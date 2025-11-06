@@ -51,3 +51,73 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+/**
+ * Typography constants following Medium-style font hierarchy:
+ * - "sohne" for main headings (h1, h2) - bold, elegant, modern
+ * - "Helvetica Neue" for subheadings (h3, h4) - clean, well-balanced
+ * - Helvetica/Arial for paragraphs and body text - professional, neat, easy-to-read
+ */
+export const Typography = {
+  // H1, H2 - Main headings using sohne (with fallbacks)
+  heading: Platform.select({
+    ios: 'HelveticaNeue-Bold', // Fallback to Helvetica Neue Bold on iOS if sohne not loaded
+    android: 'sans-serif-medium', // Medium weight on Android
+    default: 'Helvetica Neue',
+    web: "'sohne', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+  }),
+  
+  // H3, H4 - Subheadings using Helvetica Neue
+  subheading: Platform.select({
+    ios: 'HelveticaNeue',
+    android: 'sans-serif',
+    default: 'Helvetica Neue',
+    web: "'Helvetica Neue', Helvetica, Arial, sans-serif",
+  }),
+  
+  // Body text using Helvetica or Arial
+  body: Platform.select({
+    ios: 'Helvetica',
+    android: 'sans-serif',
+    default: 'Helvetica',
+    web: 'Helvetica, Arial, sans-serif',
+  }),
+};
+
+// Typography styles for consistent usage across the app
+export const TypographyStyles = {
+  h1: {
+    fontFamily: Typography.heading,
+    fontWeight: '800' as const,
+    fontSize: 32,
+    lineHeight: 40,
+  },
+  h2: {
+    fontFamily: Typography.heading,
+    fontWeight: '700' as const,
+    fontSize: 28,
+    lineHeight: 36,
+  },
+  h3: {
+    fontFamily: Typography.subheading,
+    fontWeight: '700' as const,
+    fontSize: 22,
+    lineHeight: 30,
+  },
+  h4: {
+    fontFamily: Typography.subheading,
+    fontWeight: '600' as const,
+    fontSize: 18,
+    lineHeight: 26,
+  },
+  body: {
+    fontFamily: Typography.body,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  bodySmall: {
+    fontFamily: Typography.body,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+};
