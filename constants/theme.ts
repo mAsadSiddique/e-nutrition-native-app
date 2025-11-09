@@ -1,8 +1,3 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
 import { Platform } from 'react-native';
 
 const tintColorLight = '#0a7ea4';
@@ -29,13 +24,9 @@ export const Colors = {
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {
@@ -52,22 +43,14 @@ export const Fonts = Platform.select({
   },
 });
 
-/**
- * Typography constants following Medium-style font hierarchy:
- * - "sohne" for main headings (h1, h2) - bold, elegant, modern
- * - "Helvetica Neue" for subheadings (h3, h4) - clean, well-balanced
- * - Helvetica/Arial for paragraphs and body text - professional, neat, easy-to-read
- */
 export const Typography = {
-  // H1, H2 - Main headings using sohne (with fallbacks)
   heading: Platform.select({
-    ios: 'HelveticaNeue-Bold', // Fallback to Helvetica Neue Bold on iOS if sohne not loaded
-    android: 'sans-serif-medium', // Medium weight on Android
+    ios: 'HelveticaNeue-Bold',
+    android: 'sans-serif-medium',
     default: 'Helvetica Neue',
     web: "'sohne', 'Helvetica Neue', Helvetica, Arial, sans-serif",
   }),
   
-  // H3, H4 - Subheadings using Helvetica Neue
   subheading: Platform.select({
     ios: 'HelveticaNeue',
     android: 'sans-serif',
@@ -75,7 +58,6 @@ export const Typography = {
     web: "'Helvetica Neue', Helvetica, Arial, sans-serif",
   }),
   
-  // Body text using Helvetica or Arial
   body: Platform.select({
     ios: 'Helvetica',
     android: 'sans-serif',
@@ -84,7 +66,6 @@ export const Typography = {
   }),
 };
 
-// Typography styles for consistent usage across the app
 export const TypographyStyles = {
   h1: {
     fontFamily: Typography.heading,

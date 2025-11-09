@@ -48,7 +48,6 @@ export default function BlogListScreen() {
             In For you by {item.author}
           </Text>
         </View>
-        {/* removed 3-dot menu */}
       </View>
       <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
         <View style={{ flex: 1 }}>
@@ -109,7 +108,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 12,
-    // removed outer border to match clean look
   },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rowCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -119,6 +117,5 @@ const styles = StyleSheet.create({
   cardTitle: { ...TypographyStyles.h4, marginBottom: 4 },
   cardDesc: { ...TypographyStyles.body, color: '#666' },
   meta: { ...TypographyStyles.bodySmall, color: '#666' },
-  // removed recommended section styles
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
 });

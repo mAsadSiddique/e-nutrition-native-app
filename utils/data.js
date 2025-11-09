@@ -9,16 +9,6 @@ export const categories = [
   { id: 8, name: 'Politics' },
   { id: 9, name: 'Cryptocurrency' },
   { id: 10, name: 'Psychology' },
-  { id: 11, name: 'Money' },
-  { id: 12, name: 'Business' },
-  { id: 13, name: 'Python' },
-  { id: 14, name: 'Health' },
-  { id: 15, name: 'Science' },
-  { id: 16, name: 'Mental Health' },
-  { id: 17, name: 'Life' },
-  { id: 18, name: 'Software Development' },
-  { id: 19, name: 'Startup' },
-  { id: 20, name: 'Design' },
 ];
 
 export const blogs = [

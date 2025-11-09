@@ -11,7 +11,6 @@ export default function AuthorProfileScreen() {
   const name = decodeURIComponent(String(author || ''));
   const authored = useMemo(() => blogs.filter((b) => b.author === name), [name]);
 
-  // Simple mock avatar using pravatar; could be part of data in future
   const avatarUri = 'https://i.pravatar.cc/150?u=' + encodeURIComponent(name);
   const [tab, setTab] = useState<'stories' | 'about'>('stories');
 
