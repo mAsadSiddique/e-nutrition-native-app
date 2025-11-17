@@ -23,10 +23,39 @@ export const blogs = [
       'Our greatest fitness accomplishments arise from daily, practical routines that build endurance.',
     views: 519,
     comments: 8,
-    content: [
-      'A walk-out workout is an endlessly engaging exercise that can be adapted to any environment.',
-      'It helps improve endurance and can be started with minimal preparation.',
-      'Consistency is the real differentiator in fitness success—build small, repeatable habits.',
+   content: [
+      {
+        type: 'heading',
+        text: 'The Challenge of Reading in the Digital Age'
+      },
+      {
+        type: 'paragraph',
+        text: 'Modern life is optimized for distraction. Notifications, short-form videos, and endless feeds make it harder than ever to read deeply. Building focus now requires conscious effort and structure.'
+      },
+      {
+        type: 'heading',
+        text: 'Create Your Reading Ritual'
+      },
+      {
+        type: 'paragraph',
+        text: 'Choose a dedicated time and place for reading every day. Keep your books nearby and remove friction — like having a to-read stack within reach. Ritual creates consistency, and consistency builds results.'
+      },
+      {
+        type: 'heading',
+        text: 'Track Progress and Reflect'
+      },
+      {
+        type: 'paragraph',
+        text: 'Note what you have read and share key takeaways. Reflection reinforces memory and transforms reading from passive consumption into active learning.'
+      },
+      {
+        type: 'heading',
+        text: 'Disconnect to Reconnect'
+      },
+      {
+        type: 'paragraph',
+        text: 'Try setting no screen hours. Replace phone scrolling with book time. You will find your ability to focus and enjoy quiet moments improve drastically.'
+      }
     ],
     recommended: [2, 3],
   },
@@ -38,13 +67,42 @@ export const blogs = [
     image: { uri: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=1600&auto=format&fit=crop' },
     category: 'Life',
     description:
-      'Why is it so hard to read 50 books a year? Learn tactics that work.',
+      'Why is it so hard to read 50 books a year? Learn tactics that actually work.',
     views: 421,
     comments: 13,
     content: [
-      'Modern life is optimized for distraction, not deep reading.',
-      'Make a reading ritual: time, place, and a small frictionless stack of books.',
-      'Track your wins and share notes to reinforce the habit.',
+      {
+        type: 'heading',
+        text: 'The Challenge of Reading in the Digital Age'
+      },
+      {
+        type: 'paragraph',
+        text: 'Modern life is optimized for distraction. Notifications, short-form videos, and endless feeds make it harder than ever to read deeply. Building focus now requires conscious effort and structure.'
+      },
+      {
+        type: 'heading',
+        text: 'Create Your Reading Ritual'
+      },
+      {
+        type: 'paragraph',
+        text: 'Choose a dedicated time and place for reading every day. Keep your books nearby and remove friction — like having a to-read stack within reach. Ritual creates consistency, and consistency builds results.'
+      },
+      {
+        type: 'heading',
+        text: 'Track Progress and Reflect'
+      },
+      {
+        type: 'paragraph',
+        text: 'Note what you have read and share key takeaways. Reflection reinforces memory and transforms reading from passive consumption into active learning.'
+      },
+      {
+        type: 'heading',
+        text: 'Disconnect to Reconnect'
+      },
+      {
+        type: 'paragraph',
+        text: 'Try setting no screen hours. Replace phone scrolling with book time. You will find your ability to focus and enjoy quiet moments improve drastically.'
+      }
     ],
     recommended: [1, 3],
   },
@@ -60,9 +118,38 @@ export const blogs = [
     views: 12000,
     comments: 187,
     content: [
-      'Great documentation reduces support load and accelerates adoption.',
-      'Use concrete examples and provide copy-pastable snippets.',
-      'Keep a changelog and make docs part of the CI pipeline.',
+      {
+        type: 'heading',
+        text: 'The Challenge of Reading in the Digital Age'
+      },
+      {
+        type: 'paragraph',
+        text: 'Modern life is optimized for distraction. Notifications, short-form videos, and endless feeds make it harder than ever to read deeply. Building focus now requires conscious effort and structure.'
+      },
+      {
+        type: 'heading',
+        text: 'Create Your Reading Ritual'
+      },
+      {
+        type: 'paragraph',
+        text: 'Choose a dedicated time and place for reading every day. Keep your books nearby and remove friction — like having a to-read stack within reach. Ritual creates consistency, and consistency builds results.'
+      },
+      {
+        type: 'heading',
+        text: 'Track Progress and Reflect'
+      },
+      {
+        type: 'paragraph',
+        text: 'Note what you have read and share key takeaways. Reflection reinforces memory and transforms reading from passive consumption into active learning.'
+      },
+      {
+        type: 'heading',
+        text: 'Disconnect to Reconnect'
+      },
+      {
+        type: 'paragraph',
+        text: 'Try setting no screen hours. Replace phone scrolling with book time. You will find your ability to focus and enjoy quiet moments improve drastically.'
+      }
     ],
     recommended: [2, 1],
   },
