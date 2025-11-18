@@ -76,7 +76,7 @@ export const TypographyStyles = {
   h2: {
     fontFamily: Typography.heading,
     fontWeight: '700' as const,
-    fontSize: 28,
+    fontSize: 22,
     lineHeight: 36,
   },
   h3: {
@@ -94,7 +94,7 @@ export const TypographyStyles = {
   body: {
     fontFamily: Typography.body,
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   bodySmall: {
     fontFamily: Typography.body,

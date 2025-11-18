@@ -1,9 +1,9 @@
-import { TypographyStyles } from '@/constants/theme';
+import { TypographyStyles } from '@/src/constants/theme';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { blogs } from '../../utils/data';
+import { blogs } from '../../../utils/data';
 
 export default function SearchTab() {
   const [q, setQ] = useState('');

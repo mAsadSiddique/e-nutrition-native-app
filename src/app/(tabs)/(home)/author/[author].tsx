@@ -1,9 +1,9 @@
-import { TypographyStyles } from '@/constants/theme';
+import { TypographyStyles } from '@/src/constants/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { blogs } from '../../../../utils/data';
+import { blogs } from '../../../../../utils/data';
 
 export default function AuthorProfileScreen() {
   const { author } = useLocalSearchParams<{ author: string }>();

@@ -1,9 +1,9 @@
-import { TypographyStyles } from '@/constants/theme';
+import { TypographyStyles } from '@/src/constants/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { blogs } from '../../utils/data';
+import { blogs } from '../../../utils/data';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTAINER_PADDING = 16;

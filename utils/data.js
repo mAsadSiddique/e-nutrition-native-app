@@ -7,6 +7,8 @@ export const categories = [
   { id: 6, name: 'Machine Learning' },
   { id: 7, name: 'Productivity' },
   { id: 8, name: 'Politics' },
+  { id: 8, name: 'Life' },
+
   { id: 9, name: 'Cryptocurrency' },
   { id: 10, name: 'Psychology' },
 ];
@@ -15,7 +17,7 @@ export const blogs = [
   {
     id: 1,
     title: 'Planning for a Big Adventure? You Need a Walk-Out Workout',
-    author: 'Matt Traverso Ph.D.',
+    author: 'Matt Traverso Ph.D. ',
     date: '5d ago',
     image: { uri: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=1600&auto=format&fit=crop' },
     category: 'Self Improvement',
