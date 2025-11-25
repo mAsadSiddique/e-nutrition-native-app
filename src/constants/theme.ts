@@ -42,62 +42,74 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
-
 export const Typography = {
-  heading: Platform.select({
-    ios: 'HelveticaNeue-Bold',
-    android: 'sans-serif-medium',
-    default: 'Helvetica Neue',
-    web: "'sohne', 'Helvetica Neue', Helvetica, Arial, sans-serif",
-  }),
-  
-  subheading: Platform.select({
-    ios: 'HelveticaNeue',
-    android: 'sans-serif',
-    default: 'Helvetica Neue',
-    web: "'Helvetica Neue', Helvetica, Arial, sans-serif",
-  }),
-  
-  body: Platform.select({
-    ios: 'Helvetica',
-    android: 'sans-serif',
-    default: 'Helvetica',
-    web: 'Helvetica, Arial, sans-serif',
-  }),
+  heading: 'Georgia-Bold',
+  subheading: 'Georgia-Regular', 
+  body: 'Inter-Regular',
+  sans: 'Inter-Regular'
 };
-
 export const TypographyStyles = {
   h1: {
     fontFamily: Typography.heading,
-    fontWeight: '800' as const,
-    fontSize: 32,
-    lineHeight: 40,
+    fontWeight: 'normal' as const,   // Georgia-Bold file controls weight
+    fontSize: 49,
+    lineHeight: 52,
+    letterSpacing: -0.6,
   },
   h2: {
     fontFamily: Typography.heading,
-    fontWeight: '700' as const,
-    fontSize: 22,
-    lineHeight: 36,
+    fontWeight: 'normal' as const,   // Georgia-Bold file controls weight
+    fontSize: 32,
+    lineHeight: 40,
+    letterSpacing: -0.3,
   },
   h3: {
     fontFamily: Typography.subheading,
-    fontWeight: '700' as const,
-    fontSize: 22,
-    lineHeight: 30,
+    fontWeight: 'normal' as const,   // Georgia-Bold file controls weight
+    fontSize: 24,
+    lineHeight: 32,
   },
   h4: {
     fontFamily: Typography.subheading,
-    fontWeight: '600' as const,
-    fontSize: 18,
-    lineHeight: 26,
+    fontWeight: 'normal' as const,   // Georgia-Bold file controls weight
+    fontSize: 20,
+    lineHeight: 28,
   },
   body: {
     fontFamily: Typography.body,
-    fontSize: 16,
-    lineHeight: 22,
+    fontWeight: 'normal' as const,   // Inter-Regular file controls weight
+    fontSize: 18,
+    lineHeight: 28,
   },
   bodySmall: {
     fontFamily: Typography.body,
+    fontWeight: 'normal' as const,   // Inter-Regular file controls weight
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  // Inter variants for UI elements
+  bodySans: {
+    fontFamily: Typography.sans,
+    fontWeight: 'normal' as const,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  bodySmallSans: {
+    fontFamily: Typography.sans,
+    fontWeight: 'normal' as const,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  // Bold variants using Inter for UI elements
+  bodySansBold: {
+    fontFamily: Typography.sans,
+    fontWeight: '600' as const,
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  bodySmallSansBold: {
+    fontFamily: Typography.sans,
+    fontWeight: '600' as const,
     fontSize: 14,
     lineHeight: 20,
   },
