@@ -1,9 +1,11 @@
 import AuthButton from '@/src/components/auth/AuthButton';
-import { TypographyStyles } from '@/src/constants/theme';
 import { useUser } from '@/src/contexts/UserContext';
+import { useGetProfile, useUpdateProfile } from '@/src/services/authApi';
+import { TypographyStyles } from '@/src/theme/theme';
+import { toast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,66 +14,144 @@ export default function EditProfileScreen() {
   const router = useRouter();
   
   const [name, setName] = useState(userProfile.name);
-  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState(userProfile.email);
+  const [profileImageBase64, setProfileImageBase64] = useState<string | null>(null);
+  const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
+  
+  const { mutate: updateUserProfile, isPending: loading } = useUpdateProfile();
+  const { mutate: fetchProfile, data: profileData } = useGetProfile();
+
+  // Fetch profile on component mount
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  // Update form with real-time data
+  useEffect(() => {
+    if (profileData) {
+      setName(profileData.username);
+      setEmail(profileData.email);
+      if (profileData.profileImage && !profileImageUri) {
+        setProfileImageUri(profileData.profileImage);
+      }
+    }
+  }, [profileData, profileImageUri]);
 
   const handleImagePicker = useCallback(async () => {
-    // TODO: Implement image picker when expo-image-picker is available
-    Alert.alert(
-      'Update Profile Picture',
-      'Image picker functionality will be available when expo-image-picker is installed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Use Demo Image', 
-          onPress: () => {
-            // Set a demo image URL for testing
-            updateProfile({ 
-              profileImage: 'https://i.pravatar.cc/200?img=' + Math.floor(Math.random() * 10 + 1)
-            });
+    try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        toast.error('Permission to access media library is required!');
+        return;
+      }
+
+      Alert.alert(
+        'Update Profile Picture',
+        'Choose an option',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Camera', 
+            onPress: async () => {
+              const cameraResult = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+                base64: true,
+              });
+
+              if (!cameraResult.canceled && cameraResult.assets[0]) {
+                const asset = cameraResult.assets[0];
+                setProfileImageUri(asset.uri);
+                setProfileImageBase64(asset.base64 || null);
+              }
+            }
+          },
+          { 
+            text: 'Gallery', 
+            onPress: async () => {
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+                base64: true,
+              });
+
+              if (!result.canceled && result.assets[0]) {
+                const asset = result.assets[0];
+                setProfileImageUri(asset.uri);
+                setProfileImageBase64(asset.base64 || null);
+              }
+            }
           }
-        }
-      ]
-    );
-  }, [updateProfile]);
+        ]
+      );
+    } catch (error) {
+      toast.error('Error opening image picker');
+    }
+  }, []);
 
   const handleSave = useCallback(async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+      toast.error('Please enter your name');
       return;
     }
 
-    setLoading(true);
+    const profileData: any = {
+      username: name.trim()
+    };
 
-    try {
-      // TODO: Uncomment when backend is ready
-      // await updateUserProfile({ name: name.trim() });
-      
-      // For now, update locally
-      setTimeout(() => {
-        updateProfile({ name: name.trim() });
-        setLoading(false);
-        Alert.alert(
-          'Success',
-          'Profile updated successfully',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back()
-            }
-          ]
-        );
-      }, 1000);
-      
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to update profile'
-      );
-      setLoading(false);
+    // Add profile image if selected
+    if (profileImageBase64) {
+      profileData.profileImage = {
+        fileBase64: profileImageBase64,
+        fileName: "userProfileName"
+      };
     }
-  }, [name, updateProfile, router]);
+
+    updateUserProfile(profileData, {
+      onSuccess: async (data: any) => {
+        if (data.status === 200 || data.success) {
+          // Refresh profile data from server
+          fetchProfile();
+          
+          // Update local profile
+          updateProfile({ 
+            name: name.trim(),
+            ...(profileImageUri && { profileImage: profileImageUri })
+          });
+          
+          toast.success('Profile updated successfully!');
+          router.back();
+        }
+      },
+      onError: (error: any) => {
+        const errorData = error?.response?.data;
+        if (errorData?.message) {
+          if (Array.isArray(errorData.message)) {
+            toast.error(errorData.message[0]);
+          } else {
+            toast.error(errorData.message);
+          }
+        } else {
+          toast.error('Failed to update profile. Please try again.');
+        }
+      }
+    });
+  }, [name, profileImageBase64, profileImageUri, updateUserProfile, updateProfile, fetchProfile, router]);
 
   const renderProfileImage = () => {
+    // Show selected image preview first
+    if (profileImageUri) {
+      return (
+        <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
+      );
+    }
+    
+    // Show current profile image
     if (userProfile.profileImage) {
       return (
         <Image source={{ uri: userProfile.profileImage }} style={styles.profileImage} />
@@ -80,7 +160,7 @@ export default function EditProfileScreen() {
     
     return (
       <View style={styles.profileImagePlaceholder}>
-        <Ionicons name="person" size={40} color="#999" />
+        <Ionicons name="person" size={40} color="#ccc" />
       </View>
     );
   };
@@ -118,7 +198,7 @@ export default function EditProfileScreen() {
             <Text style={styles.label}>Email</Text>
             <TextInput
               style={[styles.input, styles.disabledInput]}
-              value={userProfile.email}
+              value={email}
               editable={false}
             />
             <Text style={styles.inputHint}>Email cannot be changed</Text>
@@ -128,7 +208,7 @@ export default function EditProfileScreen() {
             text="Save Changes"
             onPress={handleSave}
             variant="primary"
-            disabled={!name.trim() || name === userProfile.name}
+            disabled={!name.trim() || (name === (profileData?.username || userProfile.name) && !profileImageBase64)}
             loading={loading}
           />
         </View>

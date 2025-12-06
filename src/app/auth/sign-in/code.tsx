@@ -1,49 +1,134 @@
 import AuthButton from '@/src/components/auth/AuthButton';
 import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
 import AuthLayout from '@/src/components/auth/AuthLayout';
-import { TypographyStyles } from '@/src/constants/theme';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { verifySignInCode } from '@/src/services/authApi';
+import { useResendVerification, useVerification } from '@/src/services/authApi';
+import { TypographyStyles } from '@/src/theme/theme';
+import { toast } from '@/utils/toast';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function SignInCodeScreen() {
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
   const { signIn } = useAuth();
   const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
+  
+  // Timer state
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [isResendDisabled, setIsResendDisabled] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  
+  const { mutate: verifyCode, isPending: loading } = useVerification();
+  const { mutate: resendCode, isPending: resendLoading } = useResendVerification();
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  // Start countdown timer
+  const startTimer = () => {
+    setTimeLeft(300);
+    setIsResendDisabled(true);
+    
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          setIsResendDisabled(false);
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+          }
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  };
+
+  // Initialize timer on component mount
+  useEffect(() => {
+    startTimer();
+    
+    // Cleanup on unmount
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
 
   const handleVerifyCode = async () => {
     if (code.length !== 6) {
-      Alert.alert('Error', 'Please enter the complete 6-digit code');
+      toast.error('Please enter the complete 6-digit code');
       return;
     }
 
     if (!email) {
-      Alert.alert('Error', 'Email address is missing');
+      toast.error('Email address is missing');
       return;
     }
 
-    setLoading(true);
-    
-    try {
-      const { token } = await verifySignInCode(email, code);
-      signIn(token);
-      router.replace('/(tabs)/(home)'); // Navigate to main app
-    } catch (error) {
-      Alert.alert(
-        'Error', 
-        error instanceof Error ? error.message : 'Invalid verification code'
-      );
-    } finally {
-      setLoading(false);
-    }
+    // Call the verification API
+    verifyCode({
+      email,
+      code
+    }, {
+      onSuccess: async (data: any) => {
+        if (data.success && data.data) {
+          toast.success('Welcome! Redirecting to your dashboard...');
+          // Store the JWT token and user data
+          await signIn(data.data.token);
+          // Navigate to main app
+          router.replace('/(tabs)/(home)');
+        }
+      },
+      onError: (error: any) => {
+        toast.error(error?.response?.data?.message || 'Invalid verification code. Please try again.');
+      }
+    });
   };
 
   const handleResendCode = () => {
-    Alert.alert('Code Resent', 'A new verification code has been sent to your email.');
+    if (!email) {
+      toast.error('Email address is missing');
+      return;
+    }
+
+    if (isResendDisabled) {
+      return; // Button should be disabled, but just in case
+    }
+
+    // Call resend API
+    resendCode({
+      email
+    }, {
+      onSuccess: (data: any) => {
+        if (data.success) {
+          toast.success('A new verification code has been sent to your email.');
+          // Restart timer
+          startTimer();
+        }
+      },
+      onError: (error: any) => {
+        const errorData = error?.response?.data;
+        
+        if (error?.response?.status === 429) {
+          // Handle rate limiting
+          toast.error(errorData?.message || 'Please wait before requesting another code.');
+          // Do NOT restart timer for 429 errors
+        } else {
+          toast.error(errorData?.message || 'Something went wrong. Please try again.');
+        }
+      }
+    });
   };
 
   return (
@@ -71,15 +156,23 @@ export default function SignInCodeScreen() {
             loading={loading}
           />
 
-          <Text style={styles.resendText}>
-            Didn't receive the code?{' '}
-            <Text 
-              style={styles.resendLink}
-              onPress={handleResendCode}
-            >
-              Resend code
+          <View style={styles.resendContainer}>
+            <Text style={styles.resendText}>
+              Didn't receive the code?{' '}
+              {isResendDisabled ? (
+                <Text style={styles.timerText}>
+                  Resend in {formatTime(timeLeft)}
+                </Text>
+              ) : (
+                <Text 
+                  style={[styles.resendLink, resendLoading && styles.resendDisabled]}
+                  onPress={resendLoading ? undefined : handleResendCode}
+                >
+                  {resendLoading ? 'Sending...' : 'Resend code'}
+                </Text>
+              )}
             </Text>
-          </Text>
+          </View>
         </View>
       </View>
     </AuthLayout>
@@ -110,15 +203,26 @@ const styles = StyleSheet.create({
   form: {
     flex: 1,
   },
+  resendContainer: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
   resendText: {
     ...TypographyStyles.body,
     color: '#666',
     textAlign: 'center',
-    marginTop: 24,
   },
   resendLink: {
     color: '#00994C',
     fontWeight: '600',
     textDecorationLine: 'underline',
+  },
+  resendDisabled: {
+    color: '#999',
+    textDecorationLine: 'none',
+  },
+  timerText: {
+    color: '#00994C',
+    fontWeight: '600',
   },
 });

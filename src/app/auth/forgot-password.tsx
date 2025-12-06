@@ -1,14 +1,20 @@
 import AuthButton from '@/src/components/auth/AuthButton';
 import AuthLayout from '@/src/components/auth/AuthLayout';
-import { TypographyStyles } from '@/src/constants/theme';
+import { useForgetPassword } from '@/src/services/authApi';
+import { TypographyStyles } from '@/src/theme/theme';
+import { forgotPasswordStorage } from '@/src/utils/forgotPasswordStorage';
+import { toast } from '@/utils/toast';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const { mutate: forgotPassword, isPending: loading } = useForgetPassword();
 
   // Email validation
   const validateEmail = (email: string) => {
@@ -19,42 +25,73 @@ export default function ForgotPasswordScreen() {
     };
   };
 
+  // Password validation
+  const validatePassword = (password: string) => {
+    return {
+      hasMinLength: password.length >= 8,
+      hasUpperCase: /[A-Z]/.test(password),
+      hasLowerCase: /[a-z]/.test(password),
+      hasNumber: /\d/.test(password),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+    };
+  };
+
   const emailValidation = validateEmail(email);
+  const passwordValidation = validatePassword(newPassword);
+  
   const isEmailValid = emailValidation.hasAtSymbol && emailValidation.isValidFormat;
+  const isPasswordValid = passwordValidation.hasMinLength && 
+                         passwordValidation.hasUpperCase && 
+                         passwordValidation.hasLowerCase && 
+                         passwordValidation.hasNumber && 
+                         passwordValidation.hasSpecialChar;
+  const doPasswordsMatch = newPassword === confirmPassword && newPassword.length > 0;
+  
+  const isFormValid = isEmailValid && isPasswordValid && doPasswordsMatch;
 
   const handleResetPassword = async () => {
     if (!isEmailValid) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      toast.error('Please enter a valid email address');
       return;
     }
 
-    setLoading(true);
+    if (!isPasswordValid) {
+      toast.error('Password must be at least 8 characters with uppercase, lowercase, number, and special character');
+      return;
+    }
+
+    if (!doPasswordsMatch) {
+      toast.error('Passwords do not match');
+      return;
+    }
 
     try {
-      // TODO: Uncomment when backend is ready
-      // await requestPasswordReset(email.trim());
-      
-      // For now, simulate success
-      setTimeout(() => {
-        setLoading(false);
-        Alert.alert(
-          'Success', 
-          'Password reset instructions have been sent to your email.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back()
-            }
-          ]
-        );
-      }, 1000);
-      
+      // Store password data in AsyncStorage
+      await forgotPasswordStorage.store({
+        email: email.trim(),
+        newPassword: newPassword.trim(),
+        confirmPassword: confirmPassword.trim()
+      });
+
+      // Call the forgot password API to send OTP
+      forgotPassword({
+        email: email.trim()
+      }, {
+        onSuccess: (data: any) => {
+          if (data.status === 200) {
+            // Show success toast
+            toast.success(data.message);
+            // Navigate to code screen for OTP verification
+            router.push('/auth/forgot-password-code');
+          }
+        },
+        onError: (error: any) => {
+          const errorMessage = error?.response?.data?.message || error?.message || 'Failed to send reset code';
+          toast.error(errorMessage);
+        }
+      });
     } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to send reset email'
-      );
-      setLoading(false);
+      toast.error('Failed to store password data');
     }
   };
 
@@ -88,11 +125,47 @@ export default function ForgotPasswordScreen() {
             )}
           </View>
 
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>New Password</Text>
+            <TextInput
+              style={styles.input}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              placeholder="Enter your new password"
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!loading}
+            />
+            {newPassword.length > 0 && !isPasswordValid && (
+              <Text style={[styles.validationText, styles.invalidText]}>
+                ✗ Password must be at least 8 characters with uppercase, lowercase, number, and special character
+              </Text>
+            )}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirm Password</Text>
+            <TextInput
+              style={styles.input}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              placeholder="Confirm your new password"
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!loading}
+            />
+            {confirmPassword.length > 0 && !doPasswordsMatch && (
+              <Text style={[styles.validationText, styles.invalidText]}>
+                ✗ Passwords do not match
+              </Text>
+            )}
+          </View>
+
           <AuthButton
-            text="Send reset instructions"
+            text="Continue"
             onPress={handleResetPassword}
             variant="primary"
-            disabled={!isEmailValid}
+            disabled={!isFormValid}
             loading={loading}
           />
         </View>

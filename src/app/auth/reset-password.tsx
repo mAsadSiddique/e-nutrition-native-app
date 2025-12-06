@@ -1,43 +1,25 @@
 import AuthButton from '@/src/components/auth/AuthButton';
+import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
 import AuthLayout from '@/src/components/auth/AuthLayout';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { useLoginProfile } from '@/src/services/authApi';
+import { useResetPassword } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
-import storage from '@/utils/storage';
 import { toast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-export default function SignInEmailScreen() {
+export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { signIn } = useAuth();
-  const { email: prefilledEmail } = useLocalSearchParams<{ email?: string }>();
-  const [email, setEmail] = useState('');
+  const { email } = useLocalSearchParams<{ email: string }>();
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { mutate: login, isPending: loading } = useLoginProfile();
-
-  // Pre-fill email if provided from forgot password flow
-  useEffect(() => {
-    if (prefilledEmail) {
-      setEmail(prefilledEmail);
-    }
-  }, [prefilledEmail]);
-
-  // Email validation
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return {
-      hasAtSymbol: email.includes('@'),
-      isValidFormat: emailRegex.test(email)
-    };
-  };
-
-  const emailValidation = validateEmail(email);
-  const isEmailValid = emailValidation.hasAtSymbol && emailValidation.isValidFormat;
+  const { mutate: resetPassword, isPending: loading } = useResetPassword();
 
   // Password validation
   const validatePassword = (pwd: string) => {
@@ -53,9 +35,14 @@ export default function SignInEmailScreen() {
   const passwordValidation = validatePassword(password);
   const isPasswordValid = Object.values(passwordValidation).every(Boolean);
 
-  const handleContinue = async () => {
-    if (!isEmailValid) {
-      toast.error('Please enter a valid email address');
+  const handleResetPassword = async () => {
+    if (!phoneNumber.trim()) {
+      toast.error('Please enter your phone number');
+      return;
+    }
+
+    if (code.length !== 6) {
+      toast.error('Please enter the complete 6-digit code');
       return;
     }
 
@@ -64,38 +51,45 @@ export default function SignInEmailScreen() {
       return;
     }
 
-    login(
-      {
-        email: email.trim(),
-        password: password.trim(),
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (!email) {
+      toast.error('Email address is missing');
+      return;
+    }
+
+    // Call the reset password API
+    resetPassword({
+      email,
+      phoneNumber,
+      code,
+      password,
+      confirmPassword
+    }, {
+      onSuccess: (data: any) => {
+        if (data.success) {
+          toast.success('Password reset successfully!');
+          router.replace('/auth/sign-in/email');
+        }
       },
-      {
-        onSuccess: async (data: any) => {
-          if (data.status === 200 && data.data?.jwt) {
-            await storage.setToken(data.data.jwt);
-            await signIn(data.data.jwt);
-
-            toast.success(data.message);
-
-            router.replace('/category-selection');
-          }
-        },
-
-        onError: (error: any) => {
-          // Extract real backend error
-          const apiMessage = error?.response?.data?.message;
-
-          if (apiMessage) {
-            toast.error(apiMessage);   // <-- shows "user not found" or "invalid password"
+      onError: (error: any) => {
+        const errorData = error?.response?.data;
+        if (errorData?.message) {
+          if (Array.isArray(errorData.message)) {
+            // Show the first validation error
+            toast.error(errorData.message[0]);
           } else {
-            toast.error('Login failed');
+            toast.error(errorData.message);
           }
+        } else {
+          toast.error('Failed to reset password. Please try again.');
         }
       }
-    );
+    });
   };
-
-
 
   return (
     <AuthLayout>
@@ -112,38 +106,43 @@ export default function SignInEmailScreen() {
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <Text style={styles.logo}>Nutrition</Text>
-              <Text style={styles.title}>Sign in with email</Text>
+              <Text style={styles.title}>Reset your password</Text>
+              <Text style={styles.subtitle}>
+                Enter your phone number, the code we sent to {email}, and your new password.
+              </Text>
             </View>
 
             <View style={styles.form}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Your email</Text>
+                <Text style={styles.label}>Phone Number</Text>
                 <TextInput
                   style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="Enter your email address"
-                  keyboardType="email-address"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  placeholder="Enter your phone number with country code"
+                  placeholderTextColor="#999"
+                  keyboardType="phone-pad"
                   autoCapitalize="none"
-                  autoComplete="email"
-                  editable={!loading}
                 />
-                {email.length > 0 && !isEmailValid && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Please enter a valid email address
-                  </Text>
-                )}
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
 
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Verification Code</Text>
+                <AuthCodeInput
+                  length={6}
+                  value={code}
+                  onChange={setCode}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>New Password</Text>
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={styles.passwordInput}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Enter your password"
+                    placeholder="Enter your new password"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoComplete="off"
@@ -151,7 +150,6 @@ export default function SignInEmailScreen() {
                     importantForAutofill="no"
                     editable={!loading}
                   />
-
                   <TouchableOpacity
                     style={styles.eyeButton}
                     onPress={() => setShowPassword(!showPassword)}
@@ -164,10 +162,6 @@ export default function SignInEmailScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => router.push("/auth/forgot-password")}>
-                  <Text style={styles.forgotPassword}>Forgot password?</Text>
-                </TouchableOpacity>
-
                 {password.length > 0 && (
                   <View style={styles.validationContainer}>
                     <Text style={[styles.validationText, passwordValidation.minLength ? styles.validText : styles.invalidText]}>
@@ -187,26 +181,49 @@ export default function SignInEmailScreen() {
                     </Text>
                   </View>
                 )}
+              </View>
 
-                {/* ⭐ Add Forget Password Link Here */}
-
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirm New Password</Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={styles.passwordInput}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Confirm your new password"
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoComplete="off"
+                    textContentType="none"
+                    importantForAutofill="no"
+                    editable={!loading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={loading}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? 'eye' : 'eye-off'}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
+                {confirmPassword.length > 0 && password !== confirmPassword && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    ✗ Passwords do not match
+                  </Text>
+                )}
               </View>
 
               <AuthButton
-                text="Sign in"
-                onPress={handleContinue}
+                text="Reset Password"
+                onPress={handleResetPassword}
                 variant="primary"
-                disabled={!isEmailValid || !isPasswordValid}
+                disabled={!phoneNumber.trim() || code.length !== 6 || !isPasswordValid || password !== confirmPassword}
                 loading={loading}
               />
-
-              <Text style={styles.terms}>
-                By signing in, you agree to our{' '}
-                <Text style={styles.termsLink}>Terms of Service</Text>
-                {' '}and acknowledge that our{' '}
-                <Text style={styles.termsLink}>Privacy Policy</Text>
-                {' '}applies to you.
-              </Text>
             </View>
           </View>
         </ScrollView>
@@ -231,25 +248,26 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
-  },
-  logo: {
-    ...TypographyStyles.h2,
     marginBottom: 32,
-    color: '#222',
   },
   title: {
-    ...TypographyStyles.h3,
+    ...TypographyStyles.h2,
     textAlign: 'center',
-    color: '#000',
-    fontSize: 28,
+    marginBottom: 16,
+    color: '#222',
+  },
+  subtitle: {
+    ...TypographyStyles.body,
+    textAlign: 'center',
+    color: '#666',
+    lineHeight: 22,
+    paddingHorizontal: 20,
   },
   form: {
     flex: 1,
   },
   inputGroup: {
     marginBottom: 15,
-
   },
   label: {
     ...TypographyStyles.body,
@@ -264,32 +282,10 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 12,
     backgroundColor: '#fff',
-    fontSize: 14,
-    color: '#222',
-  },
-  forgotPassword: {
-    ...TypographyStyles.bodySmall,
-    marginTop: 12,
-    textAlign: "right",
-    color: "#1a73e8",
-    fontSize: 12,
-    textDecorationLine: "underline",
-    fontWeight: "500",
-  },
-  terms: {
-    ...TypographyStyles.bodySmall,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    fontSize: 13,
-
-    marginTop: 16,
-  },
-  termsLink: {
-    color: '#00994C',
-    textDecorationLine: 'underline',
+    fontSize: 16,
+    color: '#000',
   },
   passwordContainer: {
     position: 'relative',
@@ -313,10 +309,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     padding: 4,
-  },
-  eyeIcon: {
-    fontSize: 18,
-    color: '#666',
   },
   validationContainer: {
     marginTop: 8,

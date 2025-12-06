@@ -4,7 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 export default function EntryScreen() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -13,14 +13,15 @@ export default function EntryScreen() {
     }, 100);
     return () => clearTimeout(timer);
   }, []);
+  
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || isLoading) return;
     if (isAuthenticated) {
-      router.replace('/category-selection');
+      router.replace('/(tabs)');
     } else {
       router.replace('/auth/sign-up');
     }
-  }, [isAuthenticated, router, isReady]);
+  }, [isAuthenticated, isLoading, router, isReady]);
 
   return null;
 }

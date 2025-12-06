@@ -1,10 +1,11 @@
-import { TypographyStyles } from '@/src/constants/theme';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useUser } from '@/src/contexts/UserContext';
+import { useGetProfile } from '@/src/services/authApi';
+import { TypographyStyles } from '@/src/theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface SettingItemProps {
@@ -44,6 +45,41 @@ export default function ProfileTab() {
   const { userProfile, updateProfile } = useUser();
   const { signOut } = useAuth();
   const router = useRouter();
+  
+  // Fetch real-time profile data using mutation
+  const { mutate: fetchProfile, data: profileData, isPending: profileLoading, error: profileError } = useGetProfile();
+
+  // Fetch profile on component mount
+  useEffect(() => {
+    fetchProfile(undefined, {
+      onSuccess: (data) => {
+        console.log('Profile fetch successful:', data);
+      },
+      onError: (error: any) => {
+        console.error('Profile fetch error:', error);
+        const status = error?.response?.status;
+        
+        if (status === 401) {
+          // Token is invalid or expired - trigger logout
+          console.log('Token expired, logging out...');
+          signOut();
+        }
+        // For other errors, just show error state
+      }
+    });
+  }, [fetchProfile, signOut]);
+  
+  useEffect(() => {
+    if (profileData) {
+      console.log('Profile API data received:', profileData);
+      updateProfile({
+        name: profileData.username,
+        email: profileData.email,
+        profileImage: profileData.profileImage
+
+      });
+    }
+  }, [profileData, updateProfile]);
 
   const handleImagePicker = useCallback(async () => {
     // TODO: Implement image picker when expo-image-picker is available
@@ -87,16 +123,22 @@ export default function ProfileTab() {
         { 
           text: 'Log out', 
           style: 'destructive',
-          onPress: signOut 
+          onPress: async () => {
+            await signOut();
+            router.replace('/auth/sign-in');
+          }
         }
       ]
     );
-  }, [signOut]);
+  }, [signOut, router]);
 
   const renderProfileImage = () => {
-    if (userProfile.profileImage) {
+    // Prioritize API data over local data
+    const imageUri = profileData?.profileImage || userProfile.profileImage;
+    
+    if (imageUri) {
       return (
-        <Image source={{ uri: userProfile.profileImage }} style={styles.profileImage} />
+        <Image source={{ uri: imageUri }} style={styles.profileImage} />
       );
     }
     
@@ -125,8 +167,24 @@ export default function ProfileTab() {
           </Pressable>
           
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{userProfile.name}</Text>
-            <Text style={styles.userEmail}>{userProfile.email}</Text>
+            {profileLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#00994C" />
+                <Text style={styles.loadingText}>Loading profile...</Text>
+              </View>
+            ) : profileError ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>Failed to load profile</Text>
+                <TouchableOpacity onPress={() => fetchProfile()} style={styles.retryButton}>
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.userName}>{profileData?.username || userProfile.name}</Text>
+                <Text style={styles.userEmail}>{profileData?.email || userProfile.email}</Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -286,6 +344,40 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#f0f0f0',
     marginLeft: 48,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  loadingText: {
+    ...TypographyStyles.body,
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 8,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  errorText: {
+    ...TypographyStyles.body,
+    fontSize: 14,
+    color: '#dc3545',
+    marginBottom: 8,
+  },
+  retryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#00994C',
+    borderRadius: 6,
+  },
+  retryText: {
+    ...TypographyStyles.body,
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 

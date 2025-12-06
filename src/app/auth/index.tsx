@@ -1,6 +1,6 @@
 import AuthButton from '@/src/components/auth/AuthButton';
 import AuthLayout from '@/src/components/auth/AuthLayout';
-import { TypographyStyles } from '@/src/constants/theme';
+import { TypographyStyles } from '@/src/theme/theme';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';

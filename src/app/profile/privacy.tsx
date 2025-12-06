@@ -1,4 +1,4 @@
-import { TypographyStyles } from '@/src/constants/theme';
+import { TypographyStyles } from '@/src/theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';

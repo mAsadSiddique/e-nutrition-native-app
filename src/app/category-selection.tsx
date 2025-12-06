@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { categories } from "../../utils/data";
 import AuthButton from "../components/auth/AuthButton";
-import { TypographyStyles } from "../constants/theme";
+import { TypographyStyles } from "../theme/theme";
 const MIN_SELECTION = 3;
 const PADDING_HORIZONTAL = 20;
 const GAP = 12;

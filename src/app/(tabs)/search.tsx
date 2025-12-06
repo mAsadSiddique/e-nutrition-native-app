@@ -1,4 +1,4 @@
-import { TypographyStyles } from '@/src/constants/theme';
+import { TypographyStyles } from '@/src/theme/theme';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';

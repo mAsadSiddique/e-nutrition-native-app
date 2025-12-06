@@ -1,4 +1,4 @@
-import { TypographyStyles } from '@/src/constants/theme';
+import { TypographyStyles } from '@/src/theme/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';

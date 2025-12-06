@@ -1,19 +1,23 @@
 import AuthButton from '@/src/components/auth/AuthButton';
 import AuthLayout from '@/src/components/auth/AuthLayout';
-import { TypographyStyles } from '@/src/constants/theme';
+import { useSignup } from '@/src/services/authApi';
+import { TypographyStyles } from '@/src/theme/theme';
+import { toast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function SignUpEmailScreen() {
   const router = useRouter();
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  const { mutate: signup, isPending: loading } = useSignup();
 
   // Email validation
   const validateEmail = (email: string) => {
@@ -42,33 +46,49 @@ export default function SignUpEmailScreen() {
   const isPasswordValid = Object.values(passwordValidation).every(Boolean);
 
   const handleCreateAccount = async () => {
+    if (!username.trim()) {
+      toast.error('Please enter a username');
+      return;
+    }
+
     if (!isEmailValid) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      toast.error('Please enter a valid email address');
       return;
     }
 
     if (!isPasswordValid) {
-      Alert.alert('Error', 'Password must meet all requirements');
+      toast.error('Password must meet all requirements');
       return;
     }
+    
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
-    setLoading(true);
-    try {
-      setTimeout(() => {
-        setLoading(false);
-        router.push('/auth/sign-in/email');
-      }, 1000);
 
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to create account'
-      );
-      setLoading(false);
-    }
+    // Call the signup API
+    signup({
+      username: username.trim(),
+      email: email.trim(),
+      password,
+      confirmPassword
+    }, {
+      onSuccess: (data: any) => {
+        if (data.status === 200) {
+          // Show success toast
+          toast.success(data.message);
+          // Navigate to verification screen with email
+          router.push({
+            pathname: '/auth/sign-up/code',
+            params: { email }
+          });
+        }
+      },
+      onError: (error: any) => {
+        const errorMessage = error?.response?.data?.message || error?.message || 'Signup failed';
+        toast.error(errorMessage);
+      }
+    });
   };
 
   return (
@@ -90,6 +110,24 @@ export default function SignUpEmailScreen() {
               <Text style={styles.title}>Create your account</Text>
             </View>
             <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Username</Text>
+                <TextInput
+                  style={styles.input}
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="Enter your username"
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  editable={!loading}
+                />
+                {username.length > 0 && username.length < 3 && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    ✗ Username must be at least 3 characters
+                  </Text>
+                )}
+              </View>
+
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Your email</Text>
                 <TextInput
@@ -195,7 +233,7 @@ export default function SignUpEmailScreen() {
                 text="Create account"
                 onPress={handleCreateAccount}
                 variant="primary"
-                disabled={!isEmailValid || !isPasswordValid || password !== confirmPassword}
+                disabled={!username.trim() || username.length < 3 || !isEmailValid || !isPasswordValid || password !== confirmPassword}
                 loading={loading}
               />
 

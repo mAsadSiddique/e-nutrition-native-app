@@ -1,9 +1,11 @@
 import AuthButton from '@/src/components/auth/AuthButton';
-import { TypographyStyles } from '@/src/constants/theme';
+import { useChangePassword } from '@/src/services/authApi';
+import { TypographyStyles } from '@/src/theme/theme';
+import { toast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ChangePasswordScreen() {
@@ -15,7 +17,8 @@ export default function ChangePasswordScreen() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+  
+  const { mutate: changePassword, isPending: loading } = useChangePassword();
 
   // Password validation
   const validatePassword = (password: string) => {
@@ -33,57 +36,50 @@ export default function ChangePasswordScreen() {
 
   const handleChangePassword = useCallback(async () => {
     if (!currentPassword) {
-      Alert.alert('Error', 'Please enter your current password');
+      toast.error('Please enter your current password');
       return;
     }
 
     if (!isNewPasswordValid) {
-      Alert.alert('Error', 'New password must meet all requirements');
+      toast.error('New password must meet all requirements');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
+      toast.error('New passwords do not match');
       return;
     }
 
     if (currentPassword === newPassword) {
-      Alert.alert('Error', 'New password must be different from current password');
+      toast.error('New password must be different from current password');
       return;
     }
 
-    setLoading(true);
-
-    try {
-      // TODO: Uncomment when backend is ready
-      // await changeUserPassword({
-      //   currentPassword: currentPassword,
-      //   newPassword: newPassword
-      // });
-      
-      // For now, simulate success
-      setTimeout(() => {
-        setLoading(false);
-        Alert.alert(
-          'Success',
-          'Password changed successfully',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back()
-            }
-          ]
-        );
-      }, 1000);
-      
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to change password'
-      );
-      setLoading(false);
-    }
-  }, [currentPassword, newPassword, confirmPassword, isNewPasswordValid, router]);
+    changePassword({
+      oldPassword: currentPassword,
+      password: newPassword,
+      confirmPassword: confirmPassword
+    }, {
+      onSuccess: (data: any) => {
+        if (data.status === 200 || data.success) {
+          toast.success('Password changed successfully!');
+          router.back();
+        }
+      },
+      onError: (error: any) => {
+        const errorData = error?.response?.data;
+        if (errorData?.message) {
+          if (Array.isArray(errorData.message)) {
+            toast.error(errorData.message[0]);
+          } else {
+            toast.error(errorData.message);
+          }
+        } else {
+          toast.error('Failed to change password. Please try again.');
+        }
+      }
+    });
+  }, [currentPassword, newPassword, confirmPassword, isNewPasswordValid, changePassword, router]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

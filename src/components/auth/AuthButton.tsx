@@ -1,4 +1,4 @@
-import { TypographyStyles } from '@/src/constants/theme';
+import { TypographyStyles } from '@/src/theme/theme';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
