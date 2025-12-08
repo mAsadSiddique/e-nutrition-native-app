@@ -2,11 +2,13 @@ import AuthButton from '@/src/components/auth/AuthButton';
 import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useSignup } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
+import { validateConfirmPassword, validateEmail, validatePasswordRules, validateUsername } from '@/src/utils/validators';
 import { toast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Dimensions, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 export default function SignUpEmailScreen() {
   const router = useRouter();
@@ -16,55 +18,37 @@ export default function SignUpEmailScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Error states
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
   const { mutate: signup, isPending: loading } = useSignup();
 
-  // Email validation
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return {
-      hasAtSymbol: email.includes('@'),
-      isValidFormat: emailRegex.test(email)
-    };
-  };
-
-  const emailValidation = validateEmail(email);
-  const isEmailValid = emailValidation.hasAtSymbol && emailValidation.isValidFormat;
-
-  // Password validation
-  const validatePassword = (pwd: string) => {
-    return {
-      minLength: pwd.length >= 8,
-      hasUppercase: /[A-Z]/.test(pwd),
-      hasLowercase: /[a-z]/.test(pwd),
-      hasNumber: /\d/.test(pwd),
-      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
-    };
-  };
-
-  const passwordValidation = validatePassword(password);
-  const isPasswordValid = Object.values(passwordValidation).every(Boolean);
-
   const handleCreateAccount = async () => {
-    if (!username.trim()) {
-      toast.error('Please enter a username');
+    setSubmitted(true);
+
+    // Validate all fields
+    const usernameErr = validateUsername(username);
+    const emailErr = validateEmail(email);
+    const passwordValidation = validatePasswordRules(password);
+    const passwordErr = passwordValidation.isValid ? null : 'Password must meet all requirements';
+    const confirmPasswordErr = validateConfirmPassword(password, confirmPassword);
+
+    // Set error states
+    setUsernameError(usernameErr);
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+    setConfirmPasswordError(confirmPasswordErr);
+
+    // If any validation fails, stop here
+    if (usernameErr || emailErr || passwordErr || confirmPasswordErr) {
       return;
     }
 
-    if (!isEmailValid) {
-      toast.error('Please enter a valid email address');
-      return;
-    }
-
-    if (!isPasswordValid) {
-      toast.error('Password must meet all requirements');
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
 
     // Call the signup API
     signup({
@@ -106,7 +90,7 @@ export default function SignUpEmailScreen() {
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <Text style={styles.logo}>Nutrition</Text>
+              {/* <Text style={styles.logo}>Nutrition</Text> */}
               <Text style={styles.title}>Create your account</Text>
             </View>
             <View style={styles.form}>
@@ -115,15 +99,20 @@ export default function SignUpEmailScreen() {
                 <TextInput
                   style={styles.input}
                   value={username}
-                  onChangeText={setUsername}
-                  placeholder="Enter your username"
+                  onChangeText={(text) => {
+                    setUsername(text);
+                    if (submitted) {
+                      setUsernameError(validateUsername(text));
+                    }
+                  }}
+                  placeholder=" username"
                   autoCapitalize="none"
                   autoComplete="username"
                   editable={!loading}
                 />
-                {username.length > 0 && username.length < 3 && (
+                {submitted && usernameError && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Username must be at least 3 characters
+                    ✗ {usernameError}
                   </Text>
                 )}
               </View>
@@ -133,16 +122,21 @@ export default function SignUpEmailScreen() {
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={setEmail}
-                  placeholder="Enter your email address"
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (submitted) {
+                      setEmailError(validateEmail(text));
+                    }
+                  }}
+                  placeholder="email address"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
                   editable={!loading}
                 />
-                {email.length > 0 && !isEmailValid && (
+                {submitted && emailError && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Please enter a valid email address
+                    ✗ {emailError}
                   </Text>
                 )}
               </View>
@@ -153,8 +147,14 @@ export default function SignUpEmailScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     value={password}
-                    onChangeText={setPassword}
-                    placeholder="Enter your password"
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (submitted) {
+                        const validation = validatePasswordRules(text);
+                        setPasswordError(validation.isValid ? null : 'Password must meet all requirements');
+                      }
+                    }}
+                    placeholder="password"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoComplete="off"
@@ -174,25 +174,40 @@ export default function SignUpEmailScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-                {password.length > 0 && (
-                  <View style={styles.validationContainer}>
-                    <Text style={[styles.validationText, passwordValidation.minLength ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.minLength ? '✓' : '✗'} Minimum 8 characters
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasUppercase ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasUppercase ? '✓' : '✗'} At least 1 uppercase
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasLowercase ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasLowercase ? '✓' : '✗'} At least 1 lowercase
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasNumber ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasNumber ? '✓' : '✗'} At least 1 number
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasSpecialChar ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasSpecialChar ? '✓' : '✗'} At least 1 special character
-                    </Text>
-                  </View>
-                )}
+                {submitted && (() => {
+                  const passwordValidation = validatePasswordRules(password);
+                  const failingRules = [];
+                  
+                  if (!passwordValidation.rules.minLength) {
+                    failingRules.push('Minimum 8 characters');
+                  }
+                  if (!passwordValidation.rules.hasUppercase) {
+                    failingRules.push('At least 1 uppercase');
+                  }
+                  if (!passwordValidation.rules.hasLowercase) {
+                    failingRules.push('At least 1 lowercase');
+                  }
+                  if (!passwordValidation.rules.hasNumber) {
+                    failingRules.push('At least 1 number');
+                  }
+                  if (!passwordValidation.rules.hasSpecialChar) {
+                    failingRules.push('At least 1 special character');
+                  }
+                  
+                  if (failingRules.length === 0) {
+                    return null;
+                  }
+                  
+                  return (
+                    <View style={styles.validationContainer}>
+                      {failingRules.map((rule, index) => (
+                        <Text key={index} style={[styles.validationText, styles.invalidText]}>
+                          ✗ {rule}
+                        </Text>
+                      ))}
+                    </View>
+                  );
+                })()}
               </View>
 
               <View style={styles.inputGroup}>
@@ -201,7 +216,12 @@ export default function SignUpEmailScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     value={confirmPassword}
-                    onChangeText={setConfirmPassword}
+                    onChangeText={(text) => {
+                      setConfirmPassword(text);
+                      if (submitted) {
+                        setConfirmPasswordError(validateConfirmPassword(password, text));
+                      }
+                    }}
                     placeholder="Confirm your password"
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
@@ -222,9 +242,9 @@ export default function SignUpEmailScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-                {confirmPassword.length > 0 && password !== confirmPassword && (
+                {submitted && confirmPasswordError && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Passwords do not match
+                    ✗ {confirmPasswordError}
                   </Text>
                 )}
               </View>
@@ -233,17 +253,20 @@ export default function SignUpEmailScreen() {
                 text="Create account"
                 onPress={handleCreateAccount}
                 variant="primary"
-                disabled={!username.trim() || username.length < 3 || !isEmailValid || !isPasswordValid || password !== confirmPassword}
                 loading={loading}
               />
 
-              <Text style={styles.terms}>
-                By signing up, you agree to our{' '}
-                <Text style={styles.termsLink}>Terms of Service</Text>
-                {' '}and acknowledge that our{' '}
-                <Text style={styles.termsLink}>Privacy Policy</Text>
-                {' '}applies to you.
-              </Text>
+              <View style={styles.footer}>
+                       <Text style={styles.footerText}>
+                         Already have an account?{" "}
+                         <Text
+                           style={styles.footerLink}
+                           onPress={() => router.push("/auth/sign-in")}
+                         >
+                           Sign in
+                         </Text>
+                       </Text>
+                     </View>
             </View>
           </View>
         </ScrollView>
@@ -261,7 +284,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 60,
   },
   content: {
     flex: 1,
@@ -279,7 +302,7 @@ const styles = StyleSheet.create({
     ...TypographyStyles.h3,
     textAlign: 'center',
     color: '#000',
-    fontSize: 28,
+    fontSize: 28
   },
   form: {
     flex: 1,
@@ -290,7 +313,7 @@ const styles = StyleSheet.create({
   label: {
     ...TypographyStyles.body,
     color: '#222',
-    marginBottom: 8,
+    marginBottom: 5,
     fontSize: 16,
     lineHeight: 24,
   },
@@ -357,5 +380,24 @@ const styles = StyleSheet.create({
   },
   invalidText: {
     color: '#dc3545',
+  },
+  footer: {
+    alignItems: "center",
+    paddingBottom: screenHeight * 0.04, // reduce bottom emptiness
+    paddingHorizontal: 31,
+  },
+
+  footerText: {
+    ...TypographyStyles.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#000",
+    textAlign: "center",
+    marginTop: 6,
+  },
+
+  footerLink: {
+    color: "#1A8917",
+    fontWeight: "600",
   },
 });

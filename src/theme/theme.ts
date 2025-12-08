@@ -67,7 +67,7 @@ export const TypographyStyles = {
     fontFamily: Typography.subheading,
     fontWeight: 'normal' as const,   // Georgia-Bold file controls weight
     fontSize: 24,
-    lineHeight: 32,
+    lineHeight: 34,
   },
   h4: {
     fontFamily: Typography.subheading,

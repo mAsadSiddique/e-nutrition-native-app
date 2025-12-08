@@ -1,10 +1,11 @@
+import LogoutSheet from '@/src/components/auth/LogoutSheet';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useUser } from '@/src/contexts/UserContext';
 import { useGetProfile } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,17 +25,20 @@ const SettingItem: React.FC<SettingItemProps> = ({
   isDestructive = false 
 }) => (
   <TouchableOpacity style={styles.settingItem} onPress={onPress}>
-    <View style={styles.settingLeft}>
-      <Ionicons 
-        name={iconName} 
-        size={20} 
-        color={isDestructive ? '#dc3545' : '#666'} 
-        style={styles.settingIcon} 
-      />
-      <Text style={[styles.settingText, isDestructive && styles.destructiveText]}>
-        {title}
-      </Text>
-    </View>
+   <View style={styles.settingLeft}>
+  <View style={styles.settingIconWrapper}>
+    <Ionicons 
+      name={iconName} 
+      size={18} 
+      color={isDestructive ? '#dc3545' : '#333'} 
+    />
+  </View>
+
+  <Text style={[styles.settingText, isDestructive && styles.destructiveText]}>
+    {title}
+  </Text>
+</View>
+
     {showArrow && (
       <Ionicons name="chevron-forward-outline" size={16} color="#ccc" />
     )}
@@ -45,6 +49,7 @@ export default function ProfileTab() {
   const { userProfile, updateProfile } = useUser();
   const { signOut } = useAuth();
   const router = useRouter();
+  const [showLogoutSheet, setShowLogoutSheet] = useState(false);
   
   // Fetch real-time profile data using mutation
   const { mutate: fetchProfile, data: profileData, isPending: profileLoading, error: profileError } = useGetProfile();
@@ -75,8 +80,7 @@ export default function ProfileTab() {
       updateProfile({
         name: profileData.username,
         email: profileData.email,
-        profileImage: profileData.profileImage
-
+        ...(profileData.profileImage && { profileImage: profileData.profileImage }),
       });
     }
   }, [profileData, updateProfile]);
@@ -115,21 +119,13 @@ export default function ProfileTab() {
   }, [router]);
  
   const handleLogout = useCallback(() => {
-    Alert.alert(
-      'Log out',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Log out', 
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-            router.replace('/auth/sign-in');
-          }
-        }
-      ]
-    );
+    setShowLogoutSheet(true);
+  }, []);
+
+  const handleLogoutConfirm = useCallback(async () => {
+    setShowLogoutSheet(false);
+    await signOut();
+    router.replace('/auth/sign-in');
   }, [signOut, router]);
 
   const renderProfileImage = () => {
@@ -154,7 +150,7 @@ export default function ProfileTab() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Profile</Text>
+          {/* <Text style={styles.headerTitle}>Profile</Text> */}
         </View>
 
         {/* User Info Section */}
@@ -175,9 +171,9 @@ export default function ProfileTab() {
             ) : profileError ? (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>Failed to load profile</Text>
-                <TouchableOpacity onPress={() => fetchProfile()} style={styles.retryButton}>
+                {/* <TouchableOpacity onPress={() => fetchProfile()} style={styles.retryButton}>
                   <Text style={styles.retryText}>Retry</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
               </View>
             ) : (
               <>
@@ -223,6 +219,12 @@ export default function ProfileTab() {
           </View>
         </View>
       </ScrollView>
+
+      <LogoutSheet
+        visible={showLogoutSheet}
+        onClose={() => setShowLogoutSheet(false)}
+        onConfirm={handleLogoutConfirm}
+      />
     </SafeAreaView>
   );
 }
@@ -232,6 +234,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  settingIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EDEDED', // Soft modern gray
+    borderColor: '#C7C7C7',
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  
   scrollContent: {
     paddingBottom: 20,
   },
@@ -240,7 +254,7 @@ const styles = StyleSheet.create({
     paddingTop: 25,
     paddingBottom: 20,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
+    // borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
   },
   headerTitle: {
@@ -292,13 +306,17 @@ const styles = StyleSheet.create({
     ...TypographyStyles.h2,
     fontSize: 22,
     color: '#000',
-    marginBottom: 4,
+    marginBottom: 0,   // smoother, more natural spacing
   },
+  
   userEmail: {
     ...TypographyStyles.body,
     fontSize: 16,
-    color: '#666',
+    color: '#444',
+
+    marginTop: 0,      // slight soft gap above email
   },
+  
   settingsSection: {
     paddingHorizontal: 20,
   },
@@ -312,10 +330,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   settingsList: {
-    backgroundColor: '#fff',
+    backgroundColor: '#F5F5F5',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#000',
+    // borderWidth: 1,
+    // borderColor: '#000',
   },
   settingItem: {
     flexDirection: 'row',
@@ -331,6 +349,7 @@ const styles = StyleSheet.create({
   },
   settingIcon: {
     marginRight: 12,
+    // color: '#000',
   },
   settingText: {
     ...TypographyStyles.body,
@@ -342,8 +361,9 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: '#f0f0f0',
-    marginLeft: 48,
+    backgroundColor: '#E0E0E0',
+    marginLeft: 20,
+    marginRight:20,
   },
   loadingContainer: {
     flexDirection: 'row',

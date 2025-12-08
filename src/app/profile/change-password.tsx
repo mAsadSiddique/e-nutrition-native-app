@@ -1,6 +1,7 @@
 import AuthButton from '@/src/components/auth/AuthButton';
 import { useChangePassword } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
+import { validateConfirmPassword, validatePasswordRules } from '@/src/utils/validators';
 import { toast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,41 +18,37 @@ export default function ChangePasswordScreen() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Error states
+  const [currentPasswordError, setCurrentPasswordError] = useState<string | null>(null);
+  const [newPasswordError, setNewPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
   
   const { mutate: changePassword, isPending: loading } = useChangePassword();
 
-  // Password validation
-  const validatePassword = (password: string) => {
-    return {
-      minLength: password.length >= 8,
-      hasUppercase: /[A-Z]/.test(password),
-      hasLowercase: /[a-z]/.test(password),
-      hasNumber: /\d/.test(password),
-      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-    };
-  };
-
-  const newPasswordValidation = validatePassword(newPassword);
-  const isNewPasswordValid = Object.values(newPasswordValidation).every(Boolean);
-
   const handleChangePassword = useCallback(async () => {
-    if (!currentPassword) {
-      toast.error('Please enter your current password');
-      return;
+    setSubmitted(true);
+
+    // Validate all fields
+    const currentPasswordErr = !currentPassword || !currentPassword.trim() ? 'Please enter your current password' : null;
+    const passwordValidation = validatePasswordRules(newPassword);
+    const newPasswordErr = passwordValidation.isValid ? null : 'New password must meet all requirements';
+    const confirmPasswordErr = validateConfirmPassword(newPassword, confirmPassword);
+
+    // Additional validation: new password must be different from current
+    let finalNewPasswordErr = newPasswordErr;
+    if (!newPasswordErr && currentPassword === newPassword) {
+      finalNewPasswordErr = 'New password must be different from current password';
     }
 
-    if (!isNewPasswordValid) {
-      toast.error('New password must meet all requirements');
-      return;
-    }
+    // Set error states
+    setCurrentPasswordError(currentPasswordErr);
+    setNewPasswordError(finalNewPasswordErr);
+    setConfirmPasswordError(confirmPasswordErr);
 
-    if (newPassword !== confirmPassword) {
-      toast.error('New passwords do not match');
-      return;
-    }
-
-    if (currentPassword === newPassword) {
-      toast.error('New password must be different from current password');
+    // If any validation fails, stop here
+    if (currentPasswordErr || finalNewPasswordErr || confirmPasswordErr) {
       return;
     }
 
@@ -87,9 +84,7 @@ export default function ChangePasswordScreen() {
 
         {/* Form Section */}
         <View style={styles.formSection}>
-          <Text style={styles.subtitle}>
-            Enter your current password and choose a new secure password.
-          </Text>
+         
 
           {/* Current Password */}
           <View style={styles.inputGroup}>
@@ -98,8 +93,13 @@ export default function ChangePasswordScreen() {
               <TextInput
                 style={styles.passwordInput}
                 value={currentPassword}
-                onChangeText={setCurrentPassword}
-                placeholder="Enter current password"
+                onChangeText={(text) => {
+                  setCurrentPassword(text);
+                  if (submitted) {
+                    setCurrentPasswordError(!text || !text.trim() ? 'Please enter your current password' : null);
+                  }
+                }}
+                placeholder="Current password"
                 secureTextEntry={!showCurrentPassword}
                 autoCapitalize="none"
                 textContentType="none"
@@ -118,6 +118,11 @@ export default function ChangePasswordScreen() {
                 />
               </TouchableOpacity>
             </View>
+            {submitted && currentPasswordError && (
+              <Text style={[styles.validationText, styles.invalidText]}>
+                ✗ {currentPasswordError}
+              </Text>
+            )}
           </View>
 
           {/* New Password */}
@@ -127,8 +132,23 @@ export default function ChangePasswordScreen() {
               <TextInput
                 style={styles.passwordInput}
                 value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Enter new password"
+                onChangeText={(text) => {
+                  setNewPassword(text);
+                  if (submitted) {
+                    const validation = validatePasswordRules(text);
+                    let err = validation.isValid ? null : 'New password must meet all requirements';
+                    // Check if new password is different from current
+                    if (!err && currentPassword === text) {
+                      err = 'New password must be different from current password';
+                    }
+                    setNewPasswordError(err);
+                    // Re-validate confirm password if it has been entered
+                    if (confirmPassword) {
+                      setConfirmPasswordError(validateConfirmPassword(text, confirmPassword));
+                    }
+                  }
+                }}
+                placeholder=" New password"
                 secureTextEntry={!showNewPassword}
                 autoCapitalize="none"
                 textContentType="none"
@@ -148,25 +168,45 @@ export default function ChangePasswordScreen() {
               </TouchableOpacity>
             </View>
 
-            {newPassword.length > 0 && (
-              <View style={styles.validationContainer}>
-                <Text style={[styles.validationText, newPasswordValidation.minLength ? styles.validText : styles.invalidText]}>
-                  {newPasswordValidation.minLength ? '✓' : '✗'} Minimum 8 characters
-                </Text>
-                <Text style={[styles.validationText, newPasswordValidation.hasUppercase ? styles.validText : styles.invalidText]}>
-                  {newPasswordValidation.hasUppercase ? '✓' : '✗'} One uppercase letter
-                </Text>
-                <Text style={[styles.validationText, newPasswordValidation.hasLowercase ? styles.validText : styles.invalidText]}>
-                  {newPasswordValidation.hasLowercase ? '✓' : '✗'} One lowercase letter
-                </Text>
-                <Text style={[styles.validationText, newPasswordValidation.hasNumber ? styles.validText : styles.invalidText]}>
-                  {newPasswordValidation.hasNumber ? '✓' : '✗'} One number
-                </Text>
-                <Text style={[styles.validationText, newPasswordValidation.hasSpecialChar ? styles.validText : styles.invalidText]}>
-                  {newPasswordValidation.hasSpecialChar ? '✓' : '✗'} One special character
-                </Text>
-              </View>
-            )}
+            {submitted && (() => {
+              const passwordValidation = validatePasswordRules(newPassword);
+              const failingRules = [];
+              
+              if (!passwordValidation.rules.minLength) {
+                failingRules.push('Minimum 8 characters');
+              }
+              if (!passwordValidation.rules.hasUppercase) {
+                failingRules.push('One uppercase letter');
+              }
+              if (!passwordValidation.rules.hasLowercase) {
+                failingRules.push('One lowercase letter');
+              }
+              if (!passwordValidation.rules.hasNumber) {
+                failingRules.push('One number');
+              }
+              if (!passwordValidation.rules.hasSpecialChar) {
+                failingRules.push('One special character');
+              }
+              
+              // Add custom error if new password is same as current
+              if (newPasswordError && newPasswordError !== 'New password must meet all requirements') {
+                failingRules.push(newPasswordError);
+              }
+              
+              if (failingRules.length === 0) {
+                return null;
+              }
+              
+              return (
+                <View style={styles.validationContainer}>
+                  {failingRules.map((rule, index) => (
+                    <Text key={index} style={[styles.validationText, styles.invalidText]}>
+                      ✗ {rule}
+                    </Text>
+                  ))}
+                </View>
+              );
+            })()}
           </View>
 
           {/* Confirm New Password */}
@@ -176,7 +216,12 @@ export default function ChangePasswordScreen() {
               <TextInput
                 style={styles.passwordInput}
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  if (submitted) {
+                    setConfirmPasswordError(validateConfirmPassword(newPassword, text));
+                  }
+                }}
                 placeholder="Confirm new password"
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
@@ -197,9 +242,9 @@ export default function ChangePasswordScreen() {
               </TouchableOpacity>
             </View>
 
-            {confirmPassword.length > 0 && newPassword !== confirmPassword && (
+            {submitted && confirmPasswordError && (
               <Text style={[styles.validationText, styles.invalidText]}>
-                ✗ Passwords do not match
+                ✗ {confirmPasswordError}
               </Text>
             )}
           </View>
@@ -208,7 +253,6 @@ export default function ChangePasswordScreen() {
             text="Change Password"
             onPress={handleChangePassword}
             variant="primary"
-            disabled={!currentPassword || !isNewPasswordValid || newPassword !== confirmPassword}
             loading={loading}
           />
         </View>
@@ -265,7 +309,7 @@ const styles = StyleSheet.create({
   label: {
     ...TypographyStyles.body,
     color: '#222',
-    marginBottom: 8,
+    marginBottom: 5,
     fontSize: 16,
     lineHeight: 24,
   },

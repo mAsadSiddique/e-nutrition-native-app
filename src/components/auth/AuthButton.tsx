@@ -78,9 +78,9 @@ const styles = StyleSheet.create({
   buttonText: {
     ...TypographyStyles.body,
     fontSize: 14,
+    fontWeight: '700',
     textAlign: 'center',
     letterSpacing: -0.2,
-    left: 16,
 
   },
   buttonTextPrimary: {
