@@ -3,6 +3,7 @@ import AuthLayout from "@/src/components/auth/AuthLayout";
 import { useAuth } from "@/src/contexts/AuthContext";
 import { useLoginProfile } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
+import { validateEmail } from "@/src/utils/validators";
 import storage from "@/utils/storage";
 import { toast } from "@/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +27,12 @@ export default function SignInEmailScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Error states
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
   const { mutate: login, isPending: loading } = useLoginProfile();
 
   useEffect(() => {
@@ -34,16 +41,19 @@ export default function SignInEmailScreen() {
     }
   }, [prefilledEmail]);
 
-  const isEmailValid = email.includes("@");
-  const isPasswordValid = password.length > 0;
   const handleContinue = async () => {
-    if (!isEmailValid) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
+    setSubmitted(true);
 
-    if (!isPasswordValid) {
-      toast.error("Please enter your password");
+    // Validate all fields
+    const emailErr = validateEmail(email);
+    const passwordErr = !password || !password.trim() ? 'Please enter your password' : null;
+
+    // Set error states
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+
+    // If any validation fails, stop here
+    if (emailErr || passwordErr) {
       return;
     }
     login(
@@ -89,38 +99,48 @@ export default function SignInEmailScreen() {
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <Text style={styles.logo}>Nutrition</Text>
+              {/* <Text style={styles.logo}>Nutrition</Text> */}
               <Text style={styles.title}>Sign in with email</Text>
             </View>
 
             <View style={styles.form}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Your email</Text>
+                <Text style={styles.label}> Email</Text>
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={setEmail}
-                  placeholder="Enter your email"
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (submitted) {
+                      setEmailError(validateEmail(text));
+                    }
+                  }}
+                  placeholder="email"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
                   editable={!loading}
                 />
-                {email.length > 0 && !isEmailValid && (
+                {submitted && emailError && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Please enter a valid email address
+                    ✗ {emailError}
                   </Text>
                 )}
               </View>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}> Password</Text>
 
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={styles.passwordInput}
                     value={password}
-                    onChangeText={setPassword}
-                    placeholder="Enter your password"
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (submitted) {
+                        setPasswordError(!text || !text.trim() ? 'Please enter your password' : null);
+                      }
+                    }}
+                    placeholder=" password"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                     autoComplete="off"
@@ -141,6 +161,11 @@ export default function SignInEmailScreen() {
                     />
                   </TouchableOpacity>
                 </View>
+                {submitted && passwordError && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    ✗ {passwordError}
+                  </Text>
+                )}
                 <TouchableOpacity
                   onPress={() => router.push("/auth/forgot-password")}
                 >
@@ -152,7 +177,6 @@ export default function SignInEmailScreen() {
                 text="Sign in"
                 onPress={handleContinue}
                 variant="primary"
-                disabled={!isEmailValid || !isPasswordValid}
                 loading={loading}
               />
 
@@ -200,11 +224,9 @@ const styles = StyleSheet.create({
 
   title: {
     ...TypographyStyles.h3,
-    textAlign: "center",
-    color: "#000",
-    fontSize: 28,
-    lineHeight: 28,
-    opacity: 0.9,
+    textAlign: 'center',
+    color: '#000',
+    fontSize: 28
   },
   form: {
     flex: 1,
@@ -215,7 +237,7 @@ const styles = StyleSheet.create({
   label: {
     ...TypographyStyles.body,
     color: "#222",
-    marginBottom: 8,
+    marginBottom: 5,
     fontSize: 16,
     lineHeight: 24,
   },

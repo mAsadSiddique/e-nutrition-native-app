@@ -3,6 +3,7 @@ import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
 import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useResetPassword } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
+import { validateConfirmPassword, validatePasswordRules, validatePhoneNumber, validateVerificationCode } from '@/src/utils/validators';
 import { toast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,41 +19,34 @@ export default function ResetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Error states
+  const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
   const { mutate: resetPassword, isPending: loading } = useResetPassword();
 
-  // Password validation
-  const validatePassword = (pwd: string) => {
-    return {
-      minLength: pwd.length >= 8,
-      hasUppercase: /[A-Z]/.test(pwd),
-      hasLowercase: /[a-z]/.test(pwd),
-      hasNumber: /\d/.test(pwd),
-      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
-    };
-  };
-
-  const passwordValidation = validatePassword(password);
-  const isPasswordValid = Object.values(passwordValidation).every(Boolean);
-
   const handleResetPassword = async () => {
-    if (!phoneNumber.trim()) {
-      toast.error('Please enter your phone number');
-      return;
-    }
+    setSubmitted(true);
 
-    if (code.length !== 6) {
-      toast.error('Please enter the complete 6-digit code');
-      return;
-    }
+    // Validate all fields
+    const phoneErr = validatePhoneNumber(phoneNumber);
+    const codeErr = validateVerificationCode(code, 6);
+    const passwordValidation = validatePasswordRules(password);
+    const passwordErr = passwordValidation.isValid ? null : 'Password must meet all requirements';
+    const confirmPasswordErr = validateConfirmPassword(password, confirmPassword);
 
-    if (!isPasswordValid) {
-      toast.error('Password must meet all requirements');
-      return;
-    }
+    // Set error states
+    setPhoneNumberError(phoneErr);
+    setCodeError(codeErr);
+    setPasswordError(passwordErr);
+    setConfirmPasswordError(confirmPasswordErr);
 
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+    // If any validation fails, stop here
+    if (phoneErr || codeErr || passwordErr || confirmPasswordErr) {
       return;
     }
 
@@ -64,7 +58,7 @@ export default function ResetPasswordScreen() {
     // Call the reset password API
     resetPassword({
       email,
-      phoneNumber,
+      // phoneNumber,
       code,
       password,
       confirmPassword
@@ -118,12 +112,22 @@ export default function ResetPasswordScreen() {
                 <TextInput
                   style={styles.input}
                   value={phoneNumber}
-                  onChangeText={setPhoneNumber}
+                  onChangeText={(text) => {
+                    setPhoneNumber(text);
+                    if (submitted) {
+                      setPhoneNumberError(validatePhoneNumber(text));
+                    }
+                  }}
                   placeholder="Enter your phone number with country code"
                   placeholderTextColor="#999"
                   keyboardType="phone-pad"
                   autoCapitalize="none"
                 />
+                {submitted && phoneNumberError && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    ✗ {phoneNumberError}
+                  </Text>
+                )}
               </View>
 
               <View style={styles.inputGroup}>
@@ -131,8 +135,18 @@ export default function ResetPasswordScreen() {
                 <AuthCodeInput
                   length={6}
                   value={code}
-                  onChange={setCode}
+                  onChange={(text) => {
+                    setCode(text);
+                    if (submitted) {
+                      setCodeError(validateVerificationCode(text, 6));
+                    }
+                  }}
                 />
+                {submitted && codeError && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    ✗ {codeError}
+                  </Text>
+                )}
               </View>
 
               <View style={styles.inputGroup}>
@@ -141,7 +155,17 @@ export default function ResetPasswordScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (submitted) {
+                        const validation = validatePasswordRules(text);
+                        setPasswordError(validation.isValid ? null : 'Password must meet all requirements');
+                        // Re-validate confirm password if it has been entered
+                        if (confirmPassword) {
+                          setConfirmPasswordError(validateConfirmPassword(text, confirmPassword));
+                        }
+                      }
+                    }}
                     placeholder="Enter your new password"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
@@ -162,25 +186,40 @@ export default function ResetPasswordScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-                {password.length > 0 && (
-                  <View style={styles.validationContainer}>
-                    <Text style={[styles.validationText, passwordValidation.minLength ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.minLength ? '✓' : '✗'} Minimum 8 characters
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasUppercase ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasUppercase ? '✓' : '✗'} At least 1 uppercase
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasLowercase ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasLowercase ? '✓' : '✗'} At least 1 lowercase
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasNumber ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasNumber ? '✓' : '✗'} At least 1 number
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasSpecialChar ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasSpecialChar ? '✓' : '✗'} At least 1 special character
-                    </Text>
-                  </View>
-                )}
+                {submitted && (() => {
+                  const passwordValidation = validatePasswordRules(password);
+                  const failingRules = [];
+                  
+                  if (!passwordValidation.rules.minLength) {
+                    failingRules.push('Minimum 8 characters');
+                  }
+                  if (!passwordValidation.rules.hasUppercase) {
+                    failingRules.push('At least 1 uppercase');
+                  }
+                  if (!passwordValidation.rules.hasLowercase) {
+                    failingRules.push('At least 1 lowercase');
+                  }
+                  if (!passwordValidation.rules.hasNumber) {
+                    failingRules.push('At least 1 number');
+                  }
+                  if (!passwordValidation.rules.hasSpecialChar) {
+                    failingRules.push('At least 1 special character');
+                  }
+                  
+                  if (failingRules.length === 0) {
+                    return null;
+                  }
+                  
+                  return (
+                    <View style={styles.validationContainer}>
+                      {failingRules.map((rule, index) => (
+                        <Text key={index} style={[styles.validationText, styles.invalidText]}>
+                          ✗ {rule}
+                        </Text>
+                      ))}
+                    </View>
+                  );
+                })()}
               </View>
 
               <View style={styles.inputGroup}>
@@ -189,7 +228,12 @@ export default function ResetPasswordScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     value={confirmPassword}
-                    onChangeText={setConfirmPassword}
+                    onChangeText={(text) => {
+                      setConfirmPassword(text);
+                      if (submitted) {
+                        setConfirmPasswordError(validateConfirmPassword(password, text));
+                      }
+                    }}
                     placeholder="Confirm your new password"
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
@@ -210,9 +254,9 @@ export default function ResetPasswordScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-                {confirmPassword.length > 0 && password !== confirmPassword && (
+                {submitted && confirmPasswordError && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Passwords do not match
+                    ✗ {confirmPasswordError}
                   </Text>
                 )}
               </View>
@@ -221,7 +265,6 @@ export default function ResetPasswordScreen() {
                 text="Reset Password"
                 onPress={handleResetPassword}
                 variant="primary"
-                disabled={!phoneNumber.trim() || code.length !== 6 || !isPasswordValid || password !== confirmPassword}
                 loading={loading}
               />
             </View>

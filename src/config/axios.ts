@@ -2,7 +2,7 @@ import Axios, { AxiosInstance, type AxiosRequestConfig } from "axios";
 import storage from "../../utils/storage";
 import { createQueryClient } from "./react-query";
 
-const BASE_URL = "https://5d71f77d89f0.ngrok-free.app";
+const BASE_URL = "https://3b1490d97465.ngrok-free.app";
 
 export const axios: AxiosInstance = Axios.create({
   baseURL: BASE_URL,
@@ -11,8 +11,6 @@ export const axios: AxiosInstance = Axios.create({
     "Accept": "application/json",
     "Content-Type": "application/json",
     "ngrok-skip-browser-warning": "true",
-    // Add mobile-specific headers
-    // "User-Agent": "NutriLife-Mobile/1.0.0",
   },
 });
 const authRequestInterceptor: any = async (config: AxiosRequestConfig) => {

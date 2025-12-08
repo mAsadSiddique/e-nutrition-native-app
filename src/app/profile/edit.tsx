@@ -2,9 +2,11 @@ import AuthButton from "@/src/components/auth/AuthButton";
 import { useUser } from "@/src/contexts/UserContext";
 import { useGetProfile, useUpdateProfile } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
+import { validateName } from "@/src/utils/validators";
 import { toast } from "@/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -29,6 +31,8 @@ export default function EditProfileScreen() {
     null
   );
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const { mutate: updateUserProfile, isPending: loading } = useUpdateProfile();
   const { mutate: fetchProfile, data: profileData } = useGetProfile();
@@ -103,8 +107,14 @@ export default function EditProfileScreen() {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!name.trim()) {
-      toast.error("Please enter your name");
+    setSubmitted(true);
+
+    // Validate name
+    const nameErr = validateName(name);
+    setNameError(nameErr);
+
+    // If validation fails, stop here
+    if (nameErr) {
       return;
     }
 
@@ -200,11 +210,21 @@ export default function EditProfileScreen() {
             <TextInput
               style={styles.input}
               value={name}
-              onChangeText={setName}
+              onChangeText={(text) => {
+                setName(text);
+                if (submitted) {
+                  setNameError(validateName(text));
+                }
+              }}
               placeholder="Enter your name"
               autoCapitalize="words"
               editable={!loading}
             />
+            {submitted && nameError && (
+              <Text style={[styles.validationText, styles.invalidText]}>
+                ✗ {nameError}
+              </Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -222,7 +242,6 @@ export default function EditProfileScreen() {
             onPress={handleSave}
             variant="primary"
             disabled={
-              !name.trim() ||
               (name === (profileData?.username || userProfile.name) &&
                 !profileImageBase64)
             }
@@ -339,5 +358,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     marginTop: 4,
+  },
+  validationText: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 4,
+  },
+  invalidText: {
+    color: "#dc3545",
   },
 });

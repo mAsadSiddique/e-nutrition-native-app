@@ -3,6 +3,7 @@ import AuthLayout from "@/src/components/auth/AuthLayout";
 import { useForgetPassword } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
 import { forgotPasswordStorage } from "@/src/utils/forgotPasswordStorage";
+import { validateConfirmPassword, validateEmail, validatePasswordRules } from "@/src/utils/validators";
 import { toast } from "@/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -23,62 +24,33 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  // Error states
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
   const { mutate: forgotPassword, isPending: loading } = useForgetPassword();
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Email validation
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return {
-      hasAtSymbol: email.includes("@"),
-      isValidFormat: emailRegex.test(email),
-    };
-  };
-
-  // Password validation
-  const validatePassword = (password: string) => {
-    return {
-      hasMinLength: password.length >= 8,
-      hasUpperCase: /[A-Z]/.test(password),
-      hasLowerCase: /[a-z]/.test(password),
-      hasNumber: /\d/.test(password),
-      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-    };
-  };
-
-  const emailValidation = validateEmail(email);
-  const passwordValidation = validatePassword(newPassword);
-
-  const isEmailValid =
-    emailValidation.hasAtSymbol && emailValidation.isValidFormat;
-  const isPasswordValid =
-    passwordValidation.hasMinLength &&
-    passwordValidation.hasUpperCase &&
-    passwordValidation.hasLowerCase &&
-    passwordValidation.hasNumber &&
-    passwordValidation.hasSpecialChar;
-  const doPasswordsMatch =
-    newPassword === confirmPassword && newPassword.length > 0;
-
-  const isFormValid = isEmailValid && isPasswordValid && doPasswordsMatch;
-
   const handleResetPassword = async () => {
-    if (!isEmailValid) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
+    setSubmitted(true);
 
-    if (!isPasswordValid) {
-      toast.error(
-        "Password must be at least 8 characters with uppercase, lowercase, number, and special character"
-      );
-      return;
-    }
+    // Validate all fields
+    const emailErr = validateEmail(email);
+    const passwordValidation = validatePasswordRules(newPassword);
+    const passwordErr = passwordValidation.isValid ? null : 'Password must meet all requirements';
+    const confirmPasswordErr = validateConfirmPassword(newPassword, confirmPassword);
 
-    if (!doPasswordsMatch) {
-      toast.error("Passwords do not match");
+    // Set error states
+    setEmailError(emailErr);
+    setPasswordError(passwordErr);
+    setConfirmPasswordError(confirmPasswordErr);
+
+    // If any validation fails, stop here
+    if (emailErr || passwordErr || confirmPasswordErr) {
       return;
     }
 
@@ -135,10 +107,6 @@ export default function ForgotPasswordScreen() {
           <View style={styles.content}>
             <View style={styles.header}>
               <Text style={styles.title}>Reset your password</Text>
-              <Text style={styles.subtitle}>
-                Enter your email address and we'll send you instructions to
-                reset your password.
-              </Text>
             </View>
 
             <View style={styles.form}>
@@ -148,16 +116,21 @@ export default function ForgotPasswordScreen() {
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (submitted) {
+                      setEmailError(validateEmail(text));
+                    }
+                  }}
                   placeholder="Enter your email"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
                   editable={!loading}
                 />
-                {email.length > 0 && !isEmailValid && (
+                {submitted && emailError && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Please enter a valid email address
+                    ✗ {emailError}
                   </Text>
                 )}
               </View>
@@ -167,7 +140,17 @@ export default function ForgotPasswordScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     value={newPassword}
-                    onChangeText={setNewPassword}
+                    onChangeText={(text) => {
+                      setNewPassword(text);
+                      if (submitted) {
+                        const validation = validatePasswordRules(text);
+                        setPasswordError(validation.isValid ? null : 'Password must meet all requirements');
+                        // Re-validate confirm password if it has been entered
+                        if (confirmPassword) {
+                          setConfirmPasswordError(validateConfirmPassword(text, confirmPassword));
+                        }
+                      }
+                    }}
                     placeholder="Enter your new password"
                     secureTextEntry={!showNewPassword}
                     autoCapitalize="none"
@@ -186,12 +169,40 @@ export default function ForgotPasswordScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {newPassword.length > 0 && !isPasswordValid && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Password must be at least 8 characters with uppercase,
-                    lowercase, number, and special character
-                  </Text>
-                )}
+                {submitted && (() => {
+                  const passwordValidation = validatePasswordRules(newPassword);
+                  const failingRules = [];
+                  
+                  if (!passwordValidation.rules.minLength) {
+                    failingRules.push('Minimum 8 characters');
+                  }
+                  if (!passwordValidation.rules.hasUppercase) {
+                    failingRules.push('At least 1 uppercase');
+                  }
+                  if (!passwordValidation.rules.hasLowercase) {
+                    failingRules.push('At least 1 lowercase');
+                  }
+                  if (!passwordValidation.rules.hasNumber) {
+                    failingRules.push('At least 1 number');
+                  }
+                  if (!passwordValidation.rules.hasSpecialChar) {
+                    failingRules.push('At least 1 special character');
+                  }
+                  
+                  if (failingRules.length === 0) {
+                    return null;
+                  }
+                  
+                  return (
+                    <View style={styles.validationContainer}>
+                      {failingRules.map((rule, index) => (
+                        <Text key={index} style={[styles.validationText, styles.invalidText]}>
+                          ✗ {rule}
+                        </Text>
+                      ))}
+                    </View>
+                  );
+                })()}
               </View>
 
               {/* CONFIRM PASSWORD */}
@@ -201,7 +212,12 @@ export default function ForgotPasswordScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     value={confirmPassword}
-                    onChangeText={setConfirmPassword}
+                    onChangeText={(text) => {
+                      setConfirmPassword(text);
+                      if (submitted) {
+                        setConfirmPasswordError(validateConfirmPassword(newPassword, text));
+                      }
+                    }}
                     placeholder="Confirm password"
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
@@ -220,9 +236,9 @@ export default function ForgotPasswordScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {confirmPassword.length > 0 && !doPasswordsMatch && (
+                {submitted && confirmPasswordError && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Passwords do not match
+                    ✗ {confirmPasswordError}
                   </Text>
                 )}
               </View>
@@ -231,7 +247,6 @@ export default function ForgotPasswordScreen() {
                 text="Continue"
                 onPress={handleResetPassword}
                 variant="primary"
-                disabled={!isFormValid}
                 loading={loading}
               />
             </View>
@@ -278,10 +293,10 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    ...TypographyStyles.h2,
-    textAlign: "center",
-    marginBottom: 16,
-    color: "#222",
+    ...TypographyStyles.h3,
+    textAlign: 'center',
+    color: '#000',
+    fontSize: 28
   },
   subtitle: {
     ...TypographyStyles.body,
@@ -318,10 +333,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#222",
   },
+  validationContainer: {
+    marginTop: 8,
+  },
   validationText: {
     fontSize: 12,
     lineHeight: 16,
     marginTop: 4,
+    marginBottom: 2,
+  },
+  validText: {
+    color: "#00994C",
   },
   invalidText: {
     color: "#dc3545",

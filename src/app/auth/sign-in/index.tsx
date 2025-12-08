@@ -73,143 +73,69 @@ export default function SignInScreen() {
     </AuthLayout>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: 0,
+    justifyContent: "center",
   },
   header: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: screenHeight * 0.08,
+    alignItems: "center",
+    marginBottom: 32,
   },
+
   logo: {
     ...TypographyStyles.h2,
-    fontSize: 24,
-    marginBottom: screenHeight * 0.08,
-    color: '#000',
-    letterSpacing: -0.5,
+    fontSize: 28,
+    marginBottom: 12,
+    color: "#000",
+    letterSpacing: -0.3,
+    lineHeight: 32,
   },
+
   title: {
     ...TypographyStyles.h3,
-    textAlign: 'center',
-    fontSize: screenWidth > 375 ? 48 : 52,
-    lineHeight: screenWidth > 375 ? 56 : 56,
-    marginBottom: screenHeight * 0.03,
-    color: '#000',
+    textAlign: "center",
+    fontSize: screenWidth > 375 ? 48 : 54,
+    lineHeight: 56,
+    marginBottom: 14, 
+    color: "#000",
     letterSpacing: -1,
   },
+
   subtitle: {
     ...TypographyStyles.body,
     fontSize: 18,
-    lineHeight: 26,
-    textAlign: 'center',
-    color: '#000',
+    lineHeight: 20,
+    textAlign: "center",
+    color: "#000",
     width: "100%",
-    letterSpacing: -0.5,
-    paddingBottom: 35,
+    letterSpacing: -0.4,
+    marginBottom: 10,
+  },
 
-  },
   buttonsContainer: {
-    paddingHorizontal: 32,
-    paddingBottom: 24,
+    paddingHorizontal: 26,
+    marginTop: 10, // reduced gap above buttons
+    marginBottom: 14, // smoother bottom space
   },
+
   footer: {
-    alignItems: 'center',
-    paddingBottom: screenHeight * 0.06,
+    alignItems: "center",
+    paddingBottom: screenHeight * 0.04, // reduce bottom emptiness
     paddingHorizontal: 31,
   },
+
   footerText: {
     ...TypographyStyles.body,
     fontSize: 14,
-    lineHeight: 24,
-    color: '#000',
-    textAlign: 'center',
-    marginBottom: 16,
+    lineHeight: 20,
+    color: "#000",
+    textAlign: "center",
+    marginTop: 6,
   },
+
   footerLink: {
-    color: '#1A8917',
-    fontWeight: '500',
-  },
-  helpText: {
-    ...TypographyStyles.bodySmall,
-    fontSize: 14,
-    // lineHeight: 20,
-    // color: '#000',
-    color: "#666",
-    textAlign: 'center',
-  },
-  helpLink: {
-    color: '#1A8917',
-    textDecorationLine: 'underline',
-  },
-  googleIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#4285F4',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleIconText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  facebookIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#1877F2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  facebookIconText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  appleIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  appleIconText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  xIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  xIconText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  emailIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#666',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emailIconText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
+    color: "#1A8917",
+    fontWeight: "600",
   },
 });

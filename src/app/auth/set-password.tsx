@@ -2,6 +2,7 @@ import AuthButton from '@/src/components/auth/AuthButton';
 import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useSetPassword } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
+import { validateConfirmPassword, validatePasswordRules } from '@/src/utils/validators';
 import { toast } from '@/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,31 +16,28 @@ export default function SetPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Error states
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
   const { mutate: setNewPassword, isPending: loading } = useSetPassword();
 
-  // Password validation
-  const validatePassword = (pwd: string) => {
-    return {
-      minLength: pwd.length >= 8,
-      hasUppercase: /[A-Z]/.test(pwd),
-      hasLowercase: /[a-z]/.test(pwd),
-      hasNumber: /\d/.test(pwd),
-      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
-    };
-  };
-
-  const passwordValidation = validatePassword(password);
-  const isPasswordValid = Object.values(passwordValidation).every(Boolean);
-
   const handleSetPassword = async () => {
-    if (!isPasswordValid) {
-      toast.error('Password must meet all requirements');
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+    setSubmitted(true);
+
+    // Validate all fields
+    const passwordValidation = validatePasswordRules(password);
+    const passwordErr = passwordValidation.isValid ? null : 'Password must meet all requirements';
+    const confirmPasswordErr = validateConfirmPassword(password, confirmPassword);
+
+    // Set error states
+    setPasswordError(passwordErr);
+    setConfirmPasswordError(confirmPasswordErr);
+
+    // If any validation fails, stop here
+    if (passwordErr || confirmPasswordErr) {
       return;
     }
 
@@ -93,7 +91,17 @@ export default function SetPasswordScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (submitted) {
+                        const validation = validatePasswordRules(text);
+                        setPasswordError(validation.isValid ? null : 'Password must meet all requirements');
+                        // Re-validate confirm password if it has been entered
+                        if (confirmPassword) {
+                          setConfirmPasswordError(validateConfirmPassword(text, confirmPassword));
+                        }
+                      }
+                    }}
                     placeholder="Enter your new password"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
@@ -115,25 +123,40 @@ export default function SetPasswordScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {password.length > 0 && (
-                  <View style={styles.validationContainer}>
-                    <Text style={[styles.validationText, passwordValidation.minLength ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.minLength ? '✓' : '✗'} Minimum 8 characters
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasUppercase ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasUppercase ? '✓' : '✗'} At least 1 uppercase
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasLowercase ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasLowercase ? '✓' : '✗'} At least 1 lowercase
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasNumber ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasNumber ? '✓' : '✗'} At least 1 number
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasSpecialChar ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasSpecialChar ? '✓' : '✗'} At least 1 special character
-                    </Text>
-                  </View>
-                )}
+                {submitted && (() => {
+                  const passwordValidation = validatePasswordRules(password);
+                  const failingRules = [];
+                  
+                  if (!passwordValidation.rules.minLength) {
+                    failingRules.push('Minimum 8 characters');
+                  }
+                  if (!passwordValidation.rules.hasUppercase) {
+                    failingRules.push('At least 1 uppercase');
+                  }
+                  if (!passwordValidation.rules.hasLowercase) {
+                    failingRules.push('At least 1 lowercase');
+                  }
+                  if (!passwordValidation.rules.hasNumber) {
+                    failingRules.push('At least 1 number');
+                  }
+                  if (!passwordValidation.rules.hasSpecialChar) {
+                    failingRules.push('At least 1 special character');
+                  }
+                  
+                  if (failingRules.length === 0) {
+                    return null;
+                  }
+                  
+                  return (
+                    <View style={styles.validationContainer}>
+                      {failingRules.map((rule, index) => (
+                        <Text key={index} style={[styles.validationText, styles.invalidText]}>
+                          ✗ {rule}
+                        </Text>
+                      ))}
+                    </View>
+                  );
+                })()}
               </View>
 
               <View style={styles.inputGroup}>
@@ -142,7 +165,12 @@ export default function SetPasswordScreen() {
                   <TextInput
                     style={styles.passwordInput}
                     value={confirmPassword}
-                    onChangeText={setConfirmPassword}
+                    onChangeText={(text) => {
+                      setConfirmPassword(text);
+                      if (submitted) {
+                        setConfirmPasswordError(validateConfirmPassword(password, text));
+                      }
+                    }}
                     placeholder="Confirm your new password"
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
@@ -164,9 +192,9 @@ export default function SetPasswordScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {confirmPassword.length > 0 && password !== confirmPassword && (
+                {submitted && confirmPasswordError && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ Passwords do not match
+                    ✗ {confirmPasswordError}
                   </Text>
                 )}
               </View>
@@ -175,7 +203,6 @@ export default function SetPasswordScreen() {
                 text="Reset Password"
                 onPress={handleSetPassword}
                 variant="primary"
-                disabled={!isPasswordValid || password !== confirmPassword}
                 loading={loading}
               />
             </View>
