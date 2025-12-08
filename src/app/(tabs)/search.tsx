@@ -32,7 +32,7 @@ export default function SearchTab() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
       <View style={styles.searchBar}>
         <TextInput
-          placeholder="Search articles, authors, topics"
+          placeholder="Search nutrition articles, recipes"
           value={q}
           onChangeText={setQ}
           style={styles.input}
@@ -57,11 +57,22 @@ const styles = StyleSheet.create({
     ...TypographyStyles.body,
     backgroundColor: '#f2f2f2',
     paddingVertical: 12,
+    fontSize:15,
     paddingHorizontal: 14,
     borderRadius: 10,
   },
   card: { backgroundColor: '#fff', padding: 12, borderRadius: 12 },
-  cardTitle: { ...TypographyStyles.h4, marginBottom: 4 },
+  cardTitle: { 
+    // ...TypographyStyles.h4
+     ...TypographyStyles.h2,
+
+    // ...TypographyStyles.body,
+    fontSize: 22,
+    // fontWeight: '700',
+    color: '#000', 
+    lineHeight: 24,
+    marginBottom: 8,
+    letterSpacing: -0,},
   cardDesc: { ...TypographyStyles.body, color: '#666' },
   thumb: { width: 80, height: 80, borderRadius: 10 },
 });

@@ -15,7 +15,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
+          title: 'explorer',
           tabBarIcon: ({ color, size }) => <Ionicons name="search" color={color} size={size} />,
         }}
       />
@@ -23,6 +23,8 @@ export default function TabsLayout() {
         name="bookmarks"
         options={{
           title: 'Saved',
+
+          
           tabBarIcon: ({ color, size }) => <Ionicons name="bookmark-outline" color={color} size={size} />,
         }}
       />
