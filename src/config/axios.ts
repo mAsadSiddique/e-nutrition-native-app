@@ -2,7 +2,7 @@ import Axios, { AxiosInstance, type AxiosRequestConfig } from "axios";
 import storage from "../../utils/storage";
 import { createQueryClient } from "./react-query";
 
-const BASE_URL = "https://b941cfe7ddd7.ngrok-free.app";
+const BASE_URL = "https://5d71f77d89f0.ngrok-free.app";
 
 export const axios: AxiosInstance = Axios.create({
   baseURL: BASE_URL,
@@ -39,7 +39,6 @@ const authRequestInterceptor: any = async (config: AxiosRequestConfig) => {
 axios.interceptors.request.use(authRequestInterceptor);
 axios.interceptors.response.use(
   (response) => {
-    // Return response data without automatic toast
     return response.data;
   },
   (error) => {

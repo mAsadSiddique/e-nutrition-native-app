@@ -14,23 +14,17 @@ export default function SignInCodeScreen() {
   const { email } = useLocalSearchParams<{ email: string }>();
   const { signIn } = useAuth();
   const [code, setCode] = useState('');
-  
-  // Timer state
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(300);
   const [isResendDisabled, setIsResendDisabled] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   const { mutate: verifyCode, isPending: loading } = useVerification();
   const { mutate: resendCode, isPending: resendLoading } = useResendVerification();
-
-  // Format time as MM:SS
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
-
-  // Start countdown timer
   const startTimer = () => {
     setTimeLeft(300);
     setIsResendDisabled(true);
@@ -52,12 +46,8 @@ export default function SignInCodeScreen() {
       });
     }, 1000);
   };
-
-  // Initialize timer on component mount
   useEffect(() => {
     startTimer();
-    
-    // Cleanup on unmount
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -75,8 +65,6 @@ export default function SignInCodeScreen() {
       toast.error('Email address is missing');
       return;
     }
-
-    // Call the verification API
     verifyCode({
       email,
       code
@@ -84,9 +72,7 @@ export default function SignInCodeScreen() {
       onSuccess: async (data: any) => {
         if (data.success && data.data) {
           toast.success('Welcome! Redirecting to your dashboard...');
-          // Store the JWT token and user data
           await signIn(data.data.token);
-          // Navigate to main app
           router.replace('/(tabs)/(home)');
         }
       },
@@ -101,12 +87,9 @@ export default function SignInCodeScreen() {
       toast.error('Email address is missing');
       return;
     }
-
     if (isResendDisabled) {
-      return; // Button should be disabled, but just in case
+      return;
     }
-
-    // Call resend API
     resendCode({
       email
     }, {
@@ -119,7 +102,6 @@ export default function SignInCodeScreen() {
       },
       onError: (error: any) => {
         const errorData = error?.response?.data;
-        
         if (error?.response?.status === 429) {
           // Handle rate limiting
           toast.error(errorData?.message || 'Please wait before requesting another code.');

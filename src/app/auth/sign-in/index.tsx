@@ -68,11 +68,6 @@ export default function SignInScreen() {
               Sign up
             </Text>
           </Text>
-
-          <Text style={styles.helpText}>
-            Forgot email or trouble signing in?{' '}
-            <Text style={styles.helpLink}>Get help</Text>
-          </Text>
         </View>
       </View>
     </AuthLayout>

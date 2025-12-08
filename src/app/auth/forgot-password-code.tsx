@@ -5,7 +5,7 @@ import { useResendVerification, useResetPassword } from '@/src/services/authApi'
 import { TypographyStyles } from '@/src/theme/theme';
 import { ForgotPasswordData, forgotPasswordStorage } from '@/src/utils/forgotPasswordStorage';
 import { toast } from '@/utils/toast';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 export default function ForgotPasswordCodeScreen() {
@@ -119,6 +119,8 @@ export default function ForgotPasswordCodeScreen() {
   };
 
   return (
+    <>
+     <Stack.Screen options={{ headerShown: false }} />
     <AuthLayout>
       <View style={styles.content}>
         <View style={styles.header}>
@@ -164,6 +166,8 @@ export default function ForgotPasswordCodeScreen() {
         </View>
       </View>
     </AuthLayout>
+    </>
+
   );
 }
 

@@ -1,69 +1,51 @@
-import AuthButton from '@/src/components/auth/AuthButton';
-import AuthLayout from '@/src/components/auth/AuthLayout';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { useLoginProfile } from '@/src/services/authApi';
-import { TypographyStyles } from '@/src/theme/theme';
-import storage from '@/utils/storage';
-import { toast } from '@/utils/toast';
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AuthButton from "@/src/components/auth/AuthButton";
+import AuthLayout from "@/src/components/auth/AuthLayout";
+import { useAuth } from "@/src/contexts/AuthContext";
+import { useLoginProfile } from "@/src/services/authApi";
+import { TypographyStyles } from "@/src/theme/theme";
+import storage from "@/utils/storage";
+import { toast } from "@/utils/toast";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function SignInEmailScreen() {
   const router = useRouter();
   const { signIn } = useAuth();
   const { email: prefilledEmail } = useLocalSearchParams<{ email?: string }>();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
   const { mutate: login, isPending: loading } = useLoginProfile();
 
-  // Pre-fill email if provided from forgot password flow
   useEffect(() => {
     if (prefilledEmail) {
       setEmail(prefilledEmail);
     }
   }, [prefilledEmail]);
 
-  // Email validation
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return {
-      hasAtSymbol: email.includes('@'),
-      isValidFormat: emailRegex.test(email)
-    };
-  };
-
-  const emailValidation = validateEmail(email);
-  const isEmailValid = emailValidation.hasAtSymbol && emailValidation.isValidFormat;
-
-  // Password validation
-  const validatePassword = (pwd: string) => {
-    return {
-      minLength: pwd.length >= 8,
-      hasUppercase: /[A-Z]/.test(pwd),
-      hasLowercase: /[a-z]/.test(pwd),
-      hasNumber: /\d/.test(pwd),
-      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
-    };
-  };
-
-  const passwordValidation = validatePassword(password);
-  const isPasswordValid = Object.values(passwordValidation).every(Boolean);
-
+  const isEmailValid = email.includes("@");
+  const isPasswordValid = password.length > 0;
   const handleContinue = async () => {
     if (!isEmailValid) {
-      toast.error('Please enter a valid email address');
+      toast.error("Please enter a valid email address");
       return;
     }
 
     if (!isPasswordValid) {
-      toast.error('Password must meet all requirements');
+      toast.error("Please enter your password");
       return;
     }
-
     login(
       {
         email: email.trim(),
@@ -74,35 +56,30 @@ export default function SignInEmailScreen() {
           if (data.status === 200 && data.data?.jwt) {
             await storage.setToken(data.data.jwt);
             await signIn(data.data.jwt);
-
             toast.success(data.message);
-
-            router.replace('/category-selection');
+            router.replace("/category-selection");
           }
         },
 
         onError: (error: any) => {
-          // Extract real backend error
           const apiMessage = error?.response?.data?.message;
 
           if (apiMessage) {
-            toast.error(apiMessage);   // <-- shows "user not found" or "invalid password"
+            toast.error(apiMessage);
           } else {
-            toast.error('Login failed');
+            toast.error("Login failed, please try again");
           }
-        }
+        },
       }
     );
   };
-
-
 
   return (
     <AuthLayout>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
           style={styles.scrollView}
@@ -123,7 +100,7 @@ export default function SignInEmailScreen() {
                   style={styles.input}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="Enter your email address"
+                  placeholder="Enter your email"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
@@ -158,38 +135,17 @@ export default function SignInEmailScreen() {
                     disabled={loading}
                   >
                     <Ionicons
-                      name={showPassword ? 'eye' : 'eye-off'}
+                      name={showPassword ? "eye" : "eye-off"}
                       size={20}
                       color="#666"
                     />
                   </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => router.push("/auth/forgot-password")}>
+                <TouchableOpacity
+                  onPress={() => router.push("/auth/forgot-password")}
+                >
                   <Text style={styles.forgotPassword}>Forgot password?</Text>
                 </TouchableOpacity>
-
-                {password.length > 0 && (
-                  <View style={styles.validationContainer}>
-                    <Text style={[styles.validationText, passwordValidation.minLength ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.minLength ? '✓' : '✗'} Minimum 8 characters
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasUppercase ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasUppercase ? '✓' : '✗'} At least 1 uppercase
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasLowercase ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasLowercase ? '✓' : '✗'} At least 1 lowercase
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasNumber ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasNumber ? '✓' : '✗'} At least 1 number
-                    </Text>
-                    <Text style={[styles.validationText, passwordValidation.hasSpecialChar ? styles.validText : styles.invalidText]}>
-                      {passwordValidation.hasSpecialChar ? '✓' : '✗'} At least 1 special character
-                    </Text>
-                  </View>
-                )}
-
-                {/* ⭐ Add Forget Password Link Here */}
-
               </View>
 
               <AuthButton
@@ -200,13 +156,13 @@ export default function SignInEmailScreen() {
                 loading={loading}
               />
 
-              <Text style={styles.terms}>
-                By signing in, you agree to our{' '}
-                <Text style={styles.termsLink}>Terms of Service</Text>
-                {' '}and acknowledge that our{' '}
-                <Text style={styles.termsLink}>Privacy Policy</Text>
-                {' '}applies to you.
-              </Text>
+              {/* <Text style={styles.terms}>
+                By signing in, you agree to our{" "}
+                <Text style={styles.termsLink}>Terms of Service</Text> and
+                acknowledge that our{" "}
+                <Text style={styles.termsLink}>Privacy Policy</Text> applies to
+                you.
+              </Text> */}
             </View>
           </View>
         </ScrollView>
@@ -230,30 +186,35 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: 48,
+    alignItems: "center",
+    marginBottom: 36,
   },
+
   logo: {
     ...TypographyStyles.h2,
-    marginBottom: 32,
-    color: '#222',
+    marginBottom: 16,
+    color: "#222",
+    // fontSize: 26,
+    lineHeight: 30,
   },
+
   title: {
     ...TypographyStyles.h3,
-    textAlign: 'center',
-    color: '#000',
+    textAlign: "center",
+    color: "#000",
     fontSize: 28,
+    lineHeight: 28,
+    opacity: 0.9,
   },
   form: {
     flex: 1,
   },
   inputGroup: {
     marginBottom: 15,
-
   },
   label: {
     ...TypographyStyles.body,
-    color: '#222',
+    color: "#222",
     marginBottom: 8,
     fontSize: 16,
     lineHeight: 24,
@@ -261,62 +222,62 @@ const styles = StyleSheet.create({
   input: {
     ...TypographyStyles.body,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     fontSize: 14,
-    color: '#222',
+    color: "#222",
   },
   forgotPassword: {
     ...TypographyStyles.bodySmall,
     marginTop: 12,
     textAlign: "right",
-    color: "#1a73e8",
+    color: "#1A6F5C",
     fontSize: 12,
     textDecorationLine: "underline",
     fontWeight: "500",
   },
   terms: {
     ...TypographyStyles.bodySmall,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 20,
     fontSize: 13,
 
     marginTop: 16,
   },
   termsLink: {
-    color: '#00994C',
-    textDecorationLine: 'underline',
+    color: "#00994C",
+    textDecorationLine: "underline",
   },
   passwordContainer: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
   },
   passwordInput: {
     ...TypographyStyles.body,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
     paddingRight: 40,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     fontSize: 14,
-    color: '#222',
+    color: "#222",
     flex: 1,
   },
   eyeButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     padding: 4,
   },
   eyeIcon: {
     fontSize: 18,
-    color: '#666',
+    color: "#666",
   },
   validationContainer: {
     marginTop: 8,
@@ -327,9 +288,9 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   validText: {
-    color: '#00994C',
+    color: "#00994C",
   },
   invalidText: {
-    color: '#dc3545',
+    color: "#dc3545",
   },
 });

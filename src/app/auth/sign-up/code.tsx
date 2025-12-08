@@ -5,7 +5,7 @@ import { useAuth } from '@/src/contexts/AuthContext';
 import { useResendVerification, useVerification } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
 import { toast } from '@/utils/toast';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 export default function SignUpCodeScreen() {
@@ -133,7 +133,9 @@ export default function SignUpCodeScreen() {
   };
 
   return (
-    <AuthLayout>
+    <>
+      <Stack.Screen options={{ headerShown: false }} />
+        <AuthLayout>
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Check your inbox</Text>
@@ -176,13 +178,18 @@ export default function SignUpCodeScreen() {
           </View>
         </View>
       </View>
+
     </AuthLayout>
+    </>
+
   );
 }
 
 const styles = StyleSheet.create({
   content: {
     flex: 1,
+    paddingTop: 40,
+
   },
   header: {
     alignItems: 'center',

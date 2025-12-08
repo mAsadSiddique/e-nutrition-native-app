@@ -35,7 +35,7 @@ export default function CategorySelectionScreen() {
           Choose three or more.
         </Text>
 
-        <ScrollView 
+        <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.pillsContainer}
           showsVerticalScrollIndicator={false}
@@ -81,17 +81,19 @@ const styles = StyleSheet.create({
   },
   title: {
     ...TypographyStyles.h3,
-    fontSize:24,
-    marginBottom: 6,
+    fontSize: 24,
+    marginBottom: 4,       
     textAlign: "center",
-    color:"#000",
+    color: "#000",
+    lineHeight: 28,      
   },
   subtitle: {
     ...TypographyStyles.body,
+    fontSize: 14,
+    textAlign: "center",
     color: "#666",
     marginBottom: 8,
-    textAlign: "center",
-    fontSize: 14,
+    lineHeight: 18,      
   },
   error: {
     ...TypographyStyles.bodySmall,
@@ -121,15 +123,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   pillActive: {
-    backgroundColor: "#00994C",
-    borderColor: "#00994C",
+    backgroundColor: "#1A8917",
+    borderColor: "#1A8917",
   },
   pillText: {
     ...TypographyStyles.body,
     color: "#222",
-    fontSize:14,
+    fontSize: 14,
     textAlign: "center",
-    
+
   },
   pillTextActive: {
     ...TypographyStyles.body,
