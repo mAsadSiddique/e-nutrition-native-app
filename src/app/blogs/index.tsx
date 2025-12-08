@@ -1,6 +1,9 @@
+import { TypographyStyles } from '@/src/constants/theme';
+import { useSavedBlogs } from '@/src/contexts/SavedBlogsContext';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { blogs as allBlogs } from '../../../utils/data';
 export default function BlogListScreen() {
@@ -11,6 +14,7 @@ export default function BlogListScreen() {
   // Tab state management
   const [activeTab, setActiveTab] = useState<'for-you' | 'featured'>('for-you');
   const [loading, setLoading] = useState(true);
+  const { savedBlogs, toggleSaveBlog } = useSavedBlogs();
 
   // Apply filtering as specified
   const filteredBlogs = allBlogs.filter(blog =>
@@ -47,7 +51,7 @@ export default function BlogListScreen() {
   }, [router]);
 
   const renderBlogItem = useCallback(({ item }: { item: any }) => (
-    <Pressable 
+    <Pressable
       style={({ pressed }) => [
         styles.blogCard,
         pressed && styles.blogCardPressed
@@ -56,18 +60,33 @@ export default function BlogListScreen() {
     >
       <View style={styles.blogHeader}>
         <View style={styles.authorRow}>
-          <Image 
-            source={{ uri: `https://i.pravatar.cc/40?img=${item.id}` }} 
-            style={styles.authorAvatar} 
+          <Image
+            source={{ uri: `https://i.pravatar.cc/40?img=${item.id}` }}
+            style={styles.authorAvatar}
           />
           <Pressable onPress={() => handleAuthorPress(item.author)}>
             <Text style={styles.authorText}>
-              In {activeTab === 'featured' ? 'Featured' : 'For you'} by {item.author}
+              <Text style={styles.grayText}>
+                In {activeTab === 'featured' ? 'Featured' : 'For you'} by
+              </Text>
+
+              <Text style={styles.blackText}> {item.author}</Text>
             </Text>
           </Pressable>
+
         </View>
+        <TouchableOpacity 
+          style={styles.saveButton}
+          onPress={() => toggleSaveBlog(item.id)}
+        >
+          <Ionicons
+            name={savedBlogs.includes(item.id) ? 'bookmark' : 'bookmark-outline'}
+            size={20}
+            color={savedBlogs.includes(item.id) ? '#1A8917' : '#666'}
+          />
+        </TouchableOpacity>
       </View>
-      
+
       <View style={styles.blogContent}>
         <View style={styles.blogTextContent}>
           <Text numberOfLines={3} style={styles.blogTitle}>
@@ -82,17 +101,20 @@ export default function BlogListScreen() {
           <Image source={item.image} style={styles.blogImage} />
         </Pressable>
       </View>
+      <View style={styles.divider} />
     </Pressable>
-  ), [activeTab, handleBlogPress, handleAuthorPress]);
+  ), [activeTab, handleBlogPress, handleAuthorPress, savedBlogs, toggleSaveBlog]);
 
   const renderHeader = useCallback(() => (
     <View style={styles.headerContainer}>
-      {/* Medium Title */}
-      <Text style={styles.mediumTitle}>Medium</Text>
-      
+      {/* 
+
+       Title */}
+      <Text style={styles.mediumTitle}>NutriLife</Text>
+
       {/* Tab Navigation */}
       <View style={styles.tabContainer}>
-        <Pressable 
+        <Pressable
           style={styles.tabButton}
           onPress={() => handleTabPress('for-you')}
         >
@@ -104,8 +126,8 @@ export default function BlogListScreen() {
           </Text>
           {activeTab === 'for-you' && <View style={styles.tabUnderline} />}
         </Pressable>
-        
-        <Pressable 
+
+        <Pressable
           style={styles.tabButton}
           onPress={() => handleTabPress('featured')}
         >
@@ -166,7 +188,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   separator: {
-    height: 24,
+    height: 4,
   },
 
   // Header styles
@@ -177,16 +199,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   mediumTitle: {
-    fontSize: 32,
-    fontWeight: '700',
+    ...TypographyStyles.h2,
+    fontSize: 28,
+    // marginBottom: screenHeight * 0.08,
     color: '#000',
     letterSpacing: -0.5,
-    lineHeight: 38,
     marginBottom: 20,
   },
 
   // Tab styles
   tabContainer: {
+    ...TypographyStyles.body,
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
@@ -198,6 +221,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tabText: {
+    ...TypographyStyles.body,
     fontSize: 16,
     fontWeight: '400',
     color: '#8e8e8e',
@@ -226,7 +250,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
   blogHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
+  },
+  saveButton: {
+    padding: 4,
   },
   authorRow: {
     flexDirection: 'row',
@@ -239,31 +269,39 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   authorText: {
-    fontSize: 13,
+    ...TypographyStyles.body,
+    fontSize: 12,
     color: '#6b6b6b',
     fontWeight: '400',
     lineHeight: 16,
   },
-
-  // Blog content styles
+  grayText: {
+    color: '#6b6b6b',
+  },
+  blackText: {
+    color: '#000',
+    fontWeight: '500',
+  },
   blogContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    paddingTop: 10,
   },
   blogTextContent: {
     flex: 1,
     paddingRight: 16,
   },
   blogTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+  ...TypographyStyles.h2,
+    fontSize: 22,
     color: '#000',
     lineHeight: 24,
     marginBottom: 8,
-    letterSpacing: -0.2,
+    letterSpacing: -0,
   },
   blogDescription: {
-    fontSize: 16,
+    ...TypographyStyles.body,
+    fontSize: 14,
     color: '#6b6b6b',
     lineHeight: 20,
     marginBottom: 12,
@@ -279,5 +317,10 @@ const styles = StyleSheet.create({
     height: 112,
     borderRadius: 4,
     backgroundColor: '#f0f0f0',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
+    marginTop: 16,
   },
 });

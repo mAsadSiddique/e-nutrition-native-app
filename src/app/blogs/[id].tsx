@@ -4,30 +4,23 @@ import React, { useMemo } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { blogs } from '../../../utils/data';
-
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTAINER_PADDING = 16;
 const CARD_GAP = 12;
-// Calculate card width to show 2 cards side-by-side with proper spacing
-// Account for screen padding on both sides and gap between cards
 const AVAILABLE_WIDTH = SCREEN_WIDTH - (CONTAINER_PADDING * 2);
 const CARD_WIDTH = Math.floor((AVAILABLE_WIDTH - CARD_GAP) / 2);
-
 export default function BlogDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const blog = useMemo(() => blogs.find((b) => String(b.id) === String(id)), [id]);
-
   if (!blog) {
     return (
       <View style={styles.center}> 
         <Text>Blog not found.</Text>
       </View>
     );
-  }
-
+  } 
   const recos = blogs.filter((b) => blog.recommended.includes(b.id));
-
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
     <ScrollView 
@@ -44,15 +37,12 @@ export default function BlogDetailScreen() {
       </Text>
       <Image source={blog.image} style={styles.headerImage} />
       {blog.content.map((item, idx) => {
-        // Support both old format (string) and new format (object with type and text)
         if (typeof item === 'string') {
           return (
             <Text key={idx} style={styles.paragraph}>{item}</Text>
           );
         }
-        
-        // New format with type and text
-        if (item.type === 'heading') {
+         if (item.type === 'heading') {
           // First content item after image shouldn't have top margin
           const isFirstHeading = idx === 0 && item.type === 'heading';
           return (
@@ -71,7 +61,6 @@ export default function BlogDetailScreen() {
             <Text key={idx} style={styles.contentParagraph}>{item.text}</Text>
           );
         }
-        
         return null;
       })}
 
@@ -164,9 +153,10 @@ const styles = StyleSheet.create({
     lineHeight: Math.max(22, Math.min(26, SCREEN_WIDTH * 0.065)),
   },
   contentHeading: {
-    ...TypographyStyles.h3,
+    ...TypographyStyles.h1,
+    // ...TypographyStyles.h3,
     fontSize: Math.max(20, Math.min(24, SCREEN_WIDTH * 0.055)),
-    fontWeight: '700',
+    // fontWeight: '700',
     color: '#000',
     marginTop: 12,
     marginBottom: 6,
@@ -188,9 +178,10 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...TypographyStyles.h2,
+    // ...TypographyStyles.h2,
     fontSize: Math.max(20, Math.min(24, SCREEN_WIDTH * 0.06)),
     marginBottom: 16,
-    fontWeight: '700',
+    // fontWeight: '700',
     color: '#000',
   },
   recommendedScrollView: {
@@ -207,6 +198,8 @@ const styles = StyleSheet.create({
     marginRight: CARD_GAP,
     backgroundColor: '#fff',
     borderRadius: 12,
+    // marginVertical: 12,
+    marginBottom:20,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -230,7 +223,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   hTitle: { 
-    ...TypographyStyles.h4,
+    ...TypographyStyles.h2,
     fontSize: Math.max(14, Math.min(16, Math.floor(CARD_WIDTH * 0.085))),
     lineHeight: Math.max(20, Math.min(22, Math.floor(CARD_WIDTH * 0.12))),
     fontWeight: '600',
