@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { blogs as allBlogs } from '../../../utils/data';
+import { blogs as allBlogs } from '../../utils/data';
 export default function BlogListScreen() {
   const params = useLocalSearchParams();
   const selected = params.selected ? JSON.parse(String(params.selected)) : [];
@@ -75,7 +75,7 @@ export default function BlogListScreen() {
           </Pressable>
 
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.saveButton}
           onPress={() => toggleSaveBlog(item.id)}
         >
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   blogTitle: {
-  ...TypographyStyles.h2,
+    ...TypographyStyles.h2,
     fontSize: 22,
     color: '#000',
     lineHeight: 24,

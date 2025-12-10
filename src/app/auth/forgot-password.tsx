@@ -2,12 +2,13 @@ import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
 import { useForgetPassword } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
-import { forgotPasswordStorage } from "@/src/utils/forgotPasswordStorage";
-import { validateConfirmPassword, validateEmail, validatePasswordRules } from "@/src/utils/validators";
-import { toast } from "@/utils/toast";
+import { toast } from "@/src/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
+import { yupResolver } from "@hookform/resolvers/yup";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -18,60 +19,110 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as yup from "yup";
+
+// Type definition for stored forgot password data
+interface ForgotPasswordData {
+  email: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+// Storage utility for forgot password data
+const FORGOT_PASSWORD_STORAGE_KEY = '@forgot_password_data';
+
+const forgotPasswordStorage = {
+  store: async (data: ForgotPasswordData) => {
+    try {
+      await AsyncStorage.setItem(FORGOT_PASSWORD_STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.error('Error storing forgot password data:', error);
+      throw error;
+    }
+  },
+  retrieve: async (): Promise<ForgotPasswordData | null> => {
+    try {
+      const data = await AsyncStorage.getItem(FORGOT_PASSWORD_STORAGE_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Error retrieving forgot password data:', error);
+      return null;
+    }
+  },
+  clear: async () => {
+    try {
+      await AsyncStorage.removeItem(FORGOT_PASSWORD_STORAGE_KEY);
+    } catch (error) {
+      console.error('Error clearing forgot password data:', error);
+    }
+  },
+};
+
+// Validation schema
+const forgotPasswordSchema = yup.object().shape({
+  email: yup
+    .string()
+    .required("Email is required")
+    .email("Please enter a valid email address"),
+  newPassword: yup
+    .string()
+    .required("Password is required")
+    .min(8, "Minimum 8 characters")
+    .matches(/[A-Z]/, "One uppercase letter")
+    .matches(/[a-z]/, "One lowercase letter")
+    .matches(/[0-9]/, "One number")
+    .matches(/[^A-Za-z0-9]/, "One special character"),
+  confirmPassword: yup
+    .string()
+    .required("Please confirm your password")
+    .oneOf([yup.ref("newPassword")], "Passwords do not match"),
+});
+
+type ForgotPasswordFormData = yup.InferType<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  // Error states
-  const [emailError, setEmailError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
-
-  const { mutate: forgotPassword, isPending: loading } = useForgetPassword();
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleResetPassword = async () => {
-    setSubmitted(true);
+  const { mutate: forgotPassword, isPending: loading } = useForgetPassword();
 
-    // Validate all fields
-    const emailErr = validateEmail(email);
-    const passwordValidation = validatePasswordRules(newPassword);
-    const passwordErr = passwordValidation.isValid ? null : 'Password must meet all requirements';
-    const confirmPasswordErr = validateConfirmPassword(newPassword, confirmPassword);
+  const {
+    control,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitted, touchedFields },
+  } = useForm<ForgotPasswordFormData>({
+    resolver: yupResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+    mode: "onChange",
+  });
 
-    // Set error states
-    setEmailError(emailErr);
-    setPasswordError(passwordErr);
-    setConfirmPasswordError(confirmPasswordErr);
+  const newPasswordValue = watch("newPassword");
 
-    // If any validation fails, stop here
-    if (emailErr || passwordErr || confirmPasswordErr) {
-      return;
-    }
-
+  const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
       // Store password data in AsyncStorage
       await forgotPasswordStorage.store({
-        email: email.trim(),
-        newPassword: newPassword.trim(),
-        confirmPassword: confirmPassword.trim(),
+        email: data.email.trim(),
+        newPassword: data.newPassword.trim(),
+        confirmPassword: data.confirmPassword.trim(),
       });
 
       // Call the forgot password API to send OTP
       forgotPassword(
         {
-          email: email.trim(),
+          email: data.email.trim(),
         },
         {
-          onSuccess: (data: any) => {
-            if (data.status === 200) {
+          onSuccess: (response: any) => {
+            if (response.status === 200) {
               // Show success toast
-              toast.success(data.message);
+              toast.success(response.message);
               // Navigate to code screen for OTP verification
               router.push("/auth/forgot-password-code");
             }
@@ -91,229 +142,201 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <>
     <AuthLayout>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
-          <View style={styles.content}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Reset your password</Text>
-            </View>
-
-            <View style={styles.form}>
-              {/* EMAIL */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Your email</Text>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (submitted) {
-                      setEmailError(validateEmail(text));
-                    }
-                  }}
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  editable={!loading}
-                />
-                {submitted && emailError && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ {emailError}
-                  </Text>
-                )}
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.content}>
+              {/* Header Section */}
+              <View style={styles.headerSection}>
+                <Text style={styles.title}>Forgot Password</Text>
+                <Text style={styles.subtitle}>
+                  Enter your email and new password to reset your account
+                </Text>
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>New Password</Text>
-                <View style={styles.passwordContainer}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    value={newPassword}
-                    onChangeText={(text) => {
-                      setNewPassword(text);
-                      if (submitted) {
-                        const validation = validatePasswordRules(text);
-                        setPasswordError(validation.isValid ? null : 'Password must meet all requirements');
-                        // Re-validate confirm password if it has been entered
-                        if (confirmPassword) {
-                          setConfirmPasswordError(validateConfirmPassword(text, confirmPassword));
-                        }
-                      }
-                    }}
-                    placeholder="Enter your new password"
-                    secureTextEntry={!showNewPassword}
-                    autoCapitalize="none"
-                    editable={!loading}
-                  />
 
-                  <TouchableOpacity
-                    style={styles.eyeButton}
-                    onPress={() => setShowNewPassword(!showNewPassword)}
-                  >
-                    <Ionicons
-                      name={showNewPassword ? "eye" : "eye-off"}
-                      size={20}
-                      color="#666"
+              <View style={styles.form}>
+                {/* EMAIL */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Your email</Text>
+                  <Controller
+                    control={control}
+                    name="email"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <TextInput
+                        style={styles.input}
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="email"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoComplete="email"
+                        editable={!loading}
+                      />
+                    )}
+                  />
+                  {(isSubmitted || touchedFields.email) && errors.email && (
+                    <Text style={[styles.validationText, styles.invalidText]}>
+                      {errors.email.message}
+                    </Text>
+                  )}
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>New Password</Text>
+                  <View style={styles.passwordContainer}>
+                    <Controller
+                      control={control}
+                      name="newPassword"
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <TextInput
+                          style={styles.passwordInput}
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          placeholder="New password"
+                          secureTextEntry={!showNewPassword}
+                          autoCapitalize="none"
+                          editable={!loading}
+                        />
+                      )}
                     />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      <Ionicons
+                        name={showNewPassword ? "eye" : "eye-off"}
+                        size={20}
+                        color="#666"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {newPasswordValue && (
+                    <Text style={styles.passwordHintText}>
+                      Must be at least 8 characters, include an uppercase letter, a lowercase letter, a number and a special character.
+                    </Text>
+                  )}
+                  {(isSubmitted || touchedFields.newPassword) && errors.newPassword && (
+                    <Text style={[styles.validationText, styles.invalidText]}>
+                      {errors.newPassword.message}
+                    </Text>
+                  )}
                 </View>
 
-                {submitted && (() => {
-                  const passwordValidation = validatePasswordRules(newPassword);
-                  const failingRules = [];
-                  
-                  if (!passwordValidation.rules.minLength) {
-                    failingRules.push('Minimum 8 characters');
-                  }
-                  if (!passwordValidation.rules.hasUppercase) {
-                    failingRules.push('At least 1 uppercase');
-                  }
-                  if (!passwordValidation.rules.hasLowercase) {
-                    failingRules.push('At least 1 lowercase');
-                  }
-                  if (!passwordValidation.rules.hasNumber) {
-                    failingRules.push('At least 1 number');
-                  }
-                  if (!passwordValidation.rules.hasSpecialChar) {
-                    failingRules.push('At least 1 special character');
-                  }
-                  
-                  if (failingRules.length === 0) {
-                    return null;
-                  }
-                  
-                  return (
-                    <View style={styles.validationContainer}>
-                      {failingRules.map((rule, index) => (
-                        <Text key={index} style={[styles.validationText, styles.invalidText]}>
-                          ✗ {rule}
-                        </Text>
-                      ))}
-                    </View>
-                  );
-                })()}
-              </View>
-
-              {/* CONFIRM PASSWORD */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Confirm Password</Text>
-                <View style={styles.passwordContainer}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    value={confirmPassword}
-                    onChangeText={(text) => {
-                      setConfirmPassword(text);
-                      if (submitted) {
-                        setConfirmPasswordError(validateConfirmPassword(newPassword, text));
-                      }
-                    }}
-                    placeholder="Confirm password"
-                    secureTextEntry={!showConfirmPassword}
-                    autoCapitalize="none"
-                    editable={!loading}
-                  />
-
-                  <TouchableOpacity
-                    style={styles.eyeButton}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    <Ionicons
-                      name={showConfirmPassword ? "eye" : "eye-off"}
-                      size={20}
-                      color="#666"
+                {/* CONFIRM PASSWORD */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Confirm Password</Text>
+                  <View style={styles.passwordContainer}>
+                    <Controller
+                      control={control}
+                      name="confirmPassword"
+                      render={({ field: { onChange, onBlur, value } }) => (
+                        <TextInput
+                          style={styles.passwordInput}
+                          value={value}
+                          onChangeText={onChange}
+                          onBlur={onBlur}
+                          placeholder="Confirm new password"
+                          secureTextEntry={!showConfirmPassword}
+                          autoCapitalize="none"
+                          editable={!loading}
+                        />
+                      )}
                     />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      <Ionicons
+                        name={showConfirmPassword ? "eye" : "eye-off"}
+                        size={20}
+                        color="#666"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {(isSubmitted || touchedFields.confirmPassword) && errors.confirmPassword && (
+                    <Text style={[styles.validationText, styles.invalidText]}>
+                      {errors.confirmPassword.message}
+                    </Text>
+                  )}
                 </View>
 
-                {submitted && confirmPasswordError && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ {confirmPasswordError}
-                  </Text>
-                )}
-              </View>
+                <View style={styles.buttonContainer}>
+                  <AuthButton
+                    text="Continue"
+                    onPress={handleSubmit(onSubmit)}
+                    variant="primary"
+                    loading={loading}
+                  />
+                </View>
 
-              <AuthButton
-                text="Continue"
-                onPress={handleResetPassword}
-                variant="primary"
-                loading={loading}
-              />
+                {/* Footer - Back to Login Link */}
+                <View style={styles.footer}>
+                  <TouchableOpacity onPress={() => router.push("/auth/sign-in/email")}>
+                    <Text style={styles.footerText}>
+                      Back to login
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </AuthLayout>
-    </>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 32,
+  },
   content: {
     flex: 1,
   },
-  header: {
+  headerSection: {
     alignItems: "center",
-    marginBottom: 48,
+    paddingTop: 40,
+    paddingBottom: 32,
+    // paddingHorizontal: 20,
   },
-  passwordContainer: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  passwordInput: {
-    ...TypographyStyles.body,
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    paddingRight: 40,
-    backgroundColor: "#fff",
-    fontSize: 14,
-    color: "#222",
-    flex: 1,
-  },
-
-  eyeButton: {
-    position: "absolute",
-    right: 12,
-    padding: 4,
-  },
-
   title: {
     ...TypographyStyles.h3,
-    textAlign: 'center',
-    color: '#000',
-    fontSize: 28
+    textAlign: "center",
+    color: "#000",
+    fontSize: 32,
+    fontWeight: "700",
+    marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
     fontSize: 16,
-    textAlign: "center",
     color: "#666",
-    lineHeight: 18,
-    paddingHorizontal: 12,
-    maxWidth: 300,
-    alignSelf: "center",
+    textAlign: "center",
+    lineHeight: 22,
+    paddingHorizontal: 20,
   },
-
   form: {
     flex: 1,
+    // paddingHorizontal: 20,
   },
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   label: {
     ...TypographyStyles.body,
@@ -321,6 +344,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 16,
     lineHeight: 24,
+    fontWeight: "500",
   },
   input: {
     ...TypographyStyles.body,
@@ -328,24 +352,64 @@ const styles = StyleSheet.create({
     borderColor: "#e0e0e0",
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 12,
     backgroundColor: "#fff",
-    fontSize: 14,
+    fontSize: 16,
     color: "#222",
   },
-  validationContainer: {
-    marginTop: 8,
+  passwordContainer: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  passwordInput: {
+    ...TypographyStyles.body,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingRight: 48,
+    backgroundColor: "#fff",
+    fontSize: 16,
+    color: "#222",
+    flex: 1,
+  },
+  eyeButton: {
+    position: "absolute",
+    right: 12,
+    top: 12,
+    padding: 4,
   },
   validationText: {
     fontSize: 12,
     lineHeight: 16,
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  validText: {
-    color: "#00994C",
+    marginTop: 6,
   },
   invalidText: {
     color: "#dc3545",
+  },
+  passwordHintText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#6c757d",
+    marginTop: 8,
+    fontStyle: "normal",
+  },
+  buttonContainer: {
+    marginTop: 8,
+    marginBottom: 0,
+  },
+  footer: {
+    alignItems: "center",
+    paddingTop: 16,
+    paddingBottom: 20,
+  },
+  footerText: {
+    ...TypographyStyles.body,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#00994C",
+    fontWeight: "600",
   },
 });

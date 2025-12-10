@@ -3,20 +3,97 @@ import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
 import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useResendVerification, useResetPassword } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
-import { ForgotPasswordData, forgotPasswordStorage } from '@/src/utils/forgotPasswordStorage';
-import { toast } from '@/utils/toast';
+import { toast } from '@/src/utils/toast';
+import { yupResolver } from '@hookform/resolvers/yup';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as yup from 'yup';
+
+// Type definition for stored forgot password data
+interface ForgotPasswordData {
+  email: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+// Storage utility for forgot password data
+const FORGOT_PASSWORD_STORAGE_KEY = '@forgot_password_data';
+
+const forgotPasswordStorage = {
+  store: async (data: ForgotPasswordData) => {
+    try {
+      await AsyncStorage.setItem(FORGOT_PASSWORD_STORAGE_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.error('Error storing forgot password data:', error);
+      throw error;
+    }
+  },
+  retrieve: async (): Promise<ForgotPasswordData | null> => {
+    try {
+      const data = await AsyncStorage.getItem(FORGOT_PASSWORD_STORAGE_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('Error retrieving forgot password data:', error);
+      return null;
+    }
+  },
+  clear: async () => {
+    try {
+      await AsyncStorage.removeItem(FORGOT_PASSWORD_STORAGE_KEY);
+    } catch (error) {
+      console.error('Error clearing forgot password data:', error);
+    }
+  },
+};
+
+// Validation schema
+const forgotPasswordCodeSchema = yup.object().shape({
+  code: yup
+    .string()
+    .required('Please enter the verification code')
+    .length(6, 'The verification code must be exactly 6 digits')
+    .matches(/^\d+$/, 'The verification code must contain only numbers'),
+});
+
+type ForgotPasswordCodeFormData = yup.InferType<typeof forgotPasswordCodeSchema>;
+
 export default function ForgotPasswordCodeScreen() {
   const router = useRouter();
-  const [code, setCode] = useState('');
-  const [countdown, setCountdown] = useState(240); // 4 minutes = 240 seconds
+  const [countdown, setCountdown] = useState(300); // 5 minutes = 300 seconds
   const [canResend, setCanResend] = useState(false);
   const [storedData, setStoredData] = useState<ForgotPasswordData | null>(null);
+  const [codeError, setCodeError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const { mutate: resendCode, isPending: resendLoading } = useResendVerification();
   const { mutate: resetPassword, isPending: resetLoading } = useResetPassword();
+
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitted },
+  } = useForm<ForgotPasswordCodeFormData>({
+    resolver: yupResolver(forgotPasswordCodeSchema),
+    defaultValues: {
+      code: '',
+    },
+    mode: 'onChange',
+  });
+
+  const codeValue = watch('code');
+
+  // Clear error when user starts typing
+  React.useEffect(() => {
+    if (codeValue && codeError) {
+      setCodeError(false);
+      setErrorMessage('');
+    }
+  }, [codeValue, codeError]);
 
   // Load stored data on component mount
   useEffect(() => {
@@ -51,12 +128,7 @@ export default function ForgotPasswordCodeScreen() {
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const handleVerifyCode = async () => {
-    if (code.length !== 6) {
-      toast.error('Please enter the complete 6-digit code');
-      return;
-    }
-
+  const onSubmit = async (data: ForgotPasswordCodeFormData) => {
     if (!storedData) {
       toast.error('Session expired. Please start over.');
       router.replace('/auth/forgot-password');
@@ -68,28 +140,30 @@ export default function ForgotPasswordCodeScreen() {
       email: storedData.email,
       password: storedData.newPassword,
       confirmPassword: storedData.confirmPassword,
-      code: code
+      code: data.code,
     };
 
     // Call reset password API
     resetPassword(payload, {
-      onSuccess: async (data: any) => {
-        if (data.status === 200) {
+      onSuccess: async (response: any) => {
+        if (response.status === 200) {
           // Clear stored data
           await forgotPasswordStorage.clear();
-          
+
           // Show success toast
-          toast.success(data.message || 'Password reset successfully!');
-          
+          toast.success(response.message || 'Password reset successfully!');
+
           // Redirect to login screen
           router.replace('/auth/sign-in/email');
         }
       },
       onError: (error: any) => {
-        // Show backend error message
-        const errorMessage = error?.response?.data?.message || 'Failed to reset password';
-        toast.error(errorMessage);
-      }
+        // Set error state to show red borders
+        setCodeError(true);
+        setErrorMessage('The verification code you entered is incorrect. Please check and try again.');
+        // Clear the code input
+        setValue('code', '');
+      },
     });
   };
 
@@ -107,7 +181,7 @@ export default function ForgotPasswordCodeScreen() {
         if (data.status === 200) {
           toast.success(data.message);
           // Restart countdown
-          setCountdown(240);
+          setCountdown(300);
           setCanResend(false);
         }
       },
@@ -120,115 +194,162 @@ export default function ForgotPasswordCodeScreen() {
 
   return (
     <>
-     <Stack.Screen options={{ headerShown: false }} />
-    <AuthLayout>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Check your inbox</Text>
-          <Text style={styles.subtitle}>
-            Enter the code we sent to {storedData?.email || 'your email'} to reset your password.
-          </Text>
-        </View>
+      <Stack.Screen options={{ headerShown: false }} />
+      <AuthLayout>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            {/* Header Section */}
+            <View style={styles.headerSection}>
+              <Text style={styles.title}>Verify Your Email</Text>
+              <Text style={styles.subtitle}>
+                We've sent a 6-digit verification code to {storedData?.email || 'your email address'}. Please enter the code below to reset your password.
+              </Text>
+            </View>
 
-        <View style={styles.form}>
-          <AuthCodeInput
-            value={code}
-            onChange={setCode}
-            length={6}
-          />
+            <View style={styles.form}>
+              <View style={styles.codeInputContainer}>
+                <Controller
+                  control={control}
+                  name="code"
+                  render={({ field: { onChange, value } }) => (
+                    <AuthCodeInput
+                      value={value}
+                      onChange={onChange}
+                      length={6}
+                      error={codeError}
+                    />
+                  )}
+                />
+                {(isSubmitted && errors.code) && (
+                  <Text style={styles.errorText}>
+                    {errors.code.message}
+                  </Text>
+                )}
+                {codeError && errorMessage && (
+                  <Text style={styles.errorText}>
+                    {errorMessage}
+                  </Text>
+                )}
+              </View>
 
-          <AuthButton
-            text="Continue"
-            onPress={handleVerifyCode}
-            variant="primary"
-            disabled={code.length !== 6 || !storedData}
-            loading={resetLoading}
-          />
+              <View style={styles.buttonContainer}>
+                <AuthButton
+                  text="Verify Code"
+                  onPress={handleSubmit(onSubmit)}
+                  variant="primary"
+                  disabled={!storedData}
+                  loading={resetLoading}
+                />
+              </View>
 
-          <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>
-              Didn’t receive the code?{' '}
-              {!canResend ? (
-                <Text style={styles.timerText}>
-                  Resend in {formatTime(countdown)}
+              <View style={styles.resendContainer}>
+                <Text style={styles.resendText}>
+                  Didn't receive the code?{' '}
+                  {!canResend ? (
+                    <Text style={styles.timerText}>
+                      Resend in {formatTime(countdown)}
+                    </Text>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={resendLoading ? undefined : handleResendCode}
+                      disabled={resendLoading}
+                    >
+                      <Text style={[styles.resendLink, resendLoading && styles.resendDisabled]}>
+                        {resendLoading ? 'Sending...' : 'Resend code'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </Text>
-              ) : (
-                <Text
-                  style={[styles.resendLink, resendLoading && styles.resendDisabled]}
-                  onPress={resendLoading ? undefined : handleResendCode}
-                >
-                  {resendLoading ? 'Sending...' : 'Resend code'}
-                </Text>
-              )}
-            </Text>
+              </View>
+            </View>
           </View>
-
-        </View>
-      </View>
-    </AuthLayout>
+        </ScrollView>
+      </AuthLayout>
     </>
-
   );
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 32,
+  },
   content: {
     flex: 1,
-    paddingHorizontal: 8,
-    paddingTop: 40,
   },
-  header: {
+  headerSection: {
     alignItems: 'center',
-    marginBottom: 48,
+    paddingTop: 40,
+    paddingBottom: 40,
+    // paddingHorizontal: 20,
   },
   title: {
     ...TypographyStyles.h3,
     textAlign: 'center',
     color: '#000',
-    fontSize: 28,
-    marginBottom: 16,
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
-    textAlign: 'center',
+    fontSize: 16,
     color: '#666',
-    lineHeight: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: 20,
   },
   form: {
     flex: 1,
+    // paddingHorizontal: 20,
+  },
+  codeInputContainer: {
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 16,
+    marginBottom: 32,
+  },
+  buttonContainer: {
+    marginTop: 0,
+    marginBottom: 0,
   },
   resendContainer: {
     alignItems: 'center',
     marginTop: 24,
-    gap: 6,
+    paddingHorizontal: 20,
   },
-  countdownText: {
-    ...TypographyStyles.bodySmall,
-
-    color: '#666',
+  resendText: {
+    ...TypographyStyles.body,
     fontSize: 14,
-  },
-  resendButton: {
-    padding: 8,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   timerText: {
     fontSize: 14,
     color: '#00994C',
-    fontWeight: '800',
-  },
-  resendText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    fontWeight: '600',
   },
   resendLink: {
     fontSize: 14,
-    color: '#1A8F46',
+    color: '#00994C',
     fontWeight: '600',
-    textDecorationLine: 'underline',
   },
-
   resendDisabled: {
     opacity: 0.5,
-  }
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#dc3545',
+    marginTop: 16,
+    textAlign: 'center',
+  },
 });

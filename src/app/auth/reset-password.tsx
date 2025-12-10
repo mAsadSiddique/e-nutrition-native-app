@@ -3,86 +3,103 @@ import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
 import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useResetPassword } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
-import { validateConfirmPassword, validatePasswordRules, validatePhoneNumber, validateVerificationCode } from '@/src/utils/validators';
-import { toast } from '@/utils/toast';
+import { toast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import * as yup from 'yup';
+
+// Validation schema
+const resetPasswordSchema = yup.object().shape({
+  phoneNumber: yup
+    .string()
+    .required('Phone number is required')
+    .matches(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number with country code'),
+  code: yup
+    .string()
+    .required('Please enter the verification code')
+    .length(6, 'Verification code must be 6 digits')
+    .matches(/^\d+$/, 'Verification code must contain only numbers'),
+  password: yup
+    .string()
+    .required('Password is required')
+    .min(8, 'Minimum 8 characters')
+    .matches(/[A-Z]/, 'One uppercase letter')
+    .matches(/[a-z]/, 'One lowercase letter')
+    .matches(/[0-9]/, 'One number')
+    .matches(/[^A-Za-z0-9]/, 'One special character'),
+  confirmPassword: yup
+    .string()
+    .required('Please confirm your password')
+    .oneOf([yup.ref('password')], 'Passwords do not match'),
+});
+
+type ResetPasswordFormData = yup.InferType<typeof resetPasswordSchema>;
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [code, setCode] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-
-  // Error states
-  const [phoneNumberError, setPhoneNumberError] = useState<string | null>(null);
-  const [codeError, setCodeError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
   const { mutate: resetPassword, isPending: loading } = useResetPassword();
 
-  const handleResetPassword = async () => {
-    setSubmitted(true);
+  const {
+    control,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitted, touchedFields },
+  } = useForm<ResetPasswordFormData>({
+    resolver: yupResolver(resetPasswordSchema),
+    defaultValues: {
+      phoneNumber: '',
+      code: '',
+      password: '',
+      confirmPassword: '',
+    },
+    mode: 'onChange',
+  });
 
-    // Validate all fields
-    const phoneErr = validatePhoneNumber(phoneNumber);
-    const codeErr = validateVerificationCode(code, 6);
-    const passwordValidation = validatePasswordRules(password);
-    const passwordErr = passwordValidation.isValid ? null : 'Password must meet all requirements';
-    const confirmPasswordErr = validateConfirmPassword(password, confirmPassword);
+  const passwordValue = watch('password');
 
-    // Set error states
-    setPhoneNumberError(phoneErr);
-    setCodeError(codeErr);
-    setPasswordError(passwordErr);
-    setConfirmPasswordError(confirmPasswordErr);
-
-    // If any validation fails, stop here
-    if (phoneErr || codeErr || passwordErr || confirmPasswordErr) {
-      return;
-    }
-
+  const onSubmit = (data: ResetPasswordFormData) => {
     if (!email) {
       toast.error('Email address is missing');
       return;
     }
 
     // Call the reset password API
-    resetPassword({
-      email,
-      // phoneNumber,
-      code,
-      password,
-      confirmPassword
-    }, {
-      onSuccess: (data: any) => {
-        if (data.success) {
-          toast.success('Password reset successfully!');
-          router.replace('/auth/sign-in/email');
-        }
+    resetPassword(
+      {
+        email,
+        code: data.code,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
       },
-      onError: (error: any) => {
-        const errorData = error?.response?.data;
-        if (errorData?.message) {
-          if (Array.isArray(errorData.message)) {
-            // Show the first validation error
-            toast.error(errorData.message[0]);
-          } else {
-            toast.error(errorData.message);
+      {
+        onSuccess: (response: any) => {
+          if (response.success || response.status === 200) {
+            toast.success('Password reset successfully!');
+            router.replace('/auth/sign-in/email');
           }
-        } else {
-          toast.error('Failed to reset password. Please try again.');
-        }
+        },
+        onError: (error: any) => {
+          const errorData = error?.response?.data;
+          if (errorData?.message) {
+            if (Array.isArray(errorData.message)) {
+              toast.error(errorData.message[0]);
+            } else {
+              toast.error(errorData.message);
+            }
+          } else {
+            toast.error('Failed to reset password. Please try again.');
+          }
+        },
       }
-    });
+    );
   };
 
   return (
@@ -99,52 +116,59 @@ export default function ResetPasswordScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.content}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Reset your password</Text>
+            {/* Header Section */}
+            <View style={styles.headerSection}>
+              <Text style={styles.title}>Reset Password</Text>
               <Text style={styles.subtitle}>
-                Enter your phone number, the code we sent to {email}, and your new password.
+                {email 
+                  ? `Enter your phone number, the verification code sent to ${email}, and your new password.`
+                  : 'Enter your phone number, verification code, and your new password to reset your account.'
+                }
               </Text>
             </View>
 
             <View style={styles.form}>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Phone Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={phoneNumber}
-                  onChangeText={(text) => {
-                    setPhoneNumber(text);
-                    if (submitted) {
-                      setPhoneNumberError(validatePhoneNumber(text));
-                    }
-                  }}
-                  placeholder="Enter your phone number with country code"
-                  placeholderTextColor="#999"
-                  keyboardType="phone-pad"
-                  autoCapitalize="none"
+                <Controller
+                  control={control}
+                  name="phoneNumber"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={styles.input}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder="Phone number with country code"
+                      keyboardType="phone-pad"
+                      autoCapitalize="none"
+                      editable={!loading}
+                    />
+                  )}
                 />
-                {submitted && phoneNumberError && (
+                {(isSubmitted || touchedFields.phoneNumber) && errors.phoneNumber && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ {phoneNumberError}
+                    {errors.phoneNumber.message}
                   </Text>
                 )}
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Verification Code</Text>
-                <AuthCodeInput
-                  length={6}
-                  value={code}
-                  onChange={(text) => {
-                    setCode(text);
-                    if (submitted) {
-                      setCodeError(validateVerificationCode(text, 6));
-                    }
-                  }}
+                <Controller
+                  control={control}
+                  name="code"
+                  render={({ field: { onChange, value } }) => (
+                    <AuthCodeInput
+                      length={6}
+                      value={value}
+                      onChange={onChange}
+                    />
+                  )}
                 />
-                {submitted && codeError && (
+                {(isSubmitted || touchedFields.code) && errors.code && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ {codeError}
+                    {errors.code.message}
                   </Text>
                 )}
               </View>
@@ -152,27 +176,24 @@ export default function ResetPasswordScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>New Password</Text>
                 <View style={styles.passwordContainer}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    value={password}
-                    onChangeText={(text) => {
-                      setPassword(text);
-                      if (submitted) {
-                        const validation = validatePasswordRules(text);
-                        setPasswordError(validation.isValid ? null : 'Password must meet all requirements');
-                        // Re-validate confirm password if it has been entered
-                        if (confirmPassword) {
-                          setConfirmPasswordError(validateConfirmPassword(text, confirmPassword));
-                        }
-                      }
-                    }}
-                    placeholder="Enter your new password"
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    autoComplete="off"
-                    textContentType="none"
-                    importantForAutofill="no"
-                    editable={!loading}
+                  <Controller
+                    control={control}
+                    name="password"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <TextInput
+                        style={styles.passwordInput}
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="New password"
+                        secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                        autoComplete="off"
+                        textContentType="none"
+                        importantForAutofill="no"
+                        editable={!loading}
+                      />
+                    )}
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
@@ -186,61 +207,39 @@ export default function ResetPasswordScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-                {submitted && (() => {
-                  const passwordValidation = validatePasswordRules(password);
-                  const failingRules = [];
-                  
-                  if (!passwordValidation.rules.minLength) {
-                    failingRules.push('Minimum 8 characters');
-                  }
-                  if (!passwordValidation.rules.hasUppercase) {
-                    failingRules.push('At least 1 uppercase');
-                  }
-                  if (!passwordValidation.rules.hasLowercase) {
-                    failingRules.push('At least 1 lowercase');
-                  }
-                  if (!passwordValidation.rules.hasNumber) {
-                    failingRules.push('At least 1 number');
-                  }
-                  if (!passwordValidation.rules.hasSpecialChar) {
-                    failingRules.push('At least 1 special character');
-                  }
-                  
-                  if (failingRules.length === 0) {
-                    return null;
-                  }
-                  
-                  return (
-                    <View style={styles.validationContainer}>
-                      {failingRules.map((rule, index) => (
-                        <Text key={index} style={[styles.validationText, styles.invalidText]}>
-                          ✗ {rule}
-                        </Text>
-                      ))}
-                    </View>
-                  );
-                })()}
+                {passwordValue && (
+                  <Text style={styles.passwordHintText}>
+                    Must be at least 8 characters, include an uppercase letter, a lowercase letter, a number and a special character.
+                  </Text>
+                )}
+                {(isSubmitted || touchedFields.password) && errors.password && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    {errors.password.message}
+                  </Text>
+                )}
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Confirm New Password</Text>
                 <View style={styles.passwordContainer}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    value={confirmPassword}
-                    onChangeText={(text) => {
-                      setConfirmPassword(text);
-                      if (submitted) {
-                        setConfirmPasswordError(validateConfirmPassword(password, text));
-                      }
-                    }}
-                    placeholder="Confirm your new password"
-                    secureTextEntry={!showConfirmPassword}
-                    autoCapitalize="none"
-                    autoComplete="off"
-                    textContentType="none"
-                    importantForAutofill="no"
-                    editable={!loading}
+                  <Controller
+                    control={control}
+                    name="confirmPassword"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <TextInput
+                        style={styles.passwordInput}
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Confirm new password"
+                        secureTextEntry={!showConfirmPassword}
+                        autoCapitalize="none"
+                        autoComplete="off"
+                        textContentType="none"
+                        importantForAutofill="no"
+                        editable={!loading}
+                      />
+                    )}
                   />
                   <TouchableOpacity
                     style={styles.eyeButton}
@@ -254,19 +253,21 @@ export default function ResetPasswordScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-                {submitted && confirmPasswordError && (
+                {(isSubmitted || touchedFields.confirmPassword) && errors.confirmPassword && (
                   <Text style={[styles.validationText, styles.invalidText]}>
-                    ✗ {confirmPasswordError}
+                    {errors.confirmPassword.message}
                   </Text>
                 )}
               </View>
 
-              <AuthButton
-                text="Reset Password"
-                onPress={handleResetPassword}
-                variant="primary"
-                loading={loading}
-              />
+              <View style={styles.buttonContainer}>
+                <AuthButton
+                  text="Reset Password"
+                  onPress={handleSubmit(onSubmit)}
+                  variant="primary"
+                  loading={loading}
+                />
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -284,33 +285,39 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: 32,
   },
   content: {
     flex: 1,
   },
-  header: {
+  headerSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    paddingTop: 40,
+    paddingBottom: 32,
+    // paddingHorizontal: 20,
   },
   title: {
-    ...TypographyStyles.h2,
+    ...TypographyStyles.h3,
     textAlign: 'center',
-    marginBottom: 16,
-    color: '#222',
+    color: '#000',
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
-    textAlign: 'center',
+    fontSize: 16,
     color: '#666',
+    textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 20,
   },
   form: {
     flex: 1,
+    // paddingHorizontal: 20,
   },
   inputGroup: {
-    marginBottom: 15,
+    marginBottom: 20,
   },
   label: {
     ...TypographyStyles.body,
@@ -318,6 +325,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontSize: 16,
     lineHeight: 24,
+    fontWeight: '500',
   },
   input: {
     ...TypographyStyles.body,
@@ -328,7 +336,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#fff',
     fontSize: 16,
-    color: '#000',
+    color: '#222',
   },
   passwordContainer: {
     position: 'relative',
@@ -341,30 +349,36 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    paddingRight: 40,
+    paddingVertical: 12,
+    paddingRight: 48,
     backgroundColor: '#fff',
-    fontSize: 14,
+    fontSize: 16,
     color: '#222',
     flex: 1,
   },
   eyeButton: {
     position: 'absolute',
     right: 12,
+    top: 12,
     padding: 4,
-  },
-  validationContainer: {
-    marginTop: 8,
   },
   validationText: {
     fontSize: 12,
     lineHeight: 16,
-    marginBottom: 2,
-  },
-  validText: {
-    color: '#00994C',
+    marginTop: 6,
   },
   invalidText: {
     color: '#dc3545',
+  },
+  passwordHintText: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#6c757d',
+    marginTop: 8,
+    fontStyle: 'normal',
+  },
+  buttonContainer: {
+    marginTop: 8,
+    marginBottom: 0,
   },
 });

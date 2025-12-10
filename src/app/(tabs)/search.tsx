@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { blogs } from '../../../utils/data';
+import { blogs } from '../../utils/data';
 
 export default function SearchTab() {
   const [q, setQ] = useState('');
@@ -57,22 +57,23 @@ const styles = StyleSheet.create({
     ...TypographyStyles.body,
     backgroundColor: '#f2f2f2',
     paddingVertical: 12,
-    fontSize:15,
+    fontSize: 15,
     paddingHorizontal: 14,
     borderRadius: 10,
   },
   card: { backgroundColor: '#fff', padding: 12, borderRadius: 12 },
-  cardTitle: { 
+  cardTitle: {
     // ...TypographyStyles.h4
-     ...TypographyStyles.h2,
+    ...TypographyStyles.h2,
 
     // ...TypographyStyles.body,
     fontSize: 22,
     // fontWeight: '700',
-    color: '#000', 
+    color: '#000',
     lineHeight: 24,
     marginBottom: 8,
-    letterSpacing: -0,},
+    letterSpacing: -0,
+  },
   cardDesc: { ...TypographyStyles.body, color: '#666' },
   thumb: { width: 80, height: 80, borderRadius: 10 },
 });

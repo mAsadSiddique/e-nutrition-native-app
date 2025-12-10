@@ -2,40 +2,64 @@ import AuthButton from "@/src/components/auth/AuthButton";
 import { useUser } from "@/src/contexts/UserContext";
 import { useGetProfile, useUpdateProfile } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
-import { validateName } from "@/src/utils/validators";
-import { toast } from "@/utils/toast";
+import { toast } from "@/src/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
+import { yupResolver } from "@hookform/resolvers/yup";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import {
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    Alert,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as yup from "yup";
+
+// Validation schema
+const editProfileSchema = yup.object().shape({
+  name: yup
+    .string()
+    .required("Name is required")
+    .min(2, "Name must be at least 2 characters")
+    .max(50, "Name must be at most 50 characters")
+    .matches(/^[a-zA-Z\s'-]+$/, "Name can only contain letters, spaces, hyphens, and apostrophes"),
+});
+
+type EditProfileFormData = yup.InferType<typeof editProfileSchema>;
 
 export default function EditProfileScreen() {
   const { userProfile, updateProfile } = useUser();
   const router = useRouter();
 
-  const [name, setName] = useState(userProfile.name);
   const [email, setEmail] = useState(userProfile.email);
   const [profileImageBase64, setProfileImageBase64] = useState<string | null>(
     null
   );
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [nameError, setNameError] = useState<string | null>(null);
 
   const { mutate: updateUserProfile, isPending: loading } = useUpdateProfile();
   const { mutate: fetchProfile, data: profileData } = useGetProfile();
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitted, touchedFields },
+  } = useForm<EditProfileFormData>({
+    resolver: yupResolver(editProfileSchema),
+    defaultValues: {
+      name: userProfile.name || "",
+    },
+    mode: "onChange",
+  });
 
 
   useEffect(() => {
@@ -44,13 +68,13 @@ export default function EditProfileScreen() {
 
   useEffect(() => {
     if (profileData) {
-      setName(profileData.username);
+      setValue("name", profileData.username || "");
       setEmail(profileData.email);
       if (profileData.profileImage && !profileImageUri) {
         setProfileImageUri(profileData.profileImage);
       }
     }
-  }, [profileData, profileImageUri]);
+  }, [profileData, profileImageUri, setValue]);
 
   const handleImagePicker = useCallback(async () => {
     try {
@@ -106,63 +130,54 @@ export default function EditProfileScreen() {
     }
   }, []);
 
-  const handleSave = useCallback(async () => {
-    setSubmitted(true);
-
-    // Validate name
-    const nameErr = validateName(name);
-    setNameError(nameErr);
-
-    // If validation fails, stop here
-    if (nameErr) {
-      return;
-    }
-
-    const profileData: any = {
-      username: name.trim(),
-    };
-
-    // Add profile image if selected
-    if (profileImageBase64) {
-      profileData.profileImage = {
-        fileBase64: profileImageBase64,
-        fileName: "userProfileName",
+  const onSubmit = useCallback(
+    async (data: EditProfileFormData) => {
+      const profilePayload: any = {
+        username: data.name.trim(),
       };
-    }
 
-    updateUserProfile(profileData, {
-      onSuccess: async (data: any) => {
-        // ⭐ 1. Save NEW TOKEN returned by backend
-        const newToken = data?.data?.jwt;
-        if (newToken) {
-          await AsyncStorage.setItem("token", newToken);
-        }
+      // Add profile image if selected
+      if (profileImageBase64) {
+        profilePayload.profileImage = {
+          fileBase64: profileImageBase64,
+          fileName: "userProfileName",
+        };
+      }
 
-        // ⭐ 2. Now call fetchProfile() using the latest token
-        fetchProfile();
+      updateUserProfile(profilePayload, {
+        onSuccess: async (response: any) => {
+          // ⭐ 1. Save NEW TOKEN returned by backend
+          const newToken = response?.data?.jwt;
+          if (newToken) {
+            await AsyncStorage.setItem("token", newToken);
+          }
 
-        // ⭐ 3. Update local context
-        updateProfile({
-          name: name.trim(),
-          ...(profileImageUri && { profileImage: profileImageUri }),
-        });
+          // ⭐ 2. Now call fetchProfile() using the latest token
+          fetchProfile();
 
-        toast.success("Profile updated successfully!");
-        router.back();
-      },
-    });
-  }, [
-    name,
-    profileImageBase64,
-    profileImageUri,
-    updateUserProfile,
-    updateProfile,
-    fetchProfile,
-    router,
-  ]);
+          // ⭐ 3. Update local context
+          updateProfile({
+            name: data.name.trim(),
+            ...(profileImageUri && { profileImage: profileImageUri }),
+          });
+
+          toast.success("Profile updated successfully!");
+          router.back();
+        },
+      });
+    },
+    [
+      profileImageBase64,
+      profileImageUri,
+      updateUserProfile,
+      updateProfile,
+      fetchProfile,
+      router,
+    ]
+  );
 
   const renderProfileImage = () => {
-    
+
     if (profileImageUri) {
       return (
         <Image source={{ uri: profileImageUri }} style={styles.profileImage} />
@@ -207,22 +222,24 @@ export default function EditProfileScreen() {
         <View style={styles.formSection}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                if (submitted) {
-                  setNameError(validateName(text));
-                }
-              }}
-              placeholder="Enter your name"
-              autoCapitalize="words"
-              editable={!loading}
+            <Controller
+              control={control}
+              name="name"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  placeholder="Enter your name"
+                  autoCapitalize="words"
+                  editable={!loading}
+                />
+              )}
             />
-            {submitted && nameError && (
+            {(isSubmitted || touchedFields.name) && errors.name && (
               <Text style={[styles.validationText, styles.invalidText]}>
-                ✗ {nameError}
+                ✗ {errors.name.message}
               </Text>
             )}
           </View>
@@ -239,12 +256,8 @@ export default function EditProfileScreen() {
 
           <AuthButton
             text="Save Changes"
-            onPress={handleSave}
+            onPress={handleSubmit(onSubmit)}
             variant="primary"
-            disabled={
-              (name === (profileData?.username || userProfile.name) &&
-                !profileImageBase64)
-            }
             loading={loading}
           />
         </View>

@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { blogs as allBlogs } from '../../../utils/data';
+import { blogs as allBlogs } from '../../utils/data';
 
 export default function BookmarksTab() {
   const { savedBlogs, toggleSaveBlog } = useSavedBlogs();
@@ -47,7 +47,7 @@ export default function BookmarksTab() {
             </Text>
           </Pressable>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.saveButton}
           onPress={() => toggleSaveBlog(item.id)}
         >
@@ -82,7 +82,7 @@ export default function BookmarksTab() {
       <Text style={styles.mediumTitle}>Saved Articles</Text>
 
     </View>
-    
+
   ), []);
 
   if (savedBlogsList.length === 0) {
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     // paddingBottom: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-  borderBottomColor: '#E5E5E5',
+    borderBottomColor: '#E5E5E5',
 
   },
   mediumTitle: {

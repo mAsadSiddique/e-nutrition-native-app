@@ -9,8 +9,8 @@ import type {
   TSignupDetails,
   TUpdateProfile,
   TVerificationDetails,
-  UserProfile
-} from "../../utils/types";
+  UserProfile,
+} from "../utils/types";
 
 import { useMutation } from "@tanstack/react-query";
 import { axios } from "../config/axios";
@@ -38,7 +38,9 @@ export const useGetProfile = () => {
 // update user profile...
 export const useUpdateProfile = () => {
   return useMutation({
-    mutationFn: async (userUpdateDetails: TUpdateProfile): Promise<ApiResponse> => {
+    mutationFn: async (
+      userUpdateDetails: TUpdateProfile
+    ): Promise<ApiResponse> => {
       return await axios.put(SERVER_END_POINTS.EDIT_USER, userUpdateDetails);
     },
   });
@@ -46,7 +48,9 @@ export const useUpdateProfile = () => {
 
 export const useForgetPassword = () => {
   return useMutation({
-    mutationFn: async (payload: TForgotPasswordDetails): Promise<ApiResponse> => {
+    mutationFn: async (
+      payload: TForgotPasswordDetails
+    ): Promise<ApiResponse> => {
       return await axios.post(SERVER_END_POINTS.FORGET_PASSWORD, payload);
     },
   });
@@ -78,8 +82,13 @@ export const useVerification = () => {
 
 export const useResendVerification = () => {
   return useMutation({
-    mutationFn: async (payload: TResendVerificationDetails): Promise<ApiResponse> => {
-      return await axios.post(SERVER_END_POINTS.USER_RESEND_VERIFICATION, payload);
+    mutationFn: async (
+      payload: TResendVerificationDetails
+    ): Promise<ApiResponse> => {
+      return await axios.post(
+        SERVER_END_POINTS.USER_RESEND_VERIFICATION,
+        payload
+      );
     },
   });
 };

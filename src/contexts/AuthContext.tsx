@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import storage from '../../utils/storage';
-import type { UserProfile } from '../../utils/types';
+import storage from '../utils/storage';
+import type { UserProfile } from '../utils/types';
 
 interface AuthContextType {
   isAuthenticated: boolean;

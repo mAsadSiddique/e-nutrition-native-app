@@ -4,26 +4,12 @@ export default function SignInLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
-        headerTitle: '',
-        headerBackTitleVisible: false,
-        headerStyle: { backgroundColor: '#fff' },
-        headerTintColor: '#222',
+        headerShown: false,
       }}
     >
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen 
-        name="email" 
-        options={{ 
-          headerTitle: '',
-        }} 
-      />
-      <Stack.Screen 
-        name="code" 
-        options={{ 
-          headerTitle: '',
-        }} 
-      />
+      <Stack.Screen name="index" />
+      <Stack.Screen name="email" />
+      <Stack.Screen name="code" />
     </Stack>
   );
 }

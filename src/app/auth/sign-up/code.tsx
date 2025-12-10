@@ -4,23 +4,63 @@ import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useResendVerification, useVerification } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
-import { toast } from '@/utils/toast';
+import { toast } from '@/src/utils/toast';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as yup from 'yup';
+
+// Validation schema
+const signUpCodeSchema = yup.object().shape({
+  code: yup
+    .string()
+    .required('Please enter the verification code')
+    .length(6, 'The verification code must be exactly 6 digits')
+    .matches(/^\d+$/, 'The verification code must contain only numbers'),
+});
+
+type SignUpCodeFormData = yup.InferType<typeof signUpCodeSchema>;
+
 export default function SignUpCodeScreen() {
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
   const { signIn } = useAuth();
-  const [code, setCode] = useState('');
-  
+
   // Timer state
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
   const [isResendDisabled, setIsResendDisabled] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [codeError, setCodeError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const { mutate: verifyCode, isPending: verifyLoading } = useVerification();
   const { mutate: resendCode, isPending: resendLoading } = useResendVerification();
+
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitted },
+  } = useForm<SignUpCodeFormData>({
+    resolver: yupResolver(signUpCodeSchema),
+    defaultValues: {
+      code: '',
+    },
+    mode: 'onChange',
+  });
+
+  const codeValue = watch('code');
+
+  // Clear error when user starts typing
+  React.useEffect(() => {
+    if (codeValue && codeError) {
+      setCodeError(false);
+      setErrorMessage('');
+    }
+  }, [codeValue, codeError]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number): string => {
@@ -33,11 +73,11 @@ export default function SignUpCodeScreen() {
   const startTimer = () => {
     setTimeLeft(300);
     setIsResendDisabled(true);
-    
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-    
+
     timerRef.current = setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 1) {
@@ -55,7 +95,7 @@ export default function SignUpCodeScreen() {
   // Initialize timer on component mount
   useEffect(() => {
     startTimer();
-    
+
     // Cleanup on unmount
     return () => {
       if (timerRef.current) {
@@ -64,36 +104,37 @@ export default function SignUpCodeScreen() {
     };
   }, []);
 
-  const handleVerifyCode = async () => {
-    if (code.length !== 6) {
-      toast.error('Please enter the complete 6-digit code');
-      return;
-    }
-
+  const onSubmit = (data: SignUpCodeFormData) => {
     if (!email) {
       toast.error('Email address is missing');
       return;
     }
 
     // Call the verification API
-    verifyCode({
-      email,
-      code
-    }, {
-      onSuccess: async (data: any) => {
-        if (data.status === 200) {
-          toast.success(data.message || 'Your account has been successfully verified!');
-          if (data.data && data.data.token) {
-            await signIn(data.data.token);
-          }
-          router.replace('/auth/sign-in/email');
-        }
+    verifyCode(
+      {
+        email,
+        code: data.code,
       },
-      onError: (error: any) => {
-        const errorMessage = error?.response?.data?.message || error?.message || 'Verification failed';
-        toast.error(errorMessage);
+      {
+        onSuccess: async (response: any) => {
+          if (response.status === 200) {
+            toast.success(
+              response.message || 'Your account has been successfully verified!'
+            );
+            if (response.data && response.data.token) {
+              await signIn(response.data.token);
+            }
+            router.replace('/auth/sign-in/email');
+          }
+        },
+        onError: (error: any) => {
+          setCodeError(true);
+          setErrorMessage('The verification code you entered is incorrect. Please check and try again.');
+          setValue('code', '');
+        },
       }
-    });
+    );
   };
 
   const handleResendCode = () => {
@@ -119,7 +160,7 @@ export default function SignUpCodeScreen() {
       },
       onError: (error: any) => {
         const errorData = error?.response?.data;
-        
+
         if (error?.response?.status === 429) {
           // Handle rate limiting
           toast.error(errorData?.message || 'Please wait before requesting another code.');
@@ -135,103 +176,151 @@ export default function SignUpCodeScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-        <AuthLayout>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Check your inbox</Text>
-          <Text style={styles.subtitle}>
-            Enter the code we sent to {email} to complete your account setup.
-          </Text>
-        </View>
+      <AuthLayout>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            {/* Header Section */}
+            <View style={styles.headerSection}>
+              <Text style={styles.title}>Verify Your Email</Text>
+              <Text style={styles.subtitle}>
+                We've sent a 6-digit verification code to {email || 'your email address'}. Please enter the code below to complete your account setup.
+              </Text>
+            </View>
 
-        <View style={styles.form}>
-          <AuthCodeInput
-            length={6}
-            value={code}
-            onChange={setCode}
-          />
+            <View style={styles.form}>
+              <View style={styles.codeInputContainer}>
+                <Controller
+                  control={control}
+                  name="code"
+                  render={({ field: { onChange, value } }) => (
+                    <AuthCodeInput length={6} value={value} onChange={onChange} error={codeError} />
+                  )}
+                />
+                {(isSubmitted && errors.code) && (
+                  <Text style={styles.errorText}>{errors.code.message}</Text>
+                )}
+                {codeError && errorMessage && (
+                  <Text style={styles.errorText}>{errorMessage}</Text>
+                )}
+              </View>
 
-          <AuthButton
-            text="Verify Code"
-            onPress={handleVerifyCode}
-            variant="primary"
-            disabled={code.length !== 6}
-            loading={verifyLoading}
-          />
+              <View style={styles.buttonContainer}>
+                <AuthButton
+                  text="Verify Code"
+                  onPress={handleSubmit(onSubmit)}
+                  variant="primary"
+                  loading={verifyLoading}
+                />
+              </View>
 
-          <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>
-              Didn't receive the code?{' '}
-              {isResendDisabled ? (
-                <Text style={styles.timerText}>
-                  Resend in {formatTime(timeLeft)}
+              <View style={styles.resendContainer}>
+                <Text style={styles.resendText}>
+                  Didn't receive the code?{' '}
+                  {isResendDisabled ? (
+                    <Text style={styles.timerText}>
+                      Resend in {formatTime(timeLeft)}
+                    </Text>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={resendLoading ? undefined : handleResendCode}
+                      disabled={resendLoading}
+                    >
+                      <Text style={[styles.resendLink, resendLoading && styles.resendDisabled]}>
+                        {resendLoading ? 'Sending...' : 'Resend code'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </Text>
-              ) : (
-                <Text 
-                  style={[styles.resendLink, resendLoading && styles.resendDisabled]}
-                  onPress={resendLoading ? undefined : handleResendCode}
-                >
-                  {resendLoading ? 'Sending...' : 'Resend code'}
-                </Text>
-              )}
-            </Text>
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
-
-    </AuthLayout>
+        </ScrollView>
+      </AuthLayout>
     </>
-
   );
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 32,
+  },
   content: {
     flex: 1,
-    paddingTop: 40,
-
   },
-  header: {
+  headerSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    paddingTop: 40,
+    paddingBottom: 40,
+    // paddingHorizontal: 20,
   },
   title: {
-    ...TypographyStyles.h2,
+    ...TypographyStyles.h3,
     textAlign: 'center',
-    marginBottom: 16,
-    color: '#222',
+    color: '#000',
+    fontSize: 32,
+    fontWeight: '700',
+    marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
-    textAlign: 'center',
+    fontSize: 16,
     color: '#666',
+    textAlign: 'center',
     lineHeight: 22,
     paddingHorizontal: 20,
   },
   form: {
     flex: 1,
+    // paddingHorizontal: 20,
+  },
+  codeInputContainer: {
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 16,
+    marginBottom: 32,
+  },
+  buttonContainer: {
+    marginTop: 0,
+    marginBottom: 0,
   },
   resendContainer: {
-    marginTop: 26,
     alignItems: 'center',
+    marginTop: 24,
+    paddingHorizontal: 20,
   },
   resendText: {
-    fontSize: 16,
+    ...TypographyStyles.body,
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
-
-  },
-  resendLink: {
-    color: '#00994C',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  resendDisabled: {
-    color: '#999',
-    textDecorationLine: 'none',
+    lineHeight: 20,
   },
   timerText: {
+    fontSize: 14,
     color: '#00994C',
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  resendLink: {
+    fontSize: 14,
+    color: '#00994C',
+    fontWeight: '600',
+  },
+  resendDisabled: {
+    opacity: 0.5,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#dc3545',
+    marginTop: 12,
+    textAlign: 'center',
   },
 });

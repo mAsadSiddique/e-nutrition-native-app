@@ -2,9 +2,9 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { categories } from "../../utils/data";
 import AuthButton from "../components/auth/AuthButton";
 import { TypographyStyles } from "../theme/theme";
+import { categories } from "../utils/data";
 const MIN_SELECTION = 3;
 const PADDING_HORIZONTAL = 20;
 const GAP = 12;
@@ -82,10 +82,10 @@ const styles = StyleSheet.create({
   title: {
     ...TypographyStyles.h3,
     fontSize: 24,
-    marginBottom: 4,       
+    marginBottom: 4,
     textAlign: "center",
     color: "#000",
-    lineHeight: 28,      
+    lineHeight: 28,
   },
   subtitle: {
     ...TypographyStyles.body,
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#666",
     marginBottom: 8,
-    lineHeight: 18,      
+    lineHeight: 18,
   },
   error: {
     ...TypographyStyles.bodySmall,
