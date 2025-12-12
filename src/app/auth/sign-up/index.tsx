@@ -1,16 +1,46 @@
 import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
 import { TypographyStyles } from "@/src/theme/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
+import {
+  Dimensions,
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const handleSkip = () => {
+    router.replace("/category-selection");
+  };
+
   return (
     <AuthLayout>
       <View style={styles.container}>
+        {/* Close Button */}
+        <TouchableOpacity
+          style={[
+            styles.closeButton,
+            { top: Platform.OS === "ios" ? insets.top + 10 : 50 },
+          ]}
+          onPress={handleSkip}
+          activeOpacity={0.7}
+        >
+          <View style={styles.closeButtonContainer}>
+            <Ionicons name="close" size={22} color="#333" />
+          </View>
+        </TouchableOpacity>
+
         <View style={styles.header}>
           <Text style={styles.logo}>Nutrition</Text>
           <Text style={styles.title}>
@@ -75,6 +105,25 @@ export default function SignUpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    justifyContent: "center",
+  },
+  closeButton: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 50 : 50,
+    right: 0,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  closeButtonContainer: {
+    marginBottom: 70,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#F5F5F5",
+    alignItems: "center",
     justifyContent: "center",
   },
   header: {
