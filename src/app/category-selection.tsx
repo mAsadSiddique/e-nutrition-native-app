@@ -80,12 +80,12 @@ const styles = StyleSheet.create({
     paddingTop: 32,
   },
   title: {
-    ...TypographyStyles.h3,
-    fontSize: 24,
-    marginBottom: 4,
+  //  ...TypographyStyles.h3,
     textAlign: "center",
     color: "#000",
-    lineHeight: 28,
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,

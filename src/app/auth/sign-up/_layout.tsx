@@ -1,15 +1,7 @@
-import { Stack } from 'expo-router';
+import SignUp from '@/src/screens/Auth/SignUp/Layout';
 
 export default function SignUpLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="email" />
-      <Stack.Screen name="code" />
-    </Stack>
+   <SignUp/>
   );
 }

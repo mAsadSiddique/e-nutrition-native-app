@@ -8,6 +8,8 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -119,11 +121,16 @@ export default function ChangePassword() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Header Section */}
         <View style={styles.headerSection}>
           {/* <View style={styles.iconContainer}>
@@ -277,6 +284,7 @@ export default function ChangePassword() {
           </View>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -286,13 +294,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: 32,
+    paddingBottom: 100,
     flexGrow: 1,
   },
   headerSection: {
     alignItems: "center",
-    paddingTop: 32,
+    // paddingTop: 32,
     paddingBottom: 24,
     paddingHorizontal: 20,
   },

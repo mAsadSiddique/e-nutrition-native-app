@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 40,
     paddingBottom: 32,
-    // paddingHorizontal: 20,
+    paddingHorizontal: 20,
   },
   title: {
     ...TypographyStyles.h3,
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
     lineHeight: 22,
-    paddingHorizontal: 20,
+    // paddingHorizontal: 20,
   },
   form: {
     flex: 1,
