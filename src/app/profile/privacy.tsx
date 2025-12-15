@@ -81,12 +81,12 @@ export default function PrivacyScreen() {
 
         {/* Privacy Policy */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.linkItem}>
+          <TouchableOpacity style={styles.linkItem} onPress={() => router.push('/legal/privacy')}>
             <Text style={styles.linkText}>Privacy Policy</Text>
             <Ionicons name="chevron-forward-outline" size={16} color="#ccc" />
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.linkItem}>
+          <TouchableOpacity style={styles.linkItem} onPress={() => router.push('/legal/terms')}>
             <Text style={styles.linkText}>Terms of Service</Text>
             <Ionicons name="chevron-forward-outline" size={16} color="#ccc" />
           </TouchableOpacity>

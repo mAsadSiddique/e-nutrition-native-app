@@ -1,34 +1,44 @@
-import AuthButton from '@/src/components/auth/AuthButton';
-import AuthLayout from '@/src/components/auth/AuthLayout';
-import { useSignup } from '@/src/services/authApi';
-import { TypographyStyles } from '@/src/theme/theme';
-import { toast } from '@/src/utils/toast';
-import { Ionicons } from '@expo/vector-icons';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import * as yup from 'yup';
+import AuthButton from "@/src/components/auth/AuthButton";
+import AuthLayout from "@/src/components/auth/AuthLayout";
+import { useSignup } from "@/src/services/authApi";
+import { TypographyStyles } from "@/src/theme/theme";
+import { toast } from "@/src/utils/toast";
+import { Ionicons } from "@expo/vector-icons";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import {
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import * as yup from "yup";
 
 // Validation schema
 const signUpEmailSchema = yup.object().shape({
   email: yup
     .string()
-    .required('Email is required')
-    .email('Please enter a valid email address'),
+    .required("Email is required")
+    .email("Please enter a valid email address"),
   password: yup
     .string()
-    .required('Password is required')
-    .min(8, 'Minimum 8 characters')
-    .matches(/[A-Z]/, 'One uppercase letter')
-    .matches(/[a-z]/, 'One lowercase letter')
-    .matches(/[0-9]/, 'One number')
-    .matches(/[^A-Za-z0-9]/, 'One special character'),
+    .required("Password is required")
+    .min(8, "Minimum 8 characters")
+    .matches(/[A-Z]/, "One uppercase letter")
+    .matches(/[a-z]/, "One lowercase letter")
+    .matches(/[0-9]/, "One number")
+    .matches(/[^A-Za-z0-9]/, "One special character"),
   confirmPassword: yup
     .string()
-    .required('Please confirm your password')
-    .oneOf([yup.ref('password')], 'Passwords do not match'),
+    .required("Please confirm your password")
+    .oneOf([yup.ref("password")], "Passwords do not match"),
 });
 
 type SignUpEmailFormData = yup.InferType<typeof signUpEmailSchema>;
@@ -48,18 +58,18 @@ export default function SignUpScreen() {
   } = useForm<SignUpEmailFormData>({
     resolver: yupResolver(signUpEmailSchema),
     defaultValues: {
-      email: '',
-      password: '',
-      confirmPassword: '',
+      email: "",
+      password: "",
+      confirmPassword: "",
     },
-    mode: 'onChange',
+    mode: "onChange",
   });
 
-  const passwordValue = watch('password');
+  const passwordValue = watch("password");
 
   const handleGoogleSignUp = () => {
     // TODO: Implement Google sign up
-    console.log('Google sign up pressed');
+    console.log("Google sign up pressed");
     // Google sign up implementation will be added here
   };
 
@@ -78,14 +88,14 @@ export default function SignUpScreen() {
             toast.success(response.message);
             // Navigate to verification screen with email
             router.push({
-              pathname: '/auth/sign-up/code',
+              pathname: "/auth/sign-up/code",
               params: { email: data.email },
             });
           }
         },
         onError: (error: any) => {
           const errorMessage =
-            error?.response?.data?.message || error?.message || 'Signup failed';
+            error?.response?.data?.message || error?.message || "Signup failed";
           toast.error(errorMessage);
         },
       }
@@ -96,8 +106,8 @@ export default function SignUpScreen() {
     <AuthLayout>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
           style={styles.scrollView}
@@ -169,7 +179,7 @@ export default function SignUpScreen() {
                     disabled={loading}
                   >
                     <Ionicons
-                      name={showPassword ? 'eye' : 'eye-off'}
+                      name={showPassword ? "eye" : "eye-off"}
                       size={20}
                       color="#666"
                     />
@@ -177,7 +187,8 @@ export default function SignUpScreen() {
                 </View>
                 {passwordValue && (
                   <Text style={styles.passwordHintText}>
-                    Must be at least 8 characters, include an uppercase letter, a lowercase letter, a number and a special character.
+                    Must be at least 8 characters, include an uppercase letter,
+                    a lowercase letter, a number and a special character.
                   </Text>
                 )}
                 {(isSubmitted || touchedFields.password) && errors.password && (
@@ -215,17 +226,18 @@ export default function SignUpScreen() {
                     disabled={loading}
                   >
                     <Ionicons
-                      name={showConfirmPassword ? 'eye' : 'eye-off'}
+                      name={showConfirmPassword ? "eye" : "eye-off"}
                       size={20}
                       color="#666"
                     />
                   </TouchableOpacity>
                 </View>
-                {(isSubmitted || touchedFields.confirmPassword) && errors.confirmPassword && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    {errors.confirmPassword.message}
-                  </Text>
-                )}
+                {(isSubmitted || touchedFields.confirmPassword) &&
+                  errors.confirmPassword && (
+                    <Text style={[styles.validationText, styles.invalidText]}>
+                      {errors.confirmPassword.message}
+                    </Text>
+                  )}
               </View>
 
               <View style={styles.buttonContainer}>
@@ -271,6 +283,25 @@ export default function SignUpScreen() {
                   </Text>
                 </Text>
               </View>
+              <View style={styles.termsContainer}>
+                <Text style={styles.termsText}>
+                  By creating an account, you agree to our{" "}
+                  <Text
+                    style={styles.termsLink}
+                    onPress={() => router.push("/legal/terms")}
+                  >
+                    Terms & Services
+                  </Text>{" "}
+                  and acknowledge that our{" "}
+                  <Text
+                    style={styles.termsLink}
+                    onPress={() => router.push("/legal/privacy")}
+                  >
+                    Privacy Policy
+                  </Text>{" "}
+                  applies to you.
+                </Text>
+              </View>
             </View>
           </View>
         </ScrollView>
@@ -294,24 +325,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 40,
     paddingBottom: 32,
     // paddingHorizontal: 20,
   },
   title: {
     ...TypographyStyles.h3,
-    textAlign: 'center',
-    color: '#000',
+    textAlign: "center",
+    color: "#000",
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 20,
   },
@@ -324,43 +355,43 @@ const styles = StyleSheet.create({
   },
   label: {
     ...TypographyStyles.body,
-    color: '#222',
+    color: "#222",
     marginBottom: 8,
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   input: {
     ...TypographyStyles.body,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     fontSize: 16,
-    color: '#222',
+    color: "#222",
   },
   passwordContainer: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
   },
   passwordInput: {
     ...TypographyStyles.body,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     paddingRight: 48,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     fontSize: 16,
-    color: '#222',
+    color: "#222",
     flex: 1,
   },
   eyeButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     top: 12,
     padding: 4,
@@ -371,35 +402,35 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   invalidText: {
-    color: '#dc3545',
+    color: "#dc3545",
   },
   passwordHintText: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#6c757d',
+    color: "#6c757d",
     marginTop: 8,
-    fontStyle: 'normal',
+    fontStyle: "normal",
   },
   buttonContainer: {
     marginTop: 8,
     marginBottom: 0,
   },
   dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: 20,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: "#e0e0e0",
   },
   dividerText: {
     ...TypographyStyles.body,
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     paddingHorizontal: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   socialButtonContainer: {
     marginTop: 0,
@@ -408,10 +439,10 @@ const styles = StyleSheet.create({
   googleIcon: {
     width: 20,
     height: 20,
-    resizeMode: 'contain',
+    resizeMode: "contain",
   },
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 8,
     paddingBottom: 20,
   },
@@ -419,11 +450,29 @@ const styles = StyleSheet.create({
     ...TypographyStyles.body,
     fontSize: 14,
     lineHeight: 20,
-    color: '#000',
-    textAlign: 'center',
+    color: "#000",
+    textAlign: "center",
   },
   footerLink: {
-    color: '#00994C',
-    fontWeight: '600',
+    color: "#00994C",
+    fontWeight: "600",
+  },
+  termsContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+
+  termsText: {
+    ...TypographyStyles.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#666",
+    textAlign: "center",
+  },
+  termsLink: {
+    color: "#00994C",
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });

@@ -47,6 +47,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="blogs" options={{ headerShown: false }} />
                 <Stack.Screen name="auth" options={{ headerShown: false }} />
+                  <Stack.Screen name="legal" options={{ headerShown: false }} />
                 <Stack.Screen name="sign-up" options={{ headerShown: false }} />
                 <Stack.Screen name="sign-in" options={{ headerShown: false }} />
                 <Stack.Screen name="profile" options={{ headerShown: false }} />

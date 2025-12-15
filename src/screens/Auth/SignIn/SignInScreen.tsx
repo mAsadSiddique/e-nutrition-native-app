@@ -11,15 +11,15 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import * as yup from "yup";
 
@@ -29,10 +29,7 @@ const signInEmailSchema = yup.object().shape({
     .string()
     .required("Email is required")
     .email("Please enter a valid email address"),
-  password: yup
-    .string()
-    .required("Password is required")
-    .trim(),
+  password: yup.string().required("Password is required").trim(),
 });
 
 type SignInEmailFormData = yup.InferType<typeof signInEmailSchema>;
@@ -231,10 +228,29 @@ export default function SignInScreen() {
                   Don't have an account?{" "}
                   <Text
                     style={styles.footerLink}
-                    onPress={() => router.push("/auth/sign-up")}
+                    onPress={() => router.push("/auth/sign-up/email")}
                   >
                     Sign up
                   </Text>
+                </Text>
+              </View>
+              <View style={styles.termsContainer}>
+                <Text style={styles.termsText}>
+                  By creating an account, you agree to our{" "}
+                  <Text
+                    style={styles.termsLink}
+                    onPress={() => router.push("/legal/terms")}
+                  >
+                    Terms & Services
+                  </Text>{" "}
+                  and acknowledge that our{" "}
+                  <Text
+                    style={styles.termsLink}
+                    onPress={() => router.push("/legal/privacy")}
+                  >
+                    Privacy Policy
+                  </Text>{" "}
+                  applies to you.
                 </Text>
               </View>
             </View>
@@ -394,5 +410,23 @@ const styles = StyleSheet.create({
   },
   invalidText: {
     color: "#dc3545",
+  },
+  termsContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+
+  termsText: {
+    ...TypographyStyles.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#666",
+    textAlign: "center",
+  },
+  termsLink: {
+    color: "#00994C",
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 });
