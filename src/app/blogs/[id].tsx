@@ -1,9 +1,10 @@
+import { useGetBlog } from '@/src/services/blogApi';
 import { TypographyStyles } from '@/src/theme/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { blogs } from '../../utils/data';
+// note: no local dummy blogs used; fetching from API
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTAINER_PADDING = 16;
 const CARD_GAP = 12;
@@ -12,7 +13,34 @@ const CARD_WIDTH = Math.floor((AVAILABLE_WIDTH - CARD_GAP) / 2);
 export default function BlogDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const blog = useMemo(() => blogs.find((b) => String(b.id) === String(id)), [id]);
+  const { mutate: fetchBlog, isPending: blogLoading } = useGetBlog();
+  const [blog, setBlog] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    // determine whether id param is numeric id or slug
+    const isNumeric = /^[0-9]+$/.test(String(id));
+    if (isNumeric) {
+      fetchBlog({ id }, {
+        onSuccess: (res: any) => setBlog(res),
+        onError: () => setBlog(null),
+      });
+    } else {
+      fetchBlog({ slug: String(id) }, {
+        onSuccess: (res: any) => setBlog(res),
+        onError: () => setBlog(null),
+      });
+    }
+  }, [id, fetchBlog]);
+
+  if (blogLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="small" color="#000" />
+      </View>
+    );
+  }
+
   if (!blog) {
     return (
       <View style={styles.center}>
@@ -20,7 +48,58 @@ export default function BlogDetailScreen() {
       </View>
     );
   }
-  const recos = blogs.filter((b) => blog.recommended.includes(b.id));
+  const recos: any[] = [];
+
+  type InlinePart = { text: string; bold?: boolean };
+  type Node = { type: 'heading' | 'paragraph'; parts: InlinePart[] };
+  /**
+   * Convert HTML string to plain text while preserving newlines and decoding entities.
+   * - replaces <br> and <br/> with newlines
+   * - replaces block tags (p, div, h1..h6, li) with newlines
+   * - strips remaining tags
+   * - decodes common HTML entities and numeric entities
+   */
+  const htmlToPlainText = (html: string) => {
+    if (!html) return '';
+    let s = String(html);
+
+    // Normalize line breaks for <br> and closing block tags
+    s = s.replace(/<br\s*\/?>/gi, '\n');
+    s = s.replace(/<\/(p|div|h[1-6]|li)>/gi, '\n');
+    s = s.replace(/<(p|div|h[1-6]|li)[^>]*>/gi, '\n');
+
+    // Remove all remaining tags
+    s = s.replace(/<[^>]+>/g, '');
+
+    // Decode common HTML entities
+    const entities: Record<string, string> = {
+      '&nbsp;': ' ',
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&ndash;': '–',
+      '&mdash;': '—',
+    };
+    s = s.replace(/&[a-zA-Z0-9#]+;?/g, (entity) => {
+      if (entities[entity]) return entities[entity];
+      // numeric decimal
+      const mDec = entity.match(/&#(\d+);?/);
+      if (mDec) return String.fromCharCode(parseInt(mDec[1], 10));
+      // numeric hex
+      const mHex = entity.match(/&#x([0-9a-fA-F]+);?/);
+      if (mHex) return String.fromCharCode(parseInt(mHex[1], 16));
+      return entity;
+    });
+
+    // Collapse multiple newlines into max two and trim
+    s = s.replace(/\r\n|\r/g, '\n');
+    s = s.replace(/\n{3,}/g, '\n\n');
+    // Trim spaces on each line
+    s = s.split('\n').map(line => line.replace(/[ \t]+$/g, '') ).join('\n');
+    return s.trim();
+  };
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
@@ -35,34 +114,9 @@ export default function BlogDetailScreen() {
         >
           {blog.author} • {blog.date}
         </Text>
-        <Image source={blog.image} style={styles.headerImage} />
-        {blog.content.map((item, idx) => {
-          if (typeof item === 'string') {
-            return (
-              <Text key={idx} style={styles.paragraph}>{item}</Text>
-            );
-          }
-          if (item.type === 'heading') {
-            // First content item after image shouldn't have top margin
-            const isFirstHeading = idx === 0 && item.type === 'heading';
-            return (
-              <Text
-                key={idx}
-                style={[
-                  styles.contentHeading,
-                  isFirstHeading && styles.contentHeadingFirst
-                ]}
-              >
-                {item.text}
-              </Text>
-            );
-          } else if (item.type === 'paragraph') {
-            return (
-              <Text key={idx} style={styles.contentParagraph}>{item.text}</Text>
-            );
-          }
-          return null;
-        })}
+        <Image source={{ uri: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop' }} style={styles.headerImage} />
+        {/** Render content as plain text (HTML stripped and entities decoded) */}
+        <Text style={styles.contentParagraph}>{htmlToPlainText(blog.content || '')}</Text>
 
         <View style={styles.recommendedSection}>
           <Text style={styles.sectionTitle}>Recommended Blogs</Text>

@@ -2,11 +2,11 @@ import Axios, { AxiosInstance, type AxiosRequestConfig } from "axios";
 import storage from "../utils/storage";
 import { createQueryClient } from "./react-query";
 
-const BASE_URL = "https://af27956d214b.ngrok-free.app";
+const BASE_URL = "https://ba558a340c25.ngrok-free.app";
 
 export const axios: AxiosInstance = Axios.create({
   baseURL: BASE_URL,
-  timeout: 10000, // 10 second timeout
+  timeout: 10000,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",

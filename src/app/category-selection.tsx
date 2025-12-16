@@ -1,25 +1,46 @@
+import { SimpleCategory, useGetCategories } from "@/src/services/categoryApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AuthButton from "../components/auth/AuthButton";
 import { TypographyStyles } from "../theme/theme";
-import { categories } from "../utils/data";
 const MIN_SELECTION = 3;
 const PADDING_HORIZONTAL = 20;
 const GAP = 12;
 
 export default function CategorySelectionScreen() {
   const router = useRouter();
-  const [selected, setSelected] = useState<string[]>([]);
+  // store selected category IDs
+  const [selected, setSelected] = useState<number[]>([]);
 
-  const toggle = (name: string) => {
+  const toggle = (id: number) => {
     setSelected((prev) => {
-      const exists = prev.includes(name);
-      if (exists) return prev.filter((n) => n !== name);
-      return [...prev, name];
+      const exists = prev.includes(id);
+      if (exists) return prev.filter((n) => n !== id);
+      return [...prev, id];
     });
   };
+
+  // disable automatic fetch; we'll trigger it once with a guard
+  const { data: categoriesApiData, isLoading: categoriesLoading, error: categoriesError, refetch: fetchCategories } = useGetCategories({ enabled: false });
+  const [categoriesState, setCategoriesState] = useState<SimpleCategory[]>([]);
+
+  const didFetchRef = useRef(false);
+  useEffect(() => {
+    if (didFetchRef.current) return;
+    didFetchRef.current = true;
+    fetchCategories().catch((err: any) => console.error('Categories fetch error:', err?.response || err));
+  }, [fetchCategories]);
+
+  useEffect(() => {
+    // Only use top-level categories (ignore any nested children)
+    if (Array.isArray(categoriesApiData)) {
+      const parentCategories = categoriesApiData.map((cat: any) => ({ id: cat.id, name: cat.name }));
+      setCategoriesState(parentCategories);
+    }
+  }, [categoriesApiData]);
 
   const canContinue = selected.length >= MIN_SELECTION;
 
@@ -40,13 +61,13 @@ export default function CategorySelectionScreen() {
           contentContainerStyle={styles.pillsContainer}
           showsVerticalScrollIndicator={false}
         >
-          {categories.map((item) => (
+          {categoriesState.map((item) => (
             <TouchableOpacity
-              key={item.id}
-              onPress={() => toggle(item.name)}
-              style={[styles.pill, selected.includes(item.name) && styles.pillActive]}
+              key={keyExtractor(item)}
+              onPress={() => toggle(item.id)}
+              style={[styles.pill, selected.includes(item.id) && styles.pillActive]}
             >
-              <Text style={[styles.pillText, selected.includes(item.name) && styles.pillTextActive]}>
+              <Text style={[styles.pillText, selected.includes(item.id) && styles.pillTextActive]}>
                 {item.name}
               </Text>
             </TouchableOpacity>
@@ -56,12 +77,14 @@ export default function CategorySelectionScreen() {
 
       <AuthButton
         text="Continue"
-        onPress={() =>
-          router.push({
-            pathname: "/(tabs)/(home)",
-            params: { selected: JSON.stringify(selected) },
-          })
-        }
+        onPress={async () => {
+          try {
+            await AsyncStorage.setItem('selected_categories', JSON.stringify(selected));
+            router.replace('/');
+          } catch (err) {
+            console.error('Failed to save selected categories:', err);
+          }
+        }}
         variant="primary"
         disabled={!canContinue}
       />

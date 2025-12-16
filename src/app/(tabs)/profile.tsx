@@ -117,6 +117,14 @@ export default function ProfileTab() {
   const handlePrivacy = useCallback(() => {
     router.push('/profile/privacy');
   }, [router]);
+
+  const handleTerms = useCallback(() => {
+    router.push('/legal/terms');
+  }, [router]);
+
+  const handlePrivacyPolicy = useCallback(() => {
+    router.push('/legal/privacy');
+  }, [router]);
  
   const handleLogout = useCallback(() => {
     setShowLogoutSheet(true);
@@ -200,6 +208,20 @@ export default function ProfileTab() {
               title="Change Password"
               iconName="lock-closed-outline"
               onPress={handleChangePassword}
+            />
+            <View style={styles.divider} />
+            
+            <SettingItem
+              title="Terms & Conditions"
+              iconName="document-text-outline"
+              onPress={handleTerms}
+            />
+            <View style={styles.divider} />
+            
+            <SettingItem
+              title="Privacy Policy"
+              iconName="shield-checkmark-outline"
+              onPress={handlePrivacyPolicy}
             />
             {/* <View style={styles.divider} />  
             <SettingItem

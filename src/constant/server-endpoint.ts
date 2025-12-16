@@ -9,4 +9,6 @@ export const SERVER_END_POINTS = {
   CHANGE_PASSWORD: "/user/change/password",
   USER_PROFILE: "/user/profile",
   EDIT_USER: "/user/profile",
+    USER_BLOG: "/user/blog",
+    CATEGORIES: "/category",
 }
