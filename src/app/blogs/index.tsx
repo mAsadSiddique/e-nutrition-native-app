@@ -1,5 +1,6 @@
+import { SkeletonBlogCard } from "@/src/components/ui/SkeletonLoader";
 import { useSavedBlogs } from "@/src/contexts/SavedBlogsContext";
-import { useGetBlogs } from "@/src/services/blogApi";
+import { useGetFeaturedBlogs, useGetForYouBlogs } from "@/src/services/blogApi";
 import { useGetCategories } from "@/src/services/categoryApi";
 import { TypographyStyles } from "@/src/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,7 +8,6 @@ import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Pressable,
@@ -25,10 +25,15 @@ export default function BlogListScreen() {
   const [activeTab, setActiveTab] = useState<"for-you" | "featured">("for-you");
   const [loading, setLoading] = useState(true);
   const {
-    mutate: fetchBlogs,
-    isPending: blogsLoading,
-    error: blogsError,
-  } = useGetBlogs();
+    mutate: fetchForYouBlogs,
+    isPending: forYouBlogsLoading,
+    error: forYouBlogsError,
+  } = useGetForYouBlogs();
+  const {
+    mutate: fetchFeaturedBlogs,
+    isPending: featuredBlogsLoading,
+    error: featuredBlogsError,
+  } = useGetFeaturedBlogs();
   const {
     refetch: fetchCategories,
     data: categoriesApiData,
@@ -38,13 +43,16 @@ export default function BlogListScreen() {
   const { savedBlogs, toggleSaveBlog } = useSavedBlogs();
   const isFocused = useIsFocused();
 
-  // State to hold raw API blogs
-  const [blogs, setBlogs] = useState<any[]>([]);
-  const didFetchRef = useRef(false);
+  // State to hold raw API blogs for both tabs
+  const [forYouBlogs, setForYouBlogs] = useState<any[]>([]);
+  const [featuredBlogs, setFeaturedBlogs] = useState<any[]>([]);
+  const didFetchForYouRef = useRef(false);
+  const didFetchFeaturedRef = useRef(false);
+  
+  // Fetch For You blogs on mount
   useEffect(() => {
-    // Ensure we fetch categories and blogs only once on mount
-    if (didFetchRef.current) return;
-    didFetchRef.current = true;
+    if (didFetchForYouRef.current) return;
+    didFetchForYouRef.current = true;
 
     // If categories are already available (e.g., fetched on Category Selection), skip refetch
     if (!Array.isArray(categoriesApiData) || categoriesApiData.length === 0) {
@@ -53,23 +61,41 @@ export default function BlogListScreen() {
       );
     }
 
-    fetchBlogs(undefined, {
+    fetchForYouBlogs(undefined, {
       onSuccess: (res: any) => {
         const received = res?.data?.blogs ?? res?.blogs ?? res ?? [];
-        setBlogs(Array.isArray(received) ? received : []);
+        setForYouBlogs(Array.isArray(received) ? received : []);
         console.debug(
-          "[BlogList] fetched blogs count:",
+          "[BlogList] fetched For You blogs count:",
           Array.isArray(received) ? received.length : 0
         );
       },
       onError: (err: any) =>
-        console.error("Blogs fetch error:", err?.response || err),
+        console.error("For You blogs fetch error:", err?.response || err),
     });
 
     const timer = setTimeout(() => setLoading(false), 150);
     return () => clearTimeout(timer);
-    // empty deps to ensure single fetch on mount only
   }, []);
+
+  // Fetch Featured blogs when switching to Featured tab
+  useEffect(() => {
+    if (activeTab === "featured" && !didFetchFeaturedRef.current) {
+      didFetchFeaturedRef.current = true;
+      fetchFeaturedBlogs(undefined, {
+        onSuccess: (res: any) => {
+          const received = res?.data?.blogs ?? res?.blogs ?? res ?? [];
+          setFeaturedBlogs(Array.isArray(received) ? received : []);
+          console.debug(
+            "[BlogList] fetched Featured blogs count:",
+            Array.isArray(received) ? received.length : 0
+          );
+        },
+        onError: (err: any) =>
+          console.error("Featured blogs fetch error:", err?.response || err),
+      });
+    }
+  }, [activeTab, fetchFeaturedBlogs]);
 
   const handleTabPress = useCallback((tab: "for-you" | "featured") => {
     setActiveTab(tab);
@@ -77,7 +103,7 @@ export default function BlogListScreen() {
 
   const handleBlogPress = useCallback(
     (item: any) => {
-      const slugOrId = item?.slug ?? item?.id ?? '';
+      const slugOrId = item?.slug ?? item?.id ?? "";
       if (!slugOrId) return;
       router.push(`/(tabs)/(home)/${slugOrId}`);
     },
@@ -100,36 +126,6 @@ export default function BlogListScreen() {
         ]}
         onPress={() => handleBlogPress(item)}
       >
-        <View style={styles.blogHeader}>
-          <View style={styles.authorRow}>
-            <Image
-              source={{ uri: `https://i.pravatar.cc/40?img=${item.id}` }}
-              style={styles.authorAvatar}
-            />
-            <Pressable onPress={() => handleAuthorPress(item.author)}>
-              <Text style={styles.authorText}>
-                <Text style={styles.grayText}>
-                  In {activeTab === "featured" ? "Featured" : "For you"} by
-                </Text>
-
-                <Text style={styles.blackText}> {item.author}</Text>
-              </Text>
-            </Pressable>
-          </View>
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={() => toggleSaveBlog(item.id)}
-          >
-            <Ionicons
-              name={
-                savedBlogs.includes(item.id) ? "bookmark" : "bookmark-outline"
-              }
-              size={20}
-              color={savedBlogs.includes(item.id) ? "#1A8917" : "#666"}
-            />
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.blogContent}>
           <View style={styles.blogTextContent}>
             <Text numberOfLines={3} style={styles.blogTitle}>
@@ -139,10 +135,28 @@ export default function BlogListScreen() {
               {item.description}
             </Text>
             <Text style={styles.blogMeta}>{item.date}</Text>
+            {/* left column (text) */}
+            </View>
+          {/* right column: image on top, date + save row below */}
+          <View style={styles.rightColumn}>
+            <Pressable onPress={() => handleBlogPress(item)}>
+              <Image source={item.image} style={styles.blogImage} />
+            </Pressable>
+
+            <View style={styles.metaRow}>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={() => toggleSaveBlog(item.id)}
+                accessibilityLabel="Save article"
+              >
+                <Ionicons
+                  name={savedBlogs.includes(item.id) ? 'bookmark' : 'bookmark-outline'}
+                  size={18}
+                  color={savedBlogs.includes(item.id) ? '#1A8917' : '#666'}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
-          <Pressable onPress={() => handleBlogPress(item)}>
-            <Image source={item.image} style={styles.blogImage} />
-          </Pressable>
         </View>
         <View style={styles.divider} />
       </Pressable>
@@ -195,13 +209,22 @@ export default function BlogListScreen() {
     [activeTab, handleTabPress]
   );
 
+  const blogsLoading = activeTab === "for-you" ? forYouBlogsLoading : featuredBlogsLoading;
+  const blogsError = activeTab === "for-you" ? forYouBlogsError : featuredBlogsError;
+
   if (loading || blogsLoading || categoriesLoading) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         {renderHeader()}
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#000" />
-        </View>
+        <FlatList
+          data={Array.from({ length: 5 })}
+          keyExtractor={(_, index) => `skeleton-${index}`}
+          renderItem={() => <SkeletonBlogCard />}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={null}
+        />
       </SafeAreaView>
     );
   }
@@ -217,7 +240,11 @@ export default function BlogListScreen() {
           <TouchableOpacity
             onPress={() => {
               fetchCategories();
-              fetchBlogs();
+              if (activeTab === "for-you") {
+                fetchForYouBlogs();
+              } else {
+                fetchFeaturedBlogs();
+              }
             }}
             style={styles.authTestButton}
           >
@@ -228,8 +255,11 @@ export default function BlogListScreen() {
     );
   }
 
+  // Get blogs for the active tab
+  const currentBlogs = activeTab === "for-you" ? forYouBlogs : featuredBlogs;
+  
   // Map raw API blogs to UI shape
-  const apiBlogs = (blogs || []).map((b: any) => b as any);
+  const apiBlogs = (currentBlogs || []).map((b: any) => b as any);
 
   // Helper: strip HTML tags and decode common entities
   const stripHtml = (html: string) => {
@@ -293,7 +323,7 @@ export default function BlogListScreen() {
   });
 
   const finalBlogs = mappedApiBlogs;
-  const displayData = activeTab === "featured" ? [] : finalBlogs;
+  const displayData = finalBlogs;
   // Debugging hint: log how many items will be rendered
   console.debug("[BlogList] displayData length:", displayData.length);
   return (
@@ -414,7 +444,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   saveButton: {
-    padding: 4,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    alignSelf: 'flex-end',
   },
   authorRow: {
     flexDirection: "row",
@@ -475,6 +510,19 @@ const styles = StyleSheet.create({
     height: 112,
     borderRadius: 4,
     backgroundColor: "#f0f0f0",
+  },
+  rightColumn: {
+    width: 112,
+    marginLeft: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+  },
+  metaRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
   },
   divider: {
     height: 1,

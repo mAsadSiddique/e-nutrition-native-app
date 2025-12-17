@@ -2,8 +2,9 @@ import { useGetBlog } from '@/src/services/blogApi';
 import { TypographyStyles } from '@/src/theme/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SkeletonBlogDetail } from '@/src/components/ui/SkeletonLoader';
 // note: no local dummy blogs used; fetching from API
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTAINER_PADDING = 16;
@@ -35,9 +36,15 @@ export default function BlogDetailScreen() {
 
   if (blogLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="small" color="#000" />
-      </View>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <SkeletonBlogDetail />
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 

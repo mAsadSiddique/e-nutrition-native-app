@@ -2,7 +2,7 @@ import Axios, { AxiosInstance, type AxiosRequestConfig } from "axios";
 import storage from "../utils/storage";
 import { createQueryClient } from "./react-query";
 
-const BASE_URL = "https://ba558a340c25.ngrok-free.app";
+const BASE_URL = "https://1c447384c1eb.ngrok-free.app";
 
 export const axios: AxiosInstance = Axios.create({
   baseURL: BASE_URL,

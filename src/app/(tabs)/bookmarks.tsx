@@ -47,16 +47,6 @@ export default function BookmarksTab() {
             </Text>
           </Pressable>
         </View>
-        <TouchableOpacity
-          style={styles.saveButton}
-          onPress={() => toggleSaveBlog(item.id)}
-        >
-          <Ionicons
-            name="bookmark"
-            size={20}
-            color="#1A8917"
-          />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.blogContent}>
@@ -69,9 +59,16 @@ export default function BookmarksTab() {
           </Text>
           <Text style={styles.blogMeta}>{item.date}</Text>
         </View>
-        <Pressable onPress={() => handleBlogPress(item.id)}>
-          <Image source={item.image} style={styles.blogImage} />
-        </Pressable>
+          <TouchableOpacity style={styles.saveButton} onPress={() => toggleSaveBlog(item.id)}>
+            <Ionicons
+              name={savedBlogs.includes(item.id) ? 'bookmark' : 'bookmark-outline'}
+              size={18}
+              color={savedBlogs.includes(item.id) ? '#1A8917' : '#666'}
+            />
+          </TouchableOpacity>
+          <Pressable onPress={() => handleBlogPress(item.id)}>
+            <Image source={item.image} style={styles.blogImage} />
+          </Pressable>
       </View>
       <View style={styles.divider} />
     </Pressable>
@@ -175,7 +172,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   saveButton: {
-    padding: 4,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   authorRow: {
     flexDirection: 'row',

@@ -1,10 +1,12 @@
-import { SimpleCategory, useGetCategories } from "@/src/services/categoryApi";
+import { useGetCategories } from "@/src/services/categoryApi";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AuthButton from "../components/auth/AuthButton";
+import { SkeletonCategoryPill } from "../components/ui/SkeletonLoader";
 import { TypographyStyles } from "../theme/theme";
 const MIN_SELECTION = 3;
 const PADDING_HORIZONTAL = 20;
@@ -12,39 +14,51 @@ const GAP = 12;
 
 export default function CategorySelectionScreen() {
   const router = useRouter();
-  // store selected category IDs
+  // store selected category IDs (including nested children)
   const [selected, setSelected] = useState<number[]>([]);
+const {
+  data: categoriesApiData,
+  isLoading: categoriesLoading,
+} = useGetCategories();
 
-  const toggle = (id: number) => {
-    setSelected((prev) => {
-      const exists = prev.includes(id);
-      if (exists) return prev.filter((n) => n !== id);
-      return [...prev, id];
-    });
-  };
+ const toggle = (id: number) => {
+  setSelected((prev) =>
+    prev.includes(id) ? prev.filter((n) => n !== id) : [...prev, id]
+  );
+};
 
-  // disable automatic fetch; we'll trigger it once with a guard
-  const { data: categoriesApiData, isLoading: categoriesLoading, error: categoriesError, refetch: fetchCategories } = useGetCategories({ enabled: false });
-  const [categoriesState, setCategoriesState] = useState<SimpleCategory[]>([]);
-
-  const didFetchRef = useRef(false);
-  useEffect(() => {
-    if (didFetchRef.current) return;
-    didFetchRef.current = true;
-    fetchCategories().catch((err: any) => console.error('Categories fetch error:', err?.response || err));
-  }, [fetchCategories]);
-
-  useEffect(() => {
-    // Only use top-level categories (ignore any nested children)
-    if (Array.isArray(categoriesApiData)) {
-      const parentCategories = categoriesApiData.map((cat: any) => ({ id: cat.id, name: cat.name }));
-      setCategoriesState(parentCategories);
-    }
-  }, [categoriesApiData]);
 
   const canContinue = selected.length >= MIN_SELECTION;
 
   const keyExtractor = (item: { id: number }) => String(item.id);
+
+  // Log selected categories for debugging
+  useEffect(() => {
+    console.log("[CategorySelection] Selected category IDs updated:", selected);
+    console.log("[CategorySelection] Number of selected categories:", selected.length);
+    if (selected.length > 0) {
+      console.log("[CategorySelection] Selected IDs list:", selected.join(', '));
+    }
+  }, [selected]);
+
+  // Check AsyncStorage on mount to see if there are previously saved categories
+  useEffect(() => {
+    const checkAsyncStorage = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('selected_categories');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          console.log('[CategorySelection] Found previously saved categories in AsyncStorage:', parsed);
+          console.log('[CategorySelection] Number of previously saved IDs:', parsed.length);
+        } else {
+          console.log('[CategorySelection] No previously saved categories found in AsyncStorage');
+        }
+      } catch (err) {
+        console.error('[CategorySelection] Error reading AsyncStorage:', err);
+      }
+    };
+    checkAsyncStorage();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -61,17 +75,33 @@ export default function CategorySelectionScreen() {
           contentContainerStyle={styles.pillsContainer}
           showsVerticalScrollIndicator={false}
         >
-          {categoriesState.map((item) => (
-            <TouchableOpacity
-              key={keyExtractor(item)}
-              onPress={() => toggle(item.id)}
-              style={[styles.pill, selected.includes(item.id) && styles.pillActive]}
-            >
-              <Text style={[styles.pillText, selected.includes(item.id) && styles.pillTextActive]}>
-                {item.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {categoriesLoading ? (
+            // Show skeleton pills while loading
+            Array.from({ length: 12 }).map((_, index) => (
+              <SkeletonCategoryPill key={`skeleton-${index}`} />
+            ))
+          ) : (
+categoriesApiData?.map((item) => (
+  <TouchableOpacity
+    key={item.id}
+    onPress={() => toggle(item.id)}
+    style={[
+      styles.pill,
+      selected.includes(item.id) && styles.pillActive,
+    ]}
+  >
+    <Text
+      style={[
+        styles.pillText,
+        selected.includes(item.id) && styles.pillTextActive,
+      ]}
+    >
+      {item.name}
+    </Text>
+  </TouchableOpacity>
+))
+
+          )}
         </ScrollView>
       </View>
 
@@ -79,10 +109,29 @@ export default function CategorySelectionScreen() {
         text="Continue"
         onPress={async () => {
           try {
-            await AsyncStorage.setItem('selected_categories', JSON.stringify(selected));
+            console.log('[CategorySelection] Saving to AsyncStorage - Selected category IDs:', selected);
+            console.log('[CategorySelection] Number of selected categories:', selected.length);
+            const jsonString = JSON.stringify(selected);
+            console.log('[CategorySelection] JSON string to save:', jsonString);
+            
+            await AsyncStorage.setItem('selected_categories', jsonString);
+            
+            // Verify it was saved by reading it back
+            const saved = await AsyncStorage.getItem('selected_categories');
+            console.log('[CategorySelection] Verification - Read back from AsyncStorage:', saved);
+            
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              console.log('[CategorySelection] Verification - Parsed saved data:', parsed);
+              console.log('[CategorySelection] Verification - Number of saved IDs:', parsed.length);
+              console.log('[CategorySelection] ✅ Successfully saved to AsyncStorage');
+            } else {
+              console.warn('[CategorySelection] ⚠️ Warning: Could not read back from AsyncStorage');
+            }
+            
             router.replace('/');
           } catch (err) {
-            console.error('Failed to save selected categories:', err);
+            console.error('[CategorySelection] ❌ Failed to save selected categories:', err);
           }
         }}
         variant="primary"
@@ -148,6 +197,9 @@ const styles = StyleSheet.create({
   pillActive: {
     backgroundColor: "#1A8917",
     borderColor: "#1A8917",
+  },
+  pillNested: {
+    marginLeft: 16,
   },
   pillText: {
     ...TypographyStyles.body,
