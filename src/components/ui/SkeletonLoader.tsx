@@ -23,7 +23,7 @@ export function SkeletonLoader({
     const shimmerAnimation = Animated.loop(
       Animated.timing(shimmerAnim, {
         toValue: 1,
-        duration: 1500,
+        duration: 2000,
         useNativeDriver: true,
       })
     );

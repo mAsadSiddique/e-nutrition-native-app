@@ -1,10 +1,10 @@
+import { SkeletonBlogDetail } from '@/src/components/ui/SkeletonLoader';
 import { useGetBlog } from '@/src/services/blogApi';
 import { TypographyStyles } from '@/src/theme/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SkeletonBlogDetail } from '@/src/components/ui/SkeletonLoader';
 // note: no local dummy blogs used; fetching from API
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTAINER_PADDING = 16;
@@ -16,23 +16,42 @@ export default function BlogDetailScreen() {
   const router = useRouter();
   const { mutate: fetchBlog, isPending: blogLoading } = useGetBlog();
   const [blog, setBlog] = useState<any | null>(null);
+  
+useEffect(() => {
+  if (!id) return;
+  setBlog(null);
+  const isNumeric = /^[0-9]+$/.test(String(id));
 
-  useEffect(() => {
-    if (!id) return;
-    // determine whether id param is numeric id or slug
-    const isNumeric = /^[0-9]+$/.test(String(id));
-    if (isNumeric) {
-      fetchBlog({ id }, {
-        onSuccess: (res: any) => setBlog(res),
-        onError: () => setBlog(null),
-      });
-    } else {
-      fetchBlog({ slug: String(id) }, {
-        onSuccess: (res: any) => setBlog(res),
-        onError: () => setBlog(null),
-      });
+  fetchBlog(
+    isNumeric ? { id } : { slug: String(id) },
+    {
+      onSuccess: (res: any) => {
+        setBlog(res);
+      },
+      onError: () => {
+        setBlog(null);
+      },
     }
-  }, [id, fetchBlog]);
+  );
+}, [id]);
+
+
+  // useEffect(() => {
+  //   if (!id) return;
+  //   // determine whether id param is numeric id or slug
+  //   const isNumeric = /^[0-9]+$/.test(String(id));
+  //   if (isNumeric) {
+  //     fetchBlog({ id }, {
+  //       onSuccess: (res: any) => setBlog(res),
+  //       onError: () => setBlog(null),
+  //     });
+  //   } else {
+  //     fetchBlog({ slug: String(id) }, {
+  //       onSuccess: (res: any) => setBlog(res),
+  //       onError: () => setBlog(null),
+  //     });
+  //   }
+  // }, [id, fetchBlog]);
 
   if (blogLoading) {
     return (
@@ -67,46 +86,34 @@ export default function BlogDetailScreen() {
    * - decodes common HTML entities and numeric entities
    */
   const htmlToPlainText = (html: string) => {
-    if (!html) return '';
-    let s = String(html);
+  if (!html) return '';
+  let s = String(html);
 
-    // Normalize line breaks for <br> and closing block tags
-    s = s.replace(/<br\s*\/?>/gi, '\n');
-    s = s.replace(/<\/(p|div|h[1-6]|li)>/gi, '\n');
-    s = s.replace(/<(p|div|h[1-6]|li)[^>]*>/gi, '\n');
+  // ❗ REMOVE CODE BLOCKS COMPLETELY
+  s = s.replace(/<pre[\s\S]*?<\/pre>/gi, '');
 
-    // Remove all remaining tags
-    s = s.replace(/<[^>]+>/g, '');
+  // Normalize line breaks
+  s = s.replace(/<br\s*\/?>/gi, '\n');
+  s = s.replace(/<\/(p|div|h[1-6]|li)>/gi, '\n');
+  s = s.replace(/<(p|div|h[1-6]|li)[^>]*>/gi, '\n');
 
-    // Decode common HTML entities
-    const entities: Record<string, string> = {
-      '&nbsp;': ' ',
-      '&amp;': '&',
-      '&lt;': '<',
-      '&gt;': '>',
-      '&quot;': '"',
-      '&#39;': "'",
-      '&ndash;': '–',
-      '&mdash;': '—',
-    };
-    s = s.replace(/&[a-zA-Z0-9#]+;?/g, (entity) => {
-      if (entities[entity]) return entities[entity];
-      // numeric decimal
-      const mDec = entity.match(/&#(\d+);?/);
-      if (mDec) return String.fromCharCode(parseInt(mDec[1], 10));
-      // numeric hex
-      const mHex = entity.match(/&#x([0-9a-fA-F]+);?/);
-      if (mHex) return String.fromCharCode(parseInt(mHex[1], 16));
-      return entity;
-    });
+  // Remove remaining tags
+  s = s.replace(/<[^>]+>/g, '');
 
-    // Collapse multiple newlines into max two and trim
-    s = s.replace(/\r\n|\r/g, '\n');
-    s = s.replace(/\n{3,}/g, '\n\n');
-    // Trim spaces on each line
-    s = s.split('\n').map(line => line.replace(/[ \t]+$/g, '') ).join('\n');
-    return s.trim();
-  };
+  // Decode entities
+  s = s.replace(/&nbsp;/g, ' ')
+       .replace(/&amp;/g, '&')
+       .replace(/&lt;/g, '<')
+       .replace(/&gt;/g, '>')
+       .replace(/&quot;/g, '"')
+       .replace(/&#39;/g, "'");
+
+  // Clean newlines
+  s = s.replace(/\n{3,}/g, '\n\n').trim();
+
+  return s;
+};
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
@@ -115,12 +122,12 @@ export default function BlogDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>{blog.title}</Text>
-        <Text
+        {/* <Text
           style={styles.meta}
           onPress={() => router.push(`/(tabs)/(home)/author/${encodeURIComponent(blog.author)}`)}
         >
           {blog.author} • {blog.date}
-        </Text>
+        </Text> */}
         <Image source={{ uri: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop' }} style={styles.headerImage} />
         {/** Render content as plain text (HTML stripped and entities decoded) */}
         <Text style={styles.contentParagraph}>{htmlToPlainText(blog.content || '')}</Text>
