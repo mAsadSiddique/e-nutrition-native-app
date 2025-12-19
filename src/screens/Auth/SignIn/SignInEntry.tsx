@@ -1,11 +1,11 @@
-import AuthButton from '@/src/components/auth/AuthButton';
-import AuthLayout from '@/src/components/auth/AuthLayout';
-import { TypographyStyles } from '@/src/theme/theme';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
+import AuthButton from "@/src/components/auth/AuthButton";
+import AuthLayout from "@/src/components/auth/AuthLayout";
+import { TypographyStyles } from "@/src/theme/theme";
+import { useRouter } from "expo-router";
+import React from "react";
+import { Dimensions, Image, StyleSheet, Text, View } from "react-native";
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
 export default function SignInEntry() {
   const router = useRouter();
@@ -14,8 +14,14 @@ export default function SignInEntry() {
     <AuthLayout>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.logo}>Nutrition</Text>
-          <Text style={styles.title}>Human{'\n'}stories and{'\n'}ideas.</Text>
+          <Image
+            source={require("../../../assets/logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.title}>
+            Human{"\n"}stories and{"\n"}ideas.
+          </Text>
           <Text style={styles.subtitle}>
             Discover perspectives that deepen understanding.
           </Text>
@@ -25,33 +31,33 @@ export default function SignInEntry() {
           <AuthButton
             text="Sign in with Google"
             onPress={() => {
-              console.log('Google sign in pressed');
+              console.log("Google sign in pressed");
             }}
             variant="outline"
             leftIcon={
               <Image
-                source={require('@/src/assets/images/google.png')}
+                source={require("@/src/assets/images/google.png")}
                 style={{
                   width: 20,
                   height: undefined,
                   aspectRatio: 1,
-                  resizeMode: 'contain',
+                  resizeMode: "contain",
                 }}
               />
             }
           />
           <AuthButton
             text="Sign in with Email"
-            onPress={() => router.push('/auth/sign-in/email')}
+            onPress={() => router.push("/auth/sign-in/email")}
             variant="outline"
             leftIcon={
               <Image
-                source={require('@/src/assets/images/icon2.png')}
+                source={require("@/src/assets/images/icon2.png")}
                 style={{
                   width: 20,
                   height: undefined,
                   aspectRatio: 1,
-                  resizeMode: 'contain',
+                  resizeMode: "contain",
                 }}
               />
             }
@@ -60,10 +66,10 @@ export default function SignInEntry() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Don't have an account?{' '}
+            Don't have an account?{" "}
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/auth/sign-up')}
+              onPress={() => router.push("/auth/sign-up")}
             >
               Sign up
             </Text>
@@ -84,20 +90,18 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    ...TypographyStyles.h2,
-    fontSize: 28,
-    marginBottom: 12,
-    color: "#000",
-    letterSpacing: -0.3,
-    lineHeight: 32,
+    width: 300,
+    height: 200,
+    resizeMode: "contain",
+    alignSelf: "center",
+    marginBottom: 6,
   },
-
   title: {
     ...TypographyStyles.h3,
     textAlign: "center",
     fontSize: screenWidth > 375 ? 48 : 54,
     lineHeight: 56,
-    marginBottom: 14, 
+    marginBottom: 14,
     color: "#000",
     letterSpacing: -1,
   },

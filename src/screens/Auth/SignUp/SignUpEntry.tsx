@@ -5,13 +5,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
-    Dimensions,
-    Image,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Dimensions,
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
@@ -27,7 +27,6 @@ export default function SignUpEntry() {
   return (
     <AuthLayout>
       <View style={styles.container}>
-        {/* Close Button */}
         <TouchableOpacity
           style={[
             styles.closeButton,
@@ -42,7 +41,11 @@ export default function SignUpEntry() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Text style={styles.logo}>Nutrition</Text>
+          <Image
+            source={require("../../../assets/logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>
             Human{"\n"}stories and{"\n"}ideas.
           </Text>
@@ -54,7 +57,6 @@ export default function SignUpEntry() {
           <AuthButton
             text="Sign up with Google"
             onPress={() => {
-              // TODO: Implement Google sign up
               console.log("Google sign up pressed");
             }}
             variant="outline"
@@ -132,20 +134,19 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    ...TypographyStyles.h2,
-    fontSize: 28,
-    marginBottom: 12,
-    color: "#000",
-    letterSpacing: -0.3,
-    lineHeight: 32,
+    width: 300,
+    height: 200,
+    resizeMode: "contain",
+    alignSelf: "center",
+    marginBottom: 6,
   },
-
   title: {
     ...TypographyStyles.h3,
     textAlign: "center",
     fontSize: screenWidth > 375 ? 48 : 54,
     lineHeight: 56,
-    marginBottom: 14, 
+    marginTop: 0,
+    marginBottom: 14,
     color: "#000",
     letterSpacing: -1,
   },

@@ -2,23 +2,23 @@ import AuthButton from "@/src/components/auth/AuthButton";
 import { useUser } from "@/src/contexts/UserContext";
 import { useGetProfile, useUpdateProfile } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
+import storage from "@/src/utils/storage";
 import { toast } from "@/src/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
 import { yupResolver } from "@hookform/resolvers/yup";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-    Alert,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as yup from "yup";
@@ -143,19 +143,13 @@ export default function EditProfile() {
           fileName: "userProfileName",
         };
       }
-
       updateUserProfile(profilePayload, {
         onSuccess: async (response: any) => {
-          // ⭐ 1. Save NEW TOKEN returned by backend
           const newToken = response?.data?.jwt;
           if (newToken) {
-            await AsyncStorage.setItem("token", newToken);
+            await storage.setToken(newToken);
           }
-
-          // ⭐ 2. Now call fetchProfile() using the latest token
           fetchProfile();
-
-          // ⭐ 3. Update local context
           updateProfile({
             name: data.name.trim(),
             ...(profileImageUri && { profileImage: profileImageUri }),
@@ -165,6 +159,7 @@ export default function EditProfile() {
           router.back();
         },
       });
+
     },
     [
       profileImageBase64,

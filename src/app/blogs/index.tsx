@@ -48,7 +48,7 @@ export default function BlogListScreen() {
   const [featuredBlogs, setFeaturedBlogs] = useState<any[]>([]);
   const didFetchForYouRef = useRef(false);
   const didFetchFeaturedRef = useRef(false);
-  
+
   // Fetch For You blogs on mount
   useEffect(() => {
     if (didFetchForYouRef.current) return;
@@ -136,7 +136,7 @@ export default function BlogListScreen() {
             </Text>
             <Text style={styles.blogMeta}>{item.date}</Text>
             {/* left column (text) */}
-            </View>
+          </View>
           {/* right column: image on top, date + save row below */}
           <View style={styles.rightColumn}>
             <Pressable onPress={() => handleBlogPress(item)}>
@@ -150,9 +150,13 @@ export default function BlogListScreen() {
                 accessibilityLabel="Save article"
               >
                 <Ionicons
-                  name={savedBlogs.includes(item.id) ? 'bookmark' : 'bookmark-outline'}
+                  name={
+                    savedBlogs.includes(item.id)
+                      ? "bookmark"
+                      : "bookmark-outline"
+                  }
                   size={18}
-                  color={savedBlogs.includes(item.id) ? '#1A8917' : '#666'}
+                  color={savedBlogs.includes(item.id) ? "#1A8917" : "#666"}
                 />
               </TouchableOpacity>
             </View>
@@ -170,7 +174,15 @@ export default function BlogListScreen() {
         {/* 
 
        Title */}
-        <Text style={styles.mediumTitle}>NutriLife</Text>
+        <View style={styles.logoWrapper}>
+          <Image
+            source={require("../../assets/logo.png")}
+            style={styles.mediumTitle}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* <Text style={styles.mediumTitle}>NutriLife</Text> */}
 
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
@@ -209,8 +221,10 @@ export default function BlogListScreen() {
     [activeTab, handleTabPress]
   );
 
-  const blogsLoading = activeTab === "for-you" ? forYouBlogsLoading : featuredBlogsLoading;
-  const blogsError = activeTab === "for-you" ? forYouBlogsError : featuredBlogsError;
+  const blogsLoading =
+    activeTab === "for-you" ? forYouBlogsLoading : featuredBlogsLoading;
+  const blogsError =
+    activeTab === "for-you" ? forYouBlogsError : featuredBlogsError;
 
   if (loading || blogsLoading || categoriesLoading) {
     return (
@@ -254,14 +268,8 @@ export default function BlogListScreen() {
       </SafeAreaView>
     );
   }
-
-  // Get blogs for the active tab
   const currentBlogs = activeTab === "for-you" ? forYouBlogs : featuredBlogs;
-  
-  // Map raw API blogs to UI shape
   const apiBlogs = (currentBlogs || []).map((b: any) => b as any);
-
-  // Helper: strip HTML tags and decode common entities
   const stripHtml = (html: string) => {
     if (!html) return "";
     const text = html.replace(/<[^>]*>/g, "");
@@ -294,7 +302,6 @@ export default function BlogListScreen() {
       year: "numeric",
     });
   };
-
   const categoryMap = new Map<number, string>();
   // if (Array.isArray(categoriesApiData)) {
   //   categoriesApiData.forEach((c: any) => categoryMap.set(c.id, c.name));
@@ -372,30 +379,40 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
   },
+
   listContent: {
     paddingBottom: 20,
   },
   separator: {
     height: 4,
   },
-
-  // Header styles
+  logoWrapper: {
+    width: "10%",
+    alignItems: "flex-start",
+  },
   headerContainer: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: 12,
+    paddingBottom: 0,
     backgroundColor: "#fff",
+    alignItems: "flex-start", // 🔥 start alignment
   },
   mediumTitle: {
-    ...TypographyStyles.h2,
-    fontSize: 28,
-    // marginBottom: screenHeight * 0.08,
-    color: "#000",
-    letterSpacing: -0.5,
-    marginBottom: 20,
+    width: 210, // logo visually bara
+    height: 130, // 🔥 real visible height (not screen height)
+    marginBottom: -20,
+    marginLeft: -70,
   },
 
-  // Tab styles
+  //  mediumTitle: {
+  //   ...TypographyStyles.h2,
+  //   fontSize: 28,
+  //   // marginBottom: screenHeight * 0.08,
+  //   color: "#000",
+  //   letterSpacing: -0.5,
+  //   marginBottom: 20,
+  // },
+
   tabContainer: {
     ...TypographyStyles.body,
     flexDirection: "row",
@@ -446,10 +463,10 @@ const styles = StyleSheet.create({
   saveButton: {
     width: 36,
     height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
   },
   authorRow: {
     flexDirection: "row",
@@ -514,14 +531,14 @@ const styles = StyleSheet.create({
   rightColumn: {
     width: 112,
     marginLeft: 8,
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
   },
   metaRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 8,
   },
   divider: {

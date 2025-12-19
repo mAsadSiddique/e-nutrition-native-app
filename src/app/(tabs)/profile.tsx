@@ -250,6 +250,8 @@ export default function ProfileTab() {
               iconName="shield-checkmark-outline"
               onPress={handlePrivacyPolicy}
             />
+            <View style={styles.divider} />
+
             <SettingItem
               title="Rate on Play Store"
               iconName="star-outline"
