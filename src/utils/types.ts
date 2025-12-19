@@ -71,7 +71,7 @@ export interface AuthUser {
   updatedAt: string;
 }
 
-export interface UserProfile {
+export type TUserProfile = {
   id: number;
   username: string;
   email: string;
@@ -89,7 +89,7 @@ export interface UserProfile {
     email: boolean;
     phoneNumber: boolean;
   };
-}
+};
 
 export interface AuthResponse {
   user: AuthUser;

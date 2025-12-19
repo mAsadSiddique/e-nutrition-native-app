@@ -1,6 +1,6 @@
 import AuthButton from "@/src/components/auth/AuthButton";
-import { useUser } from "@/src/contexts/UserContext";
 import { useGetProfile, useUpdateProfile } from "@/src/services/authApi";
+import { useAuth } from "@/src/store/auth/hook";
 import { TypographyStyles } from "@/src/theme/theme";
 import storage from "@/src/utils/storage";
 import { toast } from "@/src/utils/toast";
@@ -36,16 +36,16 @@ const editProfileSchema = yup.object().shape({
 type EditProfileFormData = yup.InferType<typeof editProfileSchema>;
 
 export default function EditProfile() {
-  const { userProfile, updateProfile } = useUser();
+  const { userProfile, updateUserProfile } = useAuth();
   const router = useRouter();
 
-  const [email, setEmail] = useState(userProfile.email);
+  const [email, setEmail] = useState(userProfile?.email || "");
   const [profileImageBase64, setProfileImageBase64] = useState<string | null>(
     null
   );
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
 
-  const { mutate: updateUserProfile, isPending: loading } = useUpdateProfile();
+  const { mutate: updateUserProfileAPI, isPending: loading } = useUpdateProfile();
   const { mutate: fetchProfile, data: profileData } = useGetProfile();
 
   const {
@@ -56,7 +56,7 @@ export default function EditProfile() {
   } = useForm<EditProfileFormData>({
     resolver: yupResolver(editProfileSchema),
     defaultValues: {
-      name: userProfile.name || "",
+      name: userProfile?.username || "",
     },
     mode: "onChange",
   });
@@ -143,15 +143,15 @@ export default function EditProfile() {
           fileName: "userProfileName",
         };
       }
-      updateUserProfile(profilePayload, {
+      updateUserProfileAPI(profilePayload, {
         onSuccess: async (response: any) => {
           const newToken = response?.data?.jwt;
           if (newToken) {
             await storage.setToken(newToken);
           }
           fetchProfile();
-          updateProfile({
-            name: data.name.trim(),
+          updateUserProfile({
+            username: data.name.trim(),
             ...(profileImageUri && { profileImage: profileImageUri }),
           });
 
@@ -165,7 +165,7 @@ export default function EditProfile() {
       profileImageBase64,
       profileImageUri,
       updateUserProfile,
-      updateProfile,
+      updateUserProfile,
       fetchProfile,
       router,
     ]
@@ -180,7 +180,7 @@ export default function EditProfile() {
     }
 
     // Show current profile image
-    if (userProfile.profileImage) {
+    if (userProfile?.profileImage) {
       return (
         <Image
           source={{ uri: userProfile.profileImage }}

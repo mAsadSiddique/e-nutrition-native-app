@@ -1,5 +1,5 @@
 import { SkeletonBlogCard } from "@/src/components/ui/SkeletonLoader";
-import { useSavedBlogs } from "@/src/contexts/SavedBlogsContext";
+import { useSavedBlogs } from "@/src/store/savedBlogs/hook";
 import { useGetFeaturedBlogs, useGetForYouBlogs } from "@/src/services/blogApi";
 import { useGetCategories } from "@/src/services/categoryApi";
 import { TypographyStyles } from "@/src/theme/theme";

@@ -1,7 +1,7 @@
 import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
-import { useAuth } from "@/src/contexts/AuthContext";
 import { useLoginProfile } from "@/src/services/authApi";
+import { useAuth } from "@/src/store/auth/hook";
 import { TypographyStyles } from "@/src/theme/theme";
 import storage from "@/src/utils/storage";
 import { toast } from "@/src/utils/toast";
@@ -36,7 +36,7 @@ type SignInEmailFormData = yup.InferType<typeof signInEmailSchema>;
 
 export default function SignInScreen() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { onSetProfile } = useAuth();
   const { email: prefilledEmail } = useLocalSearchParams<{ email?: string }>();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -70,12 +70,24 @@ export default function SignInScreen() {
       },
       {
         onSuccess: async (response: any) => {
-          if (response.status === 200 && response.data?.jwt) {
-            await storage.setToken(response.data.jwt);
-            await signIn(response.data.jwt);
-            toast.success(response.message);
-            router.replace("/category-selection");
+          console.log('Login response: ', response);
+          console.log('User data: ', response?.data?.user);
+
+          // Axios interceptor already unwraps response.data, so response is already the data object
+          if (response?.data?.jwt) {
+            await storage.setToken(response?.data?.jwt);
           }
+
+          if (response?.data?.user) {
+            console.log('Setting user profile in store:', response?.data?.user);
+            onSetProfile(response?.data?.user);
+          } else {
+            console.warn('No user data in response');
+          }
+
+          toast.success(response.message || "Login successful");
+          router.replace("/category-selection");
+
         },
         onError: (error: any) => {
           const apiMessage = error?.response?.data?.message;

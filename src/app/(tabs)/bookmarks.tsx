@@ -1,4 +1,4 @@
-import { useSavedBlogs } from '@/src/contexts/SavedBlogsContext';
+import { useSavedBlogs } from '@/src/store/savedBlogs/hook';
 import { TypographyStyles } from '@/src/theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';

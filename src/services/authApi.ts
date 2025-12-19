@@ -8,8 +8,8 @@ import type {
   TSetPasswordDetails,
   TSignupDetails,
   TUpdateProfile,
+  TUserProfile,
   TVerificationDetails,
-  UserProfile,
 } from "../utils/types";
 
 import { useMutation } from "@tanstack/react-query";
@@ -27,7 +27,7 @@ export const useLoginProfile = () => {
 // Get user profile using mutation (to avoid React Query v5 compatibility issues)
 export const useGetProfile = () => {
   return useMutation({
-    mutationFn: async (): Promise<UserProfile> => {
+    mutationFn: async (): Promise<TUserProfile> => {
       const response = await axios.get(SERVER_END_POINTS.USER_PROFILE);
       // Handle the nested response structure: data.profile
       return response.data.profile;

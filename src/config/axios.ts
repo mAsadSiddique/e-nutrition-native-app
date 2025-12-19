@@ -1,8 +1,8 @@
 import Axios, { AxiosInstance, type AxiosRequestConfig } from "axios";
-import storage from "../utils/storage";
 import { createQueryClient } from "./react-query";
+import store from "../store/store";
 
-const BASE_URL = "https://23f209fe042a.ngrok-free.app";
+const BASE_URL = "https://716cddbcadef.ngrok-free.app";
 
 export const axios: AxiosInstance = Axios.create({
   baseURL: BASE_URL,
@@ -15,7 +15,8 @@ export const axios: AxiosInstance = Axios.create({
 });
 
 const authRequestInterceptor: any = async (config: AxiosRequestConfig) => {
-  const token = await storage.getToken();
+  const state = store.getState();
+  const token = state.auth.userToken;
 
   const newConfig = { ...config };
   if (!newConfig.headers) {

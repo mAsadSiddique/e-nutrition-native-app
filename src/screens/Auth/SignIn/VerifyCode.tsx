@@ -1,7 +1,7 @@
 import AuthButton from '@/src/components/auth/AuthButton';
 import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
 import AuthLayout from '@/src/components/auth/AuthLayout';
-import { useAuth } from '@/src/contexts/AuthContext';
+import { useAuth } from '@/src/store/auth/hook';
 import { useResendVerification, useVerification } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
 import { toast } from '@/src/utils/toast';

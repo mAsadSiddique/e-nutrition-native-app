@@ -2,11 +2,14 @@ import { useGetCategories } from "@/src/services/categoryApi";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AuthButton from "../components/auth/AuthButton";
 import { SkeletonCategoryPill } from "../components/ui/SkeletonLoader";
+import { useAuth } from "../store/auth/hook";
+import { useCategories } from "../store/categories/hook";
+import { useCategoriesSelector } from "../store/categories/selector";
 import { TypographyStyles } from "../theme/theme";
 const MIN_SELECTION = 3;
 const PADDING_HORIZONTAL = 20;
@@ -14,32 +17,21 @@ const GAP = 12;
 
 export default function CategorySelectionScreen() {
   const router = useRouter();
-  // store selected category IDs (including nested children)
-  const [selected, setSelected] = useState<number[]>([]);
-const {
-  data: categoriesApiData,
-  isLoading: categoriesLoading,
-} = useGetCategories();
+  const { isAuthenticated } = useAuth();
+  const { selectedCategories } = useCategoriesSelector();
+  const { onToggleCategory, onSetSelectedCategories } = useCategories();
+  const {
+    data: categoriesApiData,
+    isLoading: categoriesLoading,
+  } = useGetCategories();
 
- const toggle = (id: number) => {
-  setSelected((prev) =>
-    prev.includes(id) ? prev.filter((n) => n !== id) : [...prev, id]
-  );
-};
+  const toggle = (id: number) => {
+    onToggleCategory(id);
+  };
 
 
-  const canContinue = selected.length >= MIN_SELECTION;
-
-  const keyExtractor = (item: { id: number }) => String(item.id);
-
-  // Log selected categories for debugging
-  useEffect(() => {
-    console.log("[CategorySelection] Selected category IDs updated:", selected);
-    console.log("[CategorySelection] Number of selected categories:", selected.length);
-    if (selected.length > 0) {
-      console.log("[CategorySelection] Selected IDs list:", selected.join(', '));
-    }
-  }, [selected]);
+  const canContinue = selectedCategories.length >= MIN_SELECTION;
+  console.log('canContinue: ', canContinue)
 
   // Check AsyncStorage on mount to see if there are previously saved categories
   useEffect(() => {
@@ -50,6 +42,7 @@ const {
           const parsed = JSON.parse(saved);
           console.log('[CategorySelection] Found previously saved categories in AsyncStorage:', parsed);
           console.log('[CategorySelection] Number of previously saved IDs:', parsed.length);
+          onSetSelectedCategories(parsed);
         } else {
           console.log('[CategorySelection] No previously saved categories found in AsyncStorage');
         }
@@ -58,7 +51,7 @@ const {
       }
     };
     checkAsyncStorage();
-  }, []);
+  }, [onSetSelectedCategories]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -81,25 +74,25 @@ const {
               <SkeletonCategoryPill key={`skeleton-${index}`} />
             ))
           ) : (
-categoriesApiData?.map((item) => (
-  <TouchableOpacity
-    key={item.id}
-    onPress={() => toggle(item.id)}
-    style={[
-      styles.pill,
-      selected.includes(item.id) && styles.pillActive,
-    ]}
-  >
-    <Text
-      style={[
-        styles.pillText,
-        selected.includes(item.id) && styles.pillTextActive,
-      ]}
-    >
-      {item.name}
-    </Text>
-  </TouchableOpacity>
-))
+            categoriesApiData?.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                onPress={() => toggle(item.id)}
+                style={[
+                  styles.pill,
+                  selectedCategories.includes(item.id) && styles.pillActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.pillText,
+                    selectedCategories.includes(item.id) && styles.pillTextActive,
+                  ]}
+                >
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            ))
 
           )}
         </ScrollView>
@@ -109,17 +102,17 @@ categoriesApiData?.map((item) => (
         text="Continue"
         onPress={async () => {
           try {
-            console.log('[CategorySelection] Saving to AsyncStorage - Selected category IDs:', selected);
-            console.log('[CategorySelection] Number of selected categories:', selected.length);
-            const jsonString = JSON.stringify(selected);
+            console.log('[CategorySelection] Saving to AsyncStorage - Selected category IDs:', selectedCategories);
+            console.log('[CategorySelection] Number of selected categories:', selectedCategories.length);
+            const jsonString = JSON.stringify(selectedCategories);
             console.log('[CategorySelection] JSON string to save:', jsonString);
-            
+
             await AsyncStorage.setItem('selected_categories', jsonString);
-            
+
             // Verify it was saved by reading it back
             const saved = await AsyncStorage.getItem('selected_categories');
             console.log('[CategorySelection] Verification - Read back from AsyncStorage:', saved);
-            
+
             if (saved) {
               const parsed = JSON.parse(saved);
               console.log('[CategorySelection] Verification - Parsed saved data:', parsed);
@@ -128,8 +121,13 @@ categoriesApiData?.map((item) => (
             } else {
               console.warn('[CategorySelection] ⚠️ Warning: Could not read back from AsyncStorage');
             }
-            
-            router.replace('/');
+
+            // Navigate to home tabs if authenticated, otherwise to index route
+            if (isAuthenticated) {
+              router.replace('/(tabs)');
+            } else {
+              router.replace('/');
+            }
           } catch (err) {
             console.error('[CategorySelection] ❌ Failed to save selected categories:', err);
           }
@@ -152,7 +150,7 @@ const styles = StyleSheet.create({
     paddingTop: 32,
   },
   title: {
-  //  ...TypographyStyles.h3,
+    //  ...TypographyStyles.h3,
     textAlign: "center",
     color: "#000",
     fontSize: 22,

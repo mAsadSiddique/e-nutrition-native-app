@@ -1,6 +1,5 @@
 import LogoutSheet from "@/src/components/auth/LogoutSheet";
-import { useAuth } from "@/src/contexts/AuthContext";
-import { useUser } from "@/src/contexts/UserContext";
+import { useAuth } from "@/src/store/auth/hook";
 import { useGetProfile } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -60,8 +59,7 @@ const SettingItem: React.FC<SettingItemProps> = ({
 );
 
 export default function ProfileTab() {
-  const { userProfile, updateProfile } = useUser();
-  const { signOut } = useAuth();
+  const { userProfile, updateUserProfile, signOut } = useAuth();
   const router = useRouter();
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
   const handleLinkedIn = () => Linking.openURL("https://linkedin.com");
@@ -95,15 +93,15 @@ export default function ProfileTab() {
   useEffect(() => {
     if (profileData) {
       console.log("Profile API data received:", profileData);
-      updateProfile({
-        name: profileData.username,
+      updateUserProfile({
+        username: profileData.username,
         email: profileData.email,
         ...(profileData.profileImage && {
           profileImage: profileData.profileImage,
         }),
       });
     }
-  }, [profileData, updateProfile]);
+  }, [profileData, updateUserProfile]);
 
   const handleImagePicker = useCallback(async () => {
     Alert.alert(
@@ -209,7 +207,7 @@ export default function ProfileTab() {
             ) : (
               <>
                 <Text style={styles.userName}>
-                  {profileData?.username || userProfile.name}
+                  {profileData?.username || userProfile?.username || "User"}
                 </Text>
                 <Text style={styles.userEmail}>
                   {profileData?.email || userProfile.email}

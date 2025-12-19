@@ -4,14 +4,28 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 import 'react-native-reanimated';
+import { Provider as ReduxProvider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
 import { createQueryClient } from '../config/react-query';
-import { AuthProvider } from '../contexts/AuthContext';
-import { SavedBlogsProvider } from '../contexts/SavedBlogsContext';
-import { UserProvider } from '../contexts/UserContext';
+import store, { persistor } from '../store/store';
+import { useAuth } from '../store/auth/hook';
 
 SplashScreen.preventAutoHideAsync();
+
+// Component to initialize auth state
+function AuthInitializer({ children }: { children: ReactNode }) {
+  const { onSetLoading } = useAuth();
+
+  useEffect(() => {
+    // Set loading to false after initial check
+    // Token is managed separately in storage, profile will be loaded when needed
+    onSetLoading(false);
+  }, [onSetLoading]);
+
+  return <>{children}</>;
+}
 export default function RootLayout() {
   console.log('Font loading started...');
   const [queryClient] = useState(() => createQueryClient());
@@ -36,10 +50,10 @@ export default function RootLayout() {
     return null;
   }
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <UserProvider>
-          <SavedBlogsProvider>
+    <ReduxProvider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <QueryClientProvider client={queryClient}>
+          <AuthInitializer>
             <ThemeProvider value={DefaultTheme}>
               <Stack>
                 <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -47,7 +61,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="blogs" options={{ headerShown: false }} />
                 <Stack.Screen name="auth" options={{ headerShown: false }} />
-                  <Stack.Screen name="legal" options={{ headerShown: false }} />
+                <Stack.Screen name="legal" options={{ headerShown: false }} />
                 <Stack.Screen name="sign-up" options={{ headerShown: false }} />
                 <Stack.Screen name="sign-in" options={{ headerShown: false }} />
                 <Stack.Screen name="profile" options={{ headerShown: false }} />
@@ -55,9 +69,9 @@ export default function RootLayout() {
               </Stack>
               <StatusBar style="auto" />
             </ThemeProvider>
-          </SavedBlogsProvider>
-        </UserProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+          </AuthInitializer>
+        </QueryClientProvider>
+      </PersistGate>
+    </ReduxProvider>
   );
 }
