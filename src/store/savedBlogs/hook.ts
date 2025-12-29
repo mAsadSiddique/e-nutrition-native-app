@@ -1,7 +1,8 @@
-import { useDispatch } from "react-redux";
 import { useCallback } from "react";
-import { setSavedBlogs, toggleSaveBlog } from "./action";
+import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../store";
+import { setBlogsWishlist, toggleBlogWishlist } from "../wishlist/action";
+import { setSavedBlogs, toggleSaveBlog } from "./action";
 import { useSavedBlogsSelector } from "./selector";
 
 // Combined hook that matches the context interface
@@ -19,6 +20,15 @@ export const useSavedBlogs = () => {
   const onToggleSaveBlog = useCallback(
     (blogId: number) => {
       dispatch(toggleSaveBlog({ blogId }));
+      // Also update wishlist to keep them in sync
+      dispatch(toggleBlogWishlist({ blogId }));
+    },
+    [dispatch]
+  );
+
+  const onSetBlogsWishlist = useCallback(
+    (blogsWishlist: number[]) => {
+      dispatch(setBlogsWishlist({ blogsWishlist }));
     },
     [dispatch]
   );
@@ -27,6 +37,7 @@ export const useSavedBlogs = () => {
   return {
     savedBlogs: savedBlogsState.savedBlogs,
     toggleSaveBlog: onToggleSaveBlog,
+    setBlogsWishlist: onSetBlogsWishlist,
   };
 };
 

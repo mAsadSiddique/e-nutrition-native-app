@@ -35,6 +35,28 @@ export const useGetProfile = () => {
   });
 };
 
+// Get user wishlist
+export interface TUserWishlistResponse {
+  userWishlist: {
+    blogsWishlist: number[];
+    categoriesWishlist: number[] | null;
+  };
+}
+
+export const useGetWishlist = () => {
+  return useMutation({
+    mutationFn: async (): Promise<TUserWishlistResponse> => {
+      const response: any = await axios.get(SERVER_END_POINTS.USER_PROFILE);
+      // Extract userWishlist from response
+      const wishlist = response?.data?.userWishlist || response?.userWishlist || {
+        blogsWishlist: [],
+        categoriesWishlist: null,
+      };
+      return { userWishlist: wishlist };
+    },
+  });
+};
+
 // update user profile...
 export const useUpdateProfile = () => {
   return useMutation({

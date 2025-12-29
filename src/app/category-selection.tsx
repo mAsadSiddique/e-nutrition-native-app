@@ -1,4 +1,5 @@
 import { useGetCategories } from "@/src/services/categoryApi";
+import { useWishlistToggle } from "@/src/services/wishlistToggle";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -24,6 +25,10 @@ export default function CategorySelectionScreen() {
     data: categoriesApiData,
     isLoading: categoriesLoading,
   } = useGetCategories();
+  const {
+    mutate: toggleWishlist,
+    isPending: wishlistLoading,
+  } = useWishlistToggle();
 
   const toggle = (id: number) => {
     onToggleCategory(id);
@@ -122,6 +127,23 @@ export default function CategorySelectionScreen() {
               console.warn('[CategorySelection] ⚠️ Warning: Could not read back from AsyncStorage');
             }
 
+            // Add selected categories to wishlist via API
+            if (selectedCategories.length > 0) {
+              console.log('[CategorySelection] Adding categories to wishlist:', selectedCategories);
+              toggleWishlist(
+                { categoryIds: selectedCategories },
+                {
+                  onSuccess: (data) => {
+                    console.log('[CategorySelection] ✅ Successfully added categories to wishlist:', data);
+                  },
+                  onError: (error: any) => {
+                    console.error('[CategorySelection] ❌ Failed to add categories to wishlist:', error);
+                    // Continue navigation even if wishlist update fails
+                  },
+                }
+              );
+            }
+
             // Navigate to home tabs if authenticated, otherwise to index route
             if (isAuthenticated) {
               router.replace('/(tabs)');
@@ -133,7 +155,7 @@ export default function CategorySelectionScreen() {
           }
         }}
         variant="primary"
-        disabled={!canContinue}
+        disabled={!canContinue || wishlistLoading}
       />
     </SafeAreaView>
   );

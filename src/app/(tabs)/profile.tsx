@@ -1,6 +1,6 @@
 import LogoutSheet from "@/src/components/auth/LogoutSheet";
-import { useAuth } from "@/src/store/auth/hook";
 import { useGetProfile } from "@/src/services/authApi";
+import { useAuth } from "@/src/store/auth/hook";
 import { TypographyStyles } from "@/src/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -112,14 +112,14 @@ export default function ProfileTab() {
         {
           text: "Use Demo Image",
           onPress: () => {
-            updateProfile({
+            updateUserProfile({
               profileImage: "https://i.pravatar.cc/200?img=1",
             });
           },
         },
       ]
     );
-  }, [updateProfile]);
+  }, [updateUserProfile]);
 
   const handleEditProfile = useCallback(() => {
     router.push("/profile/edit");
@@ -184,36 +184,57 @@ export default function ProfileTab() {
 
         {/* User Info Section */}
         <View style={styles.userSection}>
-          <Pressable onPress={handleImagePicker} style={styles.imageContainer}>
-            {renderProfileImage()}
-            <View style={styles.cameraIcon}>
-              <Ionicons name="camera" size={16} color="#fff" />
-            </View>
-          </Pressable>
+          <View style={styles.profileCard}>
+            <View style={styles.profileStack}>
+              {/* Left Side - Profile Image or Username Initial */}
+              <View style={styles.leftSection}>
+                {(() => {
+                  const imageUri = profileData?.profileImage || userProfile.profileImage;
+                  const username = profileData?.username || userProfile?.username || "User";
 
-          <View style={styles.userInfo}>
-            {profileLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color="#00994C" />
-                <Text style={styles.loadingText}>Loading profile...</Text>
+                  if (imageUri) {
+                    return (
+                      <Pressable onPress={handleImagePicker} style={styles.imageContainer}>
+                        <Image source={{ uri: imageUri }} style={styles.profileImageStack} />
+                      </Pressable>
+                    );
+                  } else {
+                    // Show username initial in a circle
+                    const initial = username.charAt(0).toUpperCase();
+                    return (
+                      <Pressable onPress={handleImagePicker} style={styles.imageContainer}>
+                        <View style={styles.usernameInitial}>
+                          <Text style={styles.initialText}>{initial}</Text>
+                        </View>
+                      </Pressable>
+                    );
+                  }
+                })()}
               </View>
-            ) : profileError ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Failed to load profile</Text>
-                {/* <TouchableOpacity onPress={() => fetchProfile()} style={styles.retryButton}>
-                  <Text style={styles.retryText}>Retry</Text>
-                </TouchableOpacity> */}
+
+              {/* Right Side - User Info */}
+              <View style={styles.rightSection}>
+                {profileLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#00994C" />
+                    <Text style={styles.loadingText}>Loading profile...</Text>
+                  </View>
+                ) : profileError ? (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>Failed to load profile</Text>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.userName} numberOfLines={1}>
+                      {profileData?.username || userProfile?.username || "User"}
+                    </Text>
+                    <Text style={styles.userEmail} numberOfLines={1}>
+                      {profileData?.email || userProfile.email}
+                    </Text>
+                  </>
+                )}
               </View>
-            ) : (
-              <>
-                <Text style={styles.userName}>
-                  {profileData?.username || userProfile?.username || "User"}
-                </Text>
-                <Text style={styles.userEmail}>
-                  {profileData?.email || userProfile.email}
-                </Text>
-              </>
-            )}
+            </View>
           </View>
         </View>
 
@@ -343,61 +364,144 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   userSection: {
-    alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: 12,
     paddingHorizontal: 20,
+  },
+  profileCard: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: "#FAFAFA",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#F0F0F0",
+  },
+  profileStack: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  leftSection: {
+    marginRight: 16,
+  },
+  rightSection: {
+    flex: 1,
+    justifyContent: "center",
   },
   imageContainer: {
     position: "relative",
-    marginBottom: 16,
   },
   profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: "#f0f0f0",
+    borderWidth: 4,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  profileImageStack: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#f0f0f0",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   profileImagePlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#f0f0f0",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "#E8E8E8",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 4,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  usernameInitial: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#00994C",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  initialText: {
+    ...TypographyStyles.h2,
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: 0,
   },
   cameraIcon: {
     position: "absolute",
     bottom: 0,
     right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#000",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#00994C",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
   },
   userInfo: {
     alignItems: "center",
+    width: "100%",
   },
   userName: {
     ...TypographyStyles.h2,
-    fontSize: 22,
+    fontSize: 20,
+    fontWeight: "700",
     color: "#000",
-    marginBottom: 0, // smoother, more natural spacing
+    // marginBottom: 8,
+    letterSpacing: -0.3,
+    textAlign: "left",
   },
-
   userEmail: {
     ...TypographyStyles.body,
-    fontSize: 16,
-    color: "#444",
-
-    marginTop: 0, // slight soft gap above email
+    fontSize: 14,
+    color: "#666",
+    marginTop: 0,
+    textAlign: "left",
+    fontWeight: "400",
   },
 
   settingsSection: {
     paddingHorizontal: 20,
+    marginTop: 10,
   },
   sectionTitle: {
     ...TypographyStyles.body,

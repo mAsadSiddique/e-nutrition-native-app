@@ -8,6 +8,7 @@ import { useDispatch } from "react-redux";
 import { auth } from "./auth/reducer";
 import { categories } from "./categories/reducer";
 import { savedBlogs } from "./savedBlogs/reducer";
+import { wishlist } from "./wishlist/reducer";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { persistReducer, persistStore } from "redux-persist";
@@ -15,13 +16,14 @@ import { persistReducer, persistStore } from "redux-persist";
 const persistConfig = {
     key: "root",
     storage: AsyncStorage,
-    whitelist: ["auth", "savedBlogs", "categories", "profile"],
+    whitelist: ["auth", "savedBlogs", "categories", "wishlist"],
 };
 
 const rootReducer = combineReducers({
     auth,
     savedBlogs,
     categories,
+    wishlist,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

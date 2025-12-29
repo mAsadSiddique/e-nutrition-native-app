@@ -1,6 +1,7 @@
-import { axios } from '@/src/config/axios';
-import { SERVER_END_POINTS } from '@/src/constant/server-endpoint';
-import { useMutation } from '@tanstack/react-query';
+import { axios } from "@/src/config/axios";
+import { SERVER_END_POINTS } from "@/src/constant/server-endpoint";
+import { useMutation } from "@tanstack/react-query";
+import type { ApiResponse } from "../utils/types";
 
 export interface RawBlog {
   id: number;
@@ -42,7 +43,10 @@ export const useGetFeaturedBlogs = () => {
 
 export const useGetBlog = () => {
   return useMutation({
-    mutationFn: async (params: { id?: number | string; slug?: string }): Promise<RawBlog | null> => {
+    mutationFn: async (params: {
+      id?: number | string;
+      slug?: string;
+    }): Promise<RawBlog | null> => {
       const { id, slug } = params || {};
       const reqParams: any = {};
       if (id) reqParams.id = id;
@@ -50,16 +54,35 @@ export const useGetBlog = () => {
       if (!Object.keys(reqParams).length) return null;
 
       // Call the list endpoint with query params (e.g. /user/blog?id=1 or /user/blog?slug=abc)
-      const response: any = await axios.get(SERVER_END_POINTS.USER_BLOG, { params: reqParams });
+      const response: any = await axios.get(SERVER_END_POINTS.USER_BLOG, {
+        params: reqParams,
+      });
 
       // Possible shapes:
       // { message, data: { blog: {...} } }
       // { message, data: { blogs: [ {...} ] } }
       // { message, data: {...} }
       // Accept these variants and return a single blog object
-      const blogFromData = response?.data?.blog ?? (Array.isArray(response?.data?.blogs) ? response.data.blogs[0] : null);
-      const blog = blogFromData || response?.data || response?.blog || response || null;
+      const blogFromData =
+        response?.data?.blog ??
+        (Array.isArray(response?.data?.blogs) ? response.data.blogs[0] : null);
+      const blog =
+        blogFromData || response?.data || response?.blog || response || null;
       return blog as RawBlog | null;
+    },
+  });
+};
+
+export interface TBlogWishlistTogglePayload {
+  id: number;
+}
+
+export const useBlogWishlistToggle = () => {
+  return useMutation({
+    mutationFn: async (
+      payload: TBlogWishlistTogglePayload
+    ): Promise<ApiResponse> => {
+      return await axios.put(SERVER_END_POINTS.BLOG_WISHLIST_TOGGLE, payload);
     },
   });
 };

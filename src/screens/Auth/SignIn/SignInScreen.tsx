@@ -2,6 +2,7 @@ import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
 import { useLoginProfile } from "@/src/services/authApi";
 import { useAuth } from "@/src/store/auth/hook";
+import { useWishlist } from "@/src/store/wishlist/hook";
 import { TypographyStyles } from "@/src/theme/theme";
 import storage from "@/src/utils/storage";
 import { toast } from "@/src/utils/toast";
@@ -36,6 +37,8 @@ type SignInEmailFormData = yup.InferType<typeof signInEmailSchema>;
 
 export default function SignInScreen() {
   const router = useRouter();
+
+  const { setWishlist } = useWishlist();
   const { onSetProfile } = useAuth();
   const { email: prefilledEmail } = useLocalSearchParams<{ email?: string }>();
   const [showPassword, setShowPassword] = useState(false);
@@ -78,11 +81,24 @@ export default function SignInScreen() {
             await storage.setToken(response?.data?.jwt);
           }
 
+          // Set user profile if available
           if (response?.data?.user) {
             console.log('Setting user profile in store:', response?.data?.user);
             onSetProfile(response?.data?.user);
+          }
+
+          // Handle wishlist data from login response
+          if (response?.data?.userWishlist) {
+            const { blogsWishlist, categoriesWishlist } = response?.data?.userWishlist;
+            setWishlist({
+              blogsWishlist: blogsWishlist || [],
+              categoriesWishlist: categoriesWishlist || null,
+            });
           } else {
-            console.warn('No user data in response');
+            setWishlist({
+              blogsWishlist: [],
+              categoriesWishlist: null,
+            });
           }
 
           toast.success(response.message || "Login successful");

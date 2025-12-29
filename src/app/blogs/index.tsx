@@ -1,7 +1,8 @@
 import { SkeletonBlogCard } from "@/src/components/ui/SkeletonLoader";
-import { useSavedBlogs } from "@/src/store/savedBlogs/hook";
-import { useGetFeaturedBlogs, useGetForYouBlogs } from "@/src/services/blogApi";
+import { useGetWishlist } from "@/src/services/authApi";
+import { useBlogWishlistToggle, useGetFeaturedBlogs, useGetForYouBlogs } from "@/src/services/blogApi";
 import { useGetCategories } from "@/src/services/categoryApi";
+import { useWishlist } from "@/src/store/wishlist/hook";
 import { TypographyStyles } from "@/src/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
@@ -40,7 +41,14 @@ export default function BlogListScreen() {
     isLoading: categoriesLoading,
     error: categoriesError,
   } = useGetCategories();
-  const { savedBlogs, toggleSaveBlog } = useSavedBlogs();
+  const { blogsWishlist, setWishlist, toggleBlogWishlist: toggleWishlistInStore } = useWishlist();
+  const {
+    mutate: toggleBlogWishlist,
+    isPending: wishlistLoading,
+  } = useBlogWishlistToggle();
+  const {
+    mutate: fetchWishlist,
+  } = useGetWishlist();
   const isFocused = useIsFocused();
 
   // State to hold raw API blogs for both tabs
@@ -117,6 +125,29 @@ export default function BlogListScreen() {
     [router]
   );
 
+  const handleToggleWishlist = useCallback(
+    (blogId: number) => {
+      // Toggle local wishlist state immediately for better UX
+      toggleWishlistInStore(blogId);
+
+      // Call API to toggle wishlist
+      toggleBlogWishlist(
+        { id: blogId },
+        {
+          onSuccess: (data) => {
+            console.log('[BlogList] ✅ Successfully toggled blog wishlist:', data);
+          },
+          onError: (error: any) => {
+            console.error('[BlogList] ❌ Failed to toggle blog wishlist:', error);
+            // Revert local state on error
+            toggleWishlistInStore(blogId);
+          },
+        }
+      );
+    },
+    [toggleWishlistInStore, toggleBlogWishlist]
+  );
+
   const renderBlogItem = useCallback(
     ({ item }: { item: any }) => (
       <Pressable
@@ -134,38 +165,36 @@ export default function BlogListScreen() {
             <Text numberOfLines={2} style={styles.blogDescription}>
               {item.description}
             </Text>
-            <Text style={styles.blogMeta}>{item.date}</Text>
-            {/* left column (text) */}
           </View>
-          {/* right column: image on top, date + save row below */}
           <View style={styles.rightColumn}>
             <Pressable onPress={() => handleBlogPress(item)}>
               <Image source={item.image} style={styles.blogImage} />
             </Pressable>
-
-            <View style={styles.metaRow}>
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={() => toggleSaveBlog(item.id)}
-                accessibilityLabel="Save article"
-              >
-                <Ionicons
-                  name={
-                    savedBlogs.includes(item.id)
-                      ? "bookmark"
-                      : "bookmark-outline"
-                  }
-                  size={18}
-                  color={savedBlogs.includes(item.id) ? "#1A8917" : "#666"}
-                />
-              </TouchableOpacity>
-            </View>
           </View>
+        </View>
+        <View style={styles.metaRow}>
+          <Text style={styles.blogMeta}>{item.date}</Text>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => handleToggleWishlist(item.id)}
+            accessibilityLabel="Save article"
+            disabled={wishlistLoading}
+          >
+            <Ionicons
+              name={
+                blogsWishlist.includes(item.id)
+                  ? "bookmark"
+                  : "bookmark-outline"
+              }
+              size={18}
+              color={blogsWishlist.includes(item.id) ? "#1A8917" : "#666"}
+            />
+          </TouchableOpacity>
         </View>
         <View style={styles.divider} />
       </Pressable>
     ),
-    [activeTab, handleBlogPress, handleAuthorPress, savedBlogs, toggleSaveBlog]
+    [activeTab, handleBlogPress, handleAuthorPress, blogsWishlist, handleToggleWishlist, wishlistLoading]
   );
 
   const renderHeader = useCallback(
@@ -307,6 +336,28 @@ export default function BlogListScreen() {
   //   categoriesApiData.forEach((c: any) => categoryMap.set(c.id, c.name));
   // }
 
+  // Helper function to extract image URL from media object
+  const getImageUrlFromMedia = (media: any): string => {
+    if (!media || !media.images || typeof media.images !== "object") {
+      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+    }
+
+    // Get the first image key from the images object
+    const imageKeys = Object.keys(media.images);
+    if (imageKeys.length === 0) {
+      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+    }
+
+    // Get the first image key and split by "_"
+    const firstKey = imageKeys[0];
+    const keyParts = firstKey.split("_");
+
+    // Use the URL from the images object
+    const imageUrl = media.images[firstKey];
+
+    return imageUrl || "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+  };
+
   const mappedApiBlogs = apiBlogs.map((b: any) => {
     const plain = stripHtml(b.content || "");
     const preview =
@@ -316,13 +367,15 @@ export default function BlogListScreen() {
         ? b.categories[0]
         : undefined;
     const catName = catId ? categoryMap.get(catId) || "General" : "General";
+    const imageUrl = getImageUrlFromMedia(b.media);
+
     return {
       id: b.id,
       title: b.title,
       description: preview,
       date: formatDate(b.publishedAt),
       image: {
-        uri: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop",
+        uri: imageUrl,
       },
       category: [catName],
       author: "",
@@ -448,7 +501,8 @@ const styles = StyleSheet.create({
   // Blog card styles
   blogCard: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 12,
+    // paddingBottom: 16,
     backgroundColor: "#fff",
   },
   blogCardPressed: {
@@ -465,8 +519,6 @@ const styles = StyleSheet.create({
     height: 36,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
-    alignSelf: "flex-end",
   },
   authorRow: {
     flexDirection: "row",
@@ -495,11 +547,12 @@ const styles = StyleSheet.create({
   blogContent: {
     flexDirection: "row",
     alignItems: "flex-start",
-    paddingTop: 10,
+    // paddingTop: 10,
   },
   blogTextContent: {
     flex: 1,
     paddingRight: 16,
+    justifyContent: "flex-start",
   },
   blogTitle: {
     ...TypographyStyles.h2,
@@ -539,11 +592,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 8,
+    marginTop: 6,
+    paddingRight: 0,
   },
   divider: {
     height: 1,
     backgroundColor: "#f0f0f0",
-    marginTop: 16,
+    marginTop: 4,
   },
 });
