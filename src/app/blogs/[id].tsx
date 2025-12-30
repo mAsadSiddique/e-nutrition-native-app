@@ -2,9 +2,12 @@ import { SkeletonBlogDetail } from '@/src/components/ui/SkeletonLoader';
 import { useGetBlog } from '@/src/services/blogApi';
 import { TypographyStyles } from '@/src/theme/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { openBrowserAsync, WebBrowserPresentationStyle } from 'expo-web-browser';
+import HtmlContentRenderer from '@/src/components/blog/HtmlContentRenderer';
+import { extractTags, extractLinks } from '@/src/utils/htmlParser';
 // note: no local dummy blogs used; fetching from API
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTAINER_PADDING = 16;
@@ -17,42 +20,49 @@ export default function BlogDetailScreen() {
   const { mutate: fetchBlog, isPending: blogLoading } = useGetBlog();
   const [blog, setBlog] = useState<any | null>(null);
   
-useEffect(() => {
-  if (!id) return;
-  setBlog(null);
-  const isNumeric = /^[0-9]+$/.test(String(id));
+  // Extract tags and links from blog content - MUST be called before any conditional returns
+  const tags = useMemo(() => {
+    if (!blog?.content) return [];
+    return extractTags(blog.content);
+  }, [blog?.content]);
 
-  fetchBlog(
-    isNumeric ? { id } : { slug: String(id) },
-    {
-      onSuccess: (res: any) => {
-        setBlog(res);
-      },
-      onError: () => {
-        setBlog(null);
-      },
+  const links = useMemo(() => {
+    if (!blog?.content) return [];
+    return extractLinks(blog.content);
+  }, [blog?.content]);
+
+  // Get header image from media
+  const headerImageUrl = useMemo(() => {
+    if (!blog?.media?.images || typeof blog.media.images !== 'object') {
+      return 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
     }
-  );
-}, [id]);
+    const imageKeys = Object.keys(blog.media.images);
+    if (imageKeys.length === 0) {
+      return 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
+    }
+    const firstKey = imageKeys[0];
+    return blog.media.images[firstKey] || 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
+  }, [blog?.media?.images]);
+  
+  useEffect(() => {
+    if (!id) return;
+    setBlog(null);
+    const isNumeric = /^[0-9]+$/.test(String(id));
 
+    fetchBlog(
+      isNumeric ? { id } : { slug: String(id) },
+      {
+        onSuccess: (res: any) => {
+          setBlog(res);
+        },
+        onError: () => {
+          setBlog(null);
+        },
+      }
+    );
+  }, [id, fetchBlog]);
 
-  // useEffect(() => {
-  //   if (!id) return;
-  //   // determine whether id param is numeric id or slug
-  //   const isNumeric = /^[0-9]+$/.test(String(id));
-  //   if (isNumeric) {
-  //     fetchBlog({ id }, {
-  //       onSuccess: (res: any) => setBlog(res),
-  //       onError: () => setBlog(null),
-  //     });
-  //   } else {
-  //     fetchBlog({ slug: String(id) }, {
-  //       onSuccess: (res: any) => setBlog(res),
-  //       onError: () => setBlog(null),
-  //     });
-  //   }
-  // }, [id, fetchBlog]);
-
+  // Conditional returns AFTER all hooks
   if (blogLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -74,45 +84,8 @@ useEffect(() => {
       </View>
     );
   }
+  
   const recos: any[] = [];
-
-  type InlinePart = { text: string; bold?: boolean };
-  type Node = { type: 'heading' | 'paragraph'; parts: InlinePart[] };
-  /**
-   * Convert HTML string to plain text while preserving newlines and decoding entities.
-   * - replaces <br> and <br/> with newlines
-   * - replaces block tags (p, div, h1..h6, li) with newlines
-   * - strips remaining tags
-   * - decodes common HTML entities and numeric entities
-   */
-  const htmlToPlainText = (html: string) => {
-  if (!html) return '';
-  let s = String(html);
-
-  // ❗ REMOVE CODE BLOCKS COMPLETELY
-  s = s.replace(/<pre[\s\S]*?<\/pre>/gi, '');
-
-  // Normalize line breaks
-  s = s.replace(/<br\s*\/?>/gi, '\n');
-  s = s.replace(/<\/(p|div|h[1-6]|li)>/gi, '\n');
-  s = s.replace(/<(p|div|h[1-6]|li)[^>]*>/gi, '\n');
-
-  // Remove remaining tags
-  s = s.replace(/<[^>]+>/g, '');
-
-  // Decode entities
-  s = s.replace(/&nbsp;/g, ' ')
-       .replace(/&amp;/g, '&')
-       .replace(/&lt;/g, '<')
-       .replace(/&gt;/g, '>')
-       .replace(/&quot;/g, '"')
-       .replace(/&#39;/g, "'");
-
-  // Clean newlines
-  s = s.replace(/\n{3,}/g, '\n\n').trim();
-
-  return s;
-};
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -128,9 +101,10 @@ useEffect(() => {
         >
           {blog.author} • {blog.date}
         </Text> */}
-        <Image source={{ uri: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop' }} style={styles.headerImage} />
-        {/** Render content as plain text (HTML stripped and entities decoded) */}
-        <Text style={styles.contentParagraph}>{htmlToPlainText(blog.content || '')}</Text>
+        {/* <Image source={{ uri: headerImageUrl }} style={styles.headerImage} /> */}
+
+        {/* Render HTML content with all features */}
+        <HtmlContentRenderer html={blog.content || ''} media={blog.media} />
 
         <View style={styles.recommendedSection}>
           <Text style={styles.sectionTitle}>Recommended Blogs</Text>
@@ -310,6 +284,66 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff'
+  },
+  tagsContainer: {
+    marginBottom: 16,
+  },
+  tagsLabel: {
+    ...TypographyStyles.bodySmall,
+    fontSize: Math.max(13, Math.min(15, SCREEN_WIDTH * 0.037)),
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  tagsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tag: {
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  tagText: {
+    ...TypographyStyles.bodySmall,
+    fontSize: Math.max(12, Math.min(13, SCREEN_WIDTH * 0.035)),
+    color: '#333',
+    textTransform: 'uppercase',
+  },
+  linksContainer: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  linksLabel: {
+    ...TypographyStyles.bodySmall,
+    fontSize: Math.max(13, Math.min(15, SCREEN_WIDTH * 0.037)),
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  linkItem: {
+    marginBottom: 6,
+  },
+  linkText: {
+    ...TypographyStyles.bodySmall,
+    fontSize: Math.max(13, Math.min(14, SCREEN_WIDTH * 0.037)),
+    color: '#0066cc',
+    textDecorationLine: 'underline',
+  },
+  moreLinksText: {
+    ...TypographyStyles.bodySmall,
+    fontSize: Math.max(12, Math.min(13, SCREEN_WIDTH * 0.035)),
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
 });
 
