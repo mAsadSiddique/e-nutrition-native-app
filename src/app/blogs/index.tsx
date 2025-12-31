@@ -41,7 +41,7 @@ export default function BlogListScreen() {
     isLoading: categoriesLoading,
     error: categoriesError,
   } = useGetCategories();
-  const { blogsWishlist, setWishlist, toggleBlogWishlist: toggleWishlistInStore } = useWishlist();
+  const { blogsWishlist, setWishlist, categoriesWishlist, toggleBlogWishlist: toggleWishlistInStore } = useWishlist();
   const {
     mutate: toggleBlogWishlist,
     isPending: wishlistLoading,
@@ -62,14 +62,7 @@ export default function BlogListScreen() {
     if (didFetchForYouRef.current) return;
     didFetchForYouRef.current = true;
 
-    // If categories are already available (e.g., fetched on Category Selection), skip refetch
-    if (!Array.isArray(categoriesApiData) || categoriesApiData.length === 0) {
-      fetchCategories().catch((err: any) =>
-        console.error("Categories fetch error:", err?.response || err)
-      );
-    }
-
-    fetchForYouBlogs(undefined, {
+    const onForYouHandlers = {
       onSuccess: (res: any) => {
         const received = res?.data?.blogs ?? res?.blogs ?? res ?? [];
         setForYouBlogs(Array.isArray(received) ? received : []);
@@ -78,9 +71,57 @@ export default function BlogListScreen() {
           Array.isArray(received) ? received.length : 0
         );
       },
-      onError: (err: any) =>
-        console.error("For You blogs fetch error:", err?.response || err),
-    });
+      onError: (err: any) => console.error("For You blogs fetch error:", err?.response || err),
+    };
+
+      // Pass stored category IDs to the For You endpoint if present
+    // Sanitize: coerce to numbers, dedupe
+    const forYouCategoryIds = Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0
+      ? Array.from(new Set(categoriesWishlist.map((n: any) => Number(n)).filter((id) => Number.isInteger(id)))) as number[]
+      : [];
+
+    // If categories data is not yet available, fetch it first and only then validate stored IDs
+    if (!Array.isArray(categoriesApiData) || categoriesApiData.length === 0) {
+      fetchCategories()
+        .then((res: any) => {
+          const latestCategories = res?.data ?? res ?? [];
+          const validatedCategoryIds = Array.isArray(latestCategories) && latestCategories.length > 0
+            ? forYouCategoryIds.filter((id) => latestCategories.some((c: any) => c.id === id))
+            : [];
+
+          const forYouParams = validatedCategoryIds.length > 0 ? { categoryIds: validatedCategoryIds } : undefined;
+
+          if (validatedCategoryIds.length > 0) {
+            console.debug('[BlogList] Fetching For You with category IDs (after categories fetch):', validatedCategoryIds);
+            fetchForYouBlogs(forYouParams, onForYouHandlers);
+          } else if (Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0) {
+            // We have stored IDs but none validated against the fetched categories — avoid sending invalid IDs
+            console.warn('[BlogList] Stored categories present but none validated against fetched categories. Stored:', categoriesWishlist);
+            // Call For You without category filters to avoid server errors
+            fetchForYouBlogs(undefined, onForYouHandlers);
+          } else {
+            // No stored categories: fetch default For You
+            fetchForYouBlogs(undefined, onForYouHandlers);
+          }
+        })
+        .catch((err: any) => {
+          console.error("Categories fetch error:", err?.response || err);
+          console.warn('[BlogList] Categories fetch failed; skipping category-filtered For You request to avoid server errors.');
+          fetchForYouBlogs(undefined, onForYouHandlers);
+        });
+    } else {
+      // categoriesApiData is available; validate stored IDs against it and call the For You endpoint
+      const validatedCategoryIds = forYouCategoryIds.filter((id) => categoriesApiData.some((c: any) => c.id === id));
+      const forYouParams = validatedCategoryIds.length > 0 ? { categoryIds: validatedCategoryIds } : undefined;
+
+      if (validatedCategoryIds.length > 0) {
+        console.debug('[BlogList] Fetching For You with category IDs:', validatedCategoryIds);
+      } else if (Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0) {
+        console.warn('[BlogList] Stored categories present but none validated against categories data. Stored:', categoriesWishlist);
+      }
+
+      fetchForYouBlogs(forYouParams, onForYouHandlers);
+    }
 
     const timer = setTimeout(() => setLoading(false), 150);
     return () => clearTimeout(timer);
@@ -282,9 +323,34 @@ export default function BlogListScreen() {
           </Text>
           <TouchableOpacity
             onPress={() => {
-              fetchCategories();
+              // Try to use validated category IDs when retrying to avoid sending stale/invalid IDs
               if (activeTab === "for-you") {
-                fetchForYouBlogs();
+                if (Array.isArray(categoriesApiData) && categoriesApiData.length > 0) {
+                  const sanitized = Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0
+                    ? Array.from(new Set(categoriesWishlist.map((n: any) => Number(n)).filter((id) => Number.isInteger(id)))) as number[]
+                    : [];
+                  const validated = sanitized.filter((id) => categoriesApiData.some((c: any) => c.id === id));
+                  const params = validated.length > 0 ? { categoryIds: validated } : undefined;
+                  fetchForYouBlogs(params);
+                } else {
+                  // categories not available yet, fetch them then validate before calling For You
+                  fetchCategories()
+                    .then((res: any) => {
+                      const latestCategories = res?.data ?? res ?? [];
+                      const sanitized = Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0
+                        ? Array.from(new Set(categoriesWishlist.map((n: any) => Number(n)).filter((id) => Number.isInteger(id)))) as number[]
+                        : [];
+                      const validated = Array.isArray(latestCategories) && latestCategories.length > 0
+                        ? sanitized.filter((id) => latestCategories.some((c: any) => c.id === id))
+                        : [];
+                      const params = validated.length > 0 ? { categoryIds: validated } : undefined;
+                      fetchForYouBlogs(params);
+                    })
+                    .catch(() => {
+                      console.warn('[BlogList] Categories fetch failed during retry; calling For You without category filters.');
+                      fetchForYouBlogs(undefined);
+                    });
+                }
               } else {
                 fetchFeaturedBlogs();
               }

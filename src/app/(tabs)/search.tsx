@@ -5,17 +5,58 @@ import React, { useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { blogs, categories } from '../../utils/data';
+import { useSearchBlogs } from '@/src/services/blogApi';
 
 export default function SearchTab() {
   const [q, setQ] = useState('');
   const router = useRouter();
-  const results = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return [];
-    return blogs.filter(
-      (b) => b.title.toLowerCase().includes(term) || b.description.toLowerCase().includes(term) || b.author.toLowerCase().includes(term)
-    );
-  }, [q]);
+
+  // Tabs state (moved up so effect can use it)
+  const [selectedTab, setSelectedTab] = useState<'Latest' | 'Tags' | 'Blogs'>('Latest');
+
+  // Remote search results (real-time)
+  const [remoteResults, setRemoteResults] = useState<any[]>([]);
+  const { mutate: searchBlogs, isPending: searchLoading } = useSearchBlogs();
+
+  // Debounce search
+  React.useEffect(() => {
+    const term = q.trim();
+    if (!term) {
+      setRemoteResults([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      let params: any = {};
+      // Heuristic: treat hyphenated, single-token queries as slugs (e.g. how-to-build-nestjs-application)
+      const isSlugLike = /^[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(term);
+
+      if (selectedTab === 'Blogs' || isSlugLike) {
+        // Explicit Blogs tab or a slug-like input → search by slug
+        params.slug = term;
+      } else if (selectedTab === 'Tags') {
+        params.tags = term;
+      } else {
+        // Latest - send tags only when a term present and it's not slug-like
+        if (term) params.tags = term;
+      }
+
+      console.debug('[SearchTab] search params:', params);
+
+      searchBlogs(params, {
+        onSuccess: (res: any) => {
+          const received = Array.isArray(res) ? res : [];
+          setRemoteResults(received);
+        },
+        onError: (err: any) => {
+          console.error('[SearchTab] search error:', err?.response || err);
+          setRemoteResults([]);
+        },
+      });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [q, selectedTab, searchBlogs]);
 
   const renderItem = ({ item }: any) => (
     <TouchableOpacity style={styles.card} onPress={() => router.push(`/(tabs)/(home)/${item.id}`)}>
@@ -29,15 +70,13 @@ export default function SearchTab() {
     </TouchableOpacity>
   );
 
-  const [selectedTab, setSelectedTab] = useState<'Latest' | 'Tags' | 'Blogs'>('Latest');
-
   const tags = useMemo(() => {
     return categories;
   }, []);
 
   const latestResults = useMemo(() => {
-    return [...results].sort((a, b) => b.id - a.id);
-  }, [results]);
+    return [...remoteResults].sort((a, b) => b.id - a.id);
+  }, [remoteResults]);
 
   const tagResults = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -87,7 +126,7 @@ export default function SearchTab() {
       ) : (
 
         <FlatList
-          data={selectedTab === 'Tags' ? tagResults : selectedTab === 'Latest' ? latestResults : results}
+          data={selectedTab === 'Tags' ? tagResults : selectedTab === 'Latest' ? latestResults : remoteResults}
           keyExtractor={(item: any) => String(item.id ?? item.name)}
           contentContainerStyle={{ padding: 16 }}
           numColumns={selectedTab === 'Tags' ? 3 : 1}
@@ -96,7 +135,13 @@ export default function SearchTab() {
           renderItem={({ item }) => {
             if (selectedTab === 'Tags') {
               return (
-                <TouchableOpacity style={styles.tagCardGrid} onPress={() => router.push(`/blogs?tag=${encodeURIComponent(item.name)}`)}>
+                <TouchableOpacity
+                  style={styles.tagCardGrid}
+                  onPress={() => {
+                    setQ(item.name);
+                    setSelectedTab('Tags');
+                  }}
+                >
                   <Text style={styles.tagTextGrid}>{item.name}</Text>
                 </TouchableOpacity>
               );

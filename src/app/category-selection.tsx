@@ -1,6 +1,7 @@
 import { useGetCategories } from "@/src/services/categoryApi";
 import { useWishlistToggle } from "@/src/services/wishlistToggle";
 
+import store, { persistor } from "@/src/store/store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
@@ -11,6 +12,7 @@ import { SkeletonCategoryPill } from "../components/ui/SkeletonLoader";
 import { useAuth } from "../store/auth/hook";
 import { useCategories } from "../store/categories/hook";
 import { useCategoriesSelector } from "../store/categories/selector";
+import { useWishlist } from "../store/wishlist/hook";
 import { TypographyStyles } from "../theme/theme";
 const MIN_SELECTION = 3;
 const PADDING_HORIZONTAL = 20;
@@ -29,6 +31,9 @@ export default function CategorySelectionScreen() {
     mutate: toggleWishlist,
     isPending: wishlistLoading,
   } = useWishlistToggle();
+
+  // Wishlist store updater
+  const { setCategoriesWishlist, setWishlist, blogsWishlist } = useWishlist();
 
   const toggle = (id: number) => {
     onToggleCategory(id);
@@ -57,6 +62,18 @@ export default function CategorySelectionScreen() {
     };
     checkAsyncStorage();
   }, [onSetSelectedCategories]);
+
+  // Keep wishlist store in sync in real time when user selects/deselects categories
+  useEffect(() => {
+    try {
+      // store null when no selection, otherwise store a shallow copy of the array of IDs
+      const payload = selectedCategories.length > 0 ? [...selectedCategories] : null;
+      console.debug('[CategorySelection] Syncing wishlist store with selectedCategories:', payload);
+      setCategoriesWishlist(payload);
+    } catch (err) {
+      console.error('[CategorySelection] Failed to sync wishlist store on selection change:', err);
+    }
+  }, [selectedCategories, setCategoriesWishlist]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
@@ -107,9 +124,19 @@ export default function CategorySelectionScreen() {
         text="Continue"
         onPress={async () => {
           try {
-            console.log('[CategorySelection] Saving to AsyncStorage - Selected category IDs:', selectedCategories);
-            console.log('[CategorySelection] Number of selected categories:', selectedCategories.length);
-            const jsonString = JSON.stringify(selectedCategories);
+            // Build a sanitized payload: dedupe, coerce to numbers, validate IDs if categories list available
+            const ids = selectedCategories.map((n: number) => Number(n));
+            const deduped = Array.from(new Set(ids)) as number[];
+            const payloadCopy = deduped.filter((id: number) => {
+              if (!Number.isInteger(id)) return false;
+              if (Array.isArray(categoriesApiData) && categoriesApiData.length) {
+                return categoriesApiData.some((c: any) => c.id === id);
+              }
+              return true;
+            });
+            console.log('[CategorySelection] Saving to AsyncStorage - Selected category IDs (sanitized):', payloadCopy);
+            console.log('[CategorySelection] Number of selected categories (sanitized):', payloadCopy.length);
+            const jsonString = JSON.stringify(payloadCopy);
             console.log('[CategorySelection] JSON string to save:', jsonString);
 
             await AsyncStorage.setItem('selected_categories', jsonString);
@@ -128,13 +155,94 @@ export default function CategorySelectionScreen() {
             }
 
             // Add selected categories to wishlist via API
-            if (selectedCategories.length > 0) {
-              console.log('[CategorySelection] Adding categories to wishlist:', selectedCategories);
+            if (payloadCopy.length > 0) {
+              console.log('[CategorySelection] Adding categories to wishlist (payload):', payloadCopy);
               toggleWishlist(
-                { categoryIds: selectedCategories },
+                { ids: payloadCopy },
                 {
                   onSuccess: (data) => {
                     console.log('[CategorySelection] ✅ Successfully added categories to wishlist:', data);
+                    // Use server response if it contains the saved categories, otherwise fallback to local selection
+                    try {
+                      const serverCategories = (data as any)?.data?.userWishlist?.categoriesWishlist ?? (data as any)?.userWishlist?.categoriesWishlist ?? (data as any)?.categoriesWishlist;
+                      if (Array.isArray(serverCategories)) {
+                        const copy = [...serverCategories];
+
+                        // Persist the authoritative server-provided selection as the app's selected categories
+                        try {
+                          onSetSelectedCategories(copy);
+                          AsyncStorage.setItem('selected_categories', JSON.stringify(copy))
+                            .then(() => console.debug('[CategorySelection] Persisted server categories to AsyncStorage:', copy))
+                            .catch((e) => console.error('[CategorySelection] Failed to persist server categories to AsyncStorage:', e));
+                        } catch (err) {
+                          console.error('[CategorySelection] Failed to update selected categories from server response:', err);
+                        }
+
+                        // Update the whole wishlist from server to avoid mismatches
+                        try {
+                          const serverBlogs = (data as any)?.data?.userWishlist?.blogsWishlist ?? (data as any)?.userWishlist?.blogsWishlist ?? (data as any)?.blogsWishlist ?? blogsWishlist ?? [];
+                          console.debug('[CategorySelection] Pre-set wishlist state:', store.getState().wishlist);
+                          setWishlist({ blogsWishlist: serverBlogs || [], categoriesWishlist: copy });
+                          // Log post-update state in next tick (allow Redux to process)
+                          setTimeout(() => {
+                            console.debug('[CategorySelection] Post-set wishlist state:', store.getState().wishlist);
+                          }, 0);
+
+                          // Ensure persisted storage is flushed and then log the persisted root
+                          try {
+                            persistor.flush().then(async () => {
+                              try {
+                                const persisted = await AsyncStorage.getItem('persist:root');
+                                console.debug('[CategorySelection] Persisted root after flush:', persisted);
+                                if (persisted) {
+                                  try {
+                                    const parsed = JSON.parse(persisted);
+                                    console.debug('[CategorySelection] Persisted wishlist slice:', parsed?.wishlist);
+                                    console.debug('[CategorySelection] Persisted categories slice:', parsed?.categories);
+                                  } catch (e) {
+                                    console.error('[CategorySelection] Failed to parse persisted root:', e);
+                                  }
+                                }
+                              } catch (e) {
+                                console.error('[CategorySelection] Failed to read persist:root from AsyncStorage:', e);
+                              }
+                            }).catch((e) => console.error('[CategorySelection] persistor.flush() failed:', e));
+                          } catch (err) {
+                            console.error('[CategorySelection] Error while flushing persistor:', err);
+                          }
+
+                          console.log('[CategorySelection] ✅ Wishlist store replaced from server response:', { blogsWishlist: serverBlogs, categoriesWishlist: copy });
+                        } catch (err) {
+                          // Fallback to setting categories only
+                          setCategoriesWishlist(copy);
+                          console.error('[CategorySelection] Failed to set full wishlist from server response, set categories only:', err);
+                        }
+                      } else {
+                        const copy = [...payloadCopy];
+                        try {
+                          onSetSelectedCategories(copy);
+                          AsyncStorage.setItem('selected_categories', JSON.stringify(copy))
+                            .then(() => console.debug('[CategorySelection] Persisted local selection to AsyncStorage:', copy))
+                            .catch((e) => console.error('[CategorySelection] Failed to persist local selection to AsyncStorage:', e));
+                        } catch (err) {
+                          console.error('[CategorySelection] Failed to update selected categories from local selection:', err);
+                        }
+
+                        setCategoriesWishlist(copy);
+                        // flush persisted storage after updating categories only
+                        try {
+                          persistor.flush().then(async () => {
+                            const persisted = await AsyncStorage.getItem('persist:root');
+                            console.debug('[CategorySelection] Persisted root after categories-only save:', persisted);
+                          }).catch((e) => console.error('[CategorySelection] persistor.flush() failed (categories-only):', e));
+                        } catch (e) {
+                          console.error('[CategorySelection] Error flushing persistor (categories-only):', e);
+                        }
+                        console.log('[CategorySelection] ✅ Wishlist store updated from local selection:', copy);
+                      }
+                    } catch (err) {
+                      console.error('[CategorySelection] Failed to update wishlist store from response:', err);
+                    }
                   },
                   onError: (error: any) => {
                     console.error('[CategorySelection] ❌ Failed to add categories to wishlist:', error);

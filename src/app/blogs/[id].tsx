@@ -1,13 +1,13 @@
+import HtmlContentRenderer from '@/src/components/blog/HtmlContentRenderer';
+import RecommendedRow from '@/src/components/blog/RecommendedRow';
 import { SkeletonBlogDetail } from '@/src/components/ui/SkeletonLoader';
-import { useGetBlog } from '@/src/services/blogApi';
+import { useGetBlog, useGetForYouBlogs } from '@/src/services/blogApi';
 import { TypographyStyles } from '@/src/theme/theme';
+import { extractLinks, extractTags } from '@/src/utils/htmlParser';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { openBrowserAsync, WebBrowserPresentationStyle } from 'expo-web-browser';
-import HtmlContentRenderer from '@/src/components/blog/HtmlContentRenderer';
-import { extractTags, extractLinks } from '@/src/utils/htmlParser';
 // note: no local dummy blogs used; fetching from API
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTAINER_PADDING = 16;
@@ -19,6 +19,10 @@ export default function BlogDetailScreen() {
   const router = useRouter();
   const { mutate: fetchBlog, isPending: blogLoading } = useGetBlog();
   const [blog, setBlog] = useState<any | null>(null);
+  const [recosState, setRecosState] = useState<any[]>([]);
+
+  // For fetching recommended blogs by category
+  const { mutate: fetchRecommendedBlogs, isPending: recosLoading } = useGetForYouBlogs();
   
   // Extract tags and links from blog content - MUST be called before any conditional returns
   const tags = useMemo(() => {
@@ -47,6 +51,7 @@ export default function BlogDetailScreen() {
   useEffect(() => {
     if (!id) return;
     setBlog(null);
+    setRecosState([]);
     const isNumeric = /^[0-9]+$/.test(String(id));
 
     fetchBlog(
@@ -54,13 +59,57 @@ export default function BlogDetailScreen() {
       {
         onSuccess: (res: any) => {
           setBlog(res);
+
+          // Fetch recommended blogs of the same category (if category is present)
+          try {
+            const catId = Array.isArray(res?.categories) && res.categories.length
+              ? res.categories[0]?.id
+              : res?.categoryId ?? undefined;
+            if (catId !== undefined && catId !== null) {
+              fetchRecommendedBlogs(
+                { categoryIds: [catId] },
+                {
+                  onSuccess: (recRes: any) => {
+                    const received = recRes?.data?.blogs ?? recRes?.blogs ?? recRes ?? [];
+                    // Exclude the current blog id
+                    const filtered = Array.isArray(received)
+                      ? received.filter((b: any) => b?.id !== res?.id)
+                      : [];
+
+                    // Map to compact display shape (title, description, image)
+                    const mapped = filtered.map((b: any) => {
+                      const plain = (b.content || '').replace(/<[^>]*>/g, '');
+                      const preview = plain.length > 120 ? `${plain.slice(0, 120).trim()}...` : plain;
+                      const imageUrl = (b.media && b.media.images && typeof b.media.images === 'object')
+                        ? b.media.images[Object.keys(b.media.images)[0]]
+                        : 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
+
+                      return {
+                        id: b.id,
+                        title: b.title,
+                        description: preview,
+                        image: { uri: imageUrl },
+                      };
+                    });
+
+                    setRecosState(mapped);
+                  },
+                  onError: () => {
+                    setRecosState([]);
+                  },
+                }
+              );
+            }
+          } catch (err) {
+            console.error('[BlogDetail] Failed to fetch recommendations:', err);
+          }
         },
         onError: () => {
           setBlog(null);
         },
       }
     );
-  }, [id, fetchBlog]);
+  }, [id, fetchBlog, fetchRecommendedBlogs]);
 
   // Conditional returns AFTER all hooks
   if (blogLoading) {
@@ -85,7 +134,7 @@ export default function BlogDetailScreen() {
     );
   }
   
-  const recos: any[] = [];
+  const recos: any[] = []; // kept for backwards compatibility (derived data is in recosState)
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -106,49 +155,15 @@ export default function BlogDetailScreen() {
         {/* Render HTML content with all features */}
         <HtmlContentRenderer html={blog.content || ''} media={blog.media} />
 
-        <View style={styles.recommendedSection}>
-          <Text style={styles.sectionTitle}>Recommended Blogs</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.recommendedContainer}
-            style={styles.recommendedScrollView}
-            snapToInterval={CARD_WIDTH + CARD_GAP}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            bounces={true}
-            alwaysBounceHorizontal={true}
-          >
-            {recos.map((it, index) => (
-              <TouchableOpacity
-                key={it.id}
-                style={styles.hCard}
-                activeOpacity={0.7}
-                onPress={() => router.push(`/(tabs)/(home)/${it.id}`)}
-              >
-                <View style={styles.hCardContent}>
-                  <Image source={it.image} style={styles.hImage} resizeMode="cover" />
-                  <View style={styles.hCardTextContainer}>
-                    <Text
-                      style={styles.hTitle}
-                      numberOfLines={2}
-                      ellipsizeMode="tail"
-                    >
-                      {it.title}
-                    </Text>
-                    <Text
-                      style={styles.hDescription}
-                      numberOfLines={3}
-                      ellipsizeMode="tail"
-                    >
-                      {it.description}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        {/* Recommended row: uses a reusable component for horizontal scrolling */}
+        {recosState.length > 0 && (
+          <>
+            <RecommendedRow
+              items={recosState}
+              onPress={(it) => router.push(`/(tabs)/(home)/${it.id}`)}
+            />
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

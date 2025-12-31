@@ -2,11 +2,11 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../store";
 import {
-  setBlogsWishlist,
-  setCategoriesWishlist,
-  setWishlist,
-  toggleBlogWishlist,
-  toggleCategoryWishlist,
+    setBlogsWishlist,
+    setCategoriesWishlist,
+    setWishlist,
+    toggleBlogWishlist,
+    toggleCategoryWishlist,
 } from "./action";
 import { useWishlistSelector } from "./selector";
 
@@ -35,6 +35,7 @@ export const useWishlist = () => {
 
   const onSetCategoriesWishlist = useCallback(
     (categoriesWishlist: number[] | null) => {
+      console.debug('[WishlistHook] dispatching setCategoriesWishlist with:', categoriesWishlist);
       dispatch(setCategoriesWishlist({ categoriesWishlist }));
     },
     [dispatch]

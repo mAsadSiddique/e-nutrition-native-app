@@ -14,12 +14,17 @@ export interface RawBlog {
 
 export const useGetForYouBlogs = () => {
   return useMutation({
-    mutationFn: async (): Promise<RawBlog[]> => {
-      // Note: axios response interceptor returns `response.data` (server body),
-      // so `response` is already the server body: { message, data: { blogs: [...] } }
-      // axios interceptor returns response.data (server body), but TS types still
-      // expect AxiosResponse. Use `any` to avoid type mismatch and safely read fields.
-      const response: any = await axios.get(SERVER_END_POINTS.USER_BLOG);
+    mutationFn: async (payload?: { categoryIds?: number[] }): Promise<RawBlog[]> => {
+      // Construct query string explicitly to ensure repeated `categoryIds` params.
+      // Sanitize: coerce to Number, keep integers only, dedupe.
+      const base = SERVER_END_POINTS.USER_BLOG;
+      const rawIds = Array.isArray(payload?.categoryIds) ? payload!.categoryIds : [];
+      const cleaned = Array.from(new Set(rawIds.map((n: any) => Number(n)).filter((id) => Number.isInteger(id)))) as number[];
+      const url = cleaned.length
+        ? `${base}?${cleaned.map((id) => `categoryIds=${encodeURIComponent(id)}`).join("&")}`
+        : base;
+
+      const response: any = await axios.get(url);
       const blogs = response?.data?.blogs || response?.blogs || [];
       return blogs;
     },
@@ -69,6 +74,34 @@ export const useGetBlog = () => {
       const blog =
         blogFromData || response?.data || response?.blog || response || null;
       return blog as RawBlog | null;
+    },
+  });
+};
+
+// New: real-time search hook
+export const useSearchBlogs = () => {
+  return useMutation({
+    mutationFn: async (params: { slug?: string; tags?: string | string[]; sortBy?: string }): Promise<RawBlog[]> => {
+      const base = SERVER_END_POINTS.USER_BLOG;
+      const parts: string[] = [];
+      if (params?.slug) {
+        parts.push(`slug=${encodeURIComponent(String(params.slug))}`);
+      }
+      if (params?.tags) {
+        if (Array.isArray(params.tags)) {
+          // server expects repeated tags or comma? use repeated tags param
+          params.tags.forEach((t) => parts.push(`tags=${encodeURIComponent(String(t))}`));
+        } else {
+          parts.push(`tags=${encodeURIComponent(String(params.tags))}`);
+        }
+      }
+      if (params?.sortBy) {
+        parts.push(`sortBy=${encodeURIComponent(String(params.sortBy))}`);
+      }
+      const url = parts.length ? `${base}?${parts.join('&')}` : base;
+      const response: any = await axios.get(url);
+      const blogs = response?.data?.blogs || response?.blogs || [];
+      return blogs;
     },
   });
 };

@@ -4,7 +4,7 @@ import { SERVER_END_POINTS } from "../constant/server-endpoint";
 import type { ApiResponse } from "../utils/types";
 
 export interface TWishlistTogglePayload {
-  categoryIds: number[];
+  ids: number[];
 }
 
 export const useWishlistToggle = () => {

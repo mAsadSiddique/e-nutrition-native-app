@@ -12,5 +12,5 @@ export const SERVER_END_POINTS = {
   USER_BLOG: "/user/blog",
   BLOG_WISHLIST_TOGGLE: "/user/blog/wishlist/toggle",
   CATEGORIES: "/category",
-  WISHLIST_CATEGORIES: "/category/wishlist/toggle",
+  WISHLIST_CATEGORIES: "/category/wishlist",
 };
