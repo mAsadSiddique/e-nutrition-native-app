@@ -62,9 +62,10 @@ export default function ProfileTab() {
   const { userProfile, updateUserProfile, signOut } = useAuth();
   const router = useRouter();
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
-  const handleLinkedIn = () => Linking.openURL("https://linkedin.com");
-  const handleTwitter = () => Linking.openURL("https://twitter.com");
-  const handleInstagram = () => Linking.openURL("https://instagram.com");
+  // Social links (only the three requested)
+  const handleLinkedIn = () => Linking.openURL("https://www.linkedin.com/in/oneplatforms");
+  const handleFacebookEnutrition = () => Linking.openURL("https://www.facebook.com/enutrition.me");
+  const handleYouTube = () => Linking.openURL("https://www.youtube.com/@e.nutrition");
 
   const {
     mutate: fetchProfile,
@@ -294,16 +295,16 @@ export default function ProfileTab() {
             <View style={styles.divider} />
 
             <SettingItem
-              title="Twitter"
-              iconName="logo-twitter"
-              onPress={handleTwitter}
+              title="Facebook"
+              iconName="logo-facebook"
+              onPress={handleFacebookEnutrition}
             />
             <View style={styles.divider} />
 
             <SettingItem
-              title="Instagram"
-              iconName="logo-instagram"
-              onPress={handleInstagram}
+              title="YouTube"
+              iconName="logo-youtube"
+              onPress={handleYouTube}
             />
           </View>
         </View>

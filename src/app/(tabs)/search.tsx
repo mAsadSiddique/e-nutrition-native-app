@@ -1,11 +1,11 @@
+import { useSearchBlogs } from '@/src/services/blogApi';
 import { TypographyStyles } from '@/src/theme/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { blogs, categories } from '../../utils/data';
-import { useSearchBlogs } from '@/src/services/blogApi';
+import { categories } from '../../utils/data';
 
 export default function SearchTab() {
   const [q, setQ] = useState('');
