@@ -2,22 +2,21 @@ import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../store";
 import {
-    setBlogsWishlist,
-    setCategoriesWishlist,
-    setWishlist,
-    toggleBlogWishlist,
-    toggleCategoryWishlist,
+  setBlogsWishlist,
+  setCategoriesWishlist,
+  setWishlist,
+  toggleBlogWishlist,
+  toggleCategoryWishlist,
 } from "./action";
-import { useWishlistSelector } from "./selector";
 
 export interface TWishlistPayload {
   blogsWishlist: number[];
   categoriesWishlist: number[] | null;
 }
 
-export const useWishlist = () => {
+export const useWishlistHandler = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const wishlistState = useWishlistSelector();
+  // const wishlistState = useWishlistSelector();
 
   const onSetWishlist = useCallback(
     (payload: TWishlistPayload) => {
@@ -35,7 +34,10 @@ export const useWishlist = () => {
 
   const onSetCategoriesWishlist = useCallback(
     (categoriesWishlist: number[] | null) => {
-      console.debug('[WishlistHook] dispatching setCategoriesWishlist with:', categoriesWishlist);
+      console.debug(
+        "[WishlistHook] dispatching setCategoriesWishlist with:",
+        categoriesWishlist
+      );
       dispatch(setCategoriesWishlist({ categoriesWishlist }));
     },
     [dispatch]
@@ -56,8 +58,8 @@ export const useWishlist = () => {
   );
 
   return {
-    blogsWishlist: wishlistState.blogsWishlist,
-    categoriesWishlist: wishlistState.categoriesWishlist,
+    // blogsWishlist: wishlistState.blogsWishlist,
+    // categoriesWishlist: wishlistState.categoriesWishlist,
     setWishlist: onSetWishlist,
     setBlogsWishlist: onSetBlogsWishlist,
     setCategoriesWishlist: onSetCategoriesWishlist,

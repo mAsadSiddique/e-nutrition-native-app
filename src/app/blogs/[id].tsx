@@ -1,9 +1,8 @@
 import HtmlContentRenderer from '@/src/components/blog/HtmlContentRenderer';
 import RecommendedRow from '@/src/components/blog/RecommendedRow';
 import { SkeletonBlogDetail } from '@/src/components/ui/SkeletonLoader';
-import { useGetBlog, useGetForYouBlogs } from '@/src/services/blogApi';
+import { useBlogsListing } from '@/src/services/blogApi';
 import { TypographyStyles } from '@/src/theme/theme';
-import { extractLinks, extractTags } from '@/src/utils/htmlParser';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -15,101 +14,71 @@ const CARD_GAP = 12;
 const AVAILABLE_WIDTH = SCREEN_WIDTH - (CONTAINER_PADDING * 2);
 const CARD_WIDTH = Math.floor((AVAILABLE_WIDTH - CARD_GAP) / 2);
 export default function BlogDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { mutate: fetchBlog, isPending: blogLoading } = useGetBlog();
-  const [blog, setBlog] = useState<any | null>(null);
+  const { id, categoryId } = useLocalSearchParams<{ id: string; categoryId?: string }>();
+
   const [recosState, setRecosState] = useState<any[]>([]);
 
-  // For fetching recommended blogs by category
-  const { mutate: fetchRecommendedBlogs, isPending: recosLoading } = useGetForYouBlogs();
-  
-  // Extract tags and links from blog content - MUST be called before any conditional returns
-  const tags = useMemo(() => {
-    if (!blog?.content) return [];
-    return extractTags(blog.content);
-  }, [blog?.content]);
+  const categoryIdNum = categoryId ? Number(categoryId) : undefined;
 
-  const links = useMemo(() => {
-    if (!blog?.content) return [];
-    return extractLinks(blog.content);
-  }, [blog?.content]);
+  // Fetch specific blog by id or slug
+  const isNumericId = id ? /^[0-9]+$/.test(String(id)) : false;
+  const { data: specificBlogData, isLoading: blogLoading } = useBlogsListing({
+    ...(id && (isNumericId ? { id } : { slug: id })),
+  });
 
-  // Get header image from media
-  const headerImageUrl = useMemo(() => {
-    if (!blog?.media?.images || typeof blog.media.images !== 'object') {
-      return 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
+  // Fetch recommended blogs by categoryId
+  const { data: recommendedBlogsData, isLoading } = useBlogsListing({
+    ...(categoryIdNum && { categoryIds: [categoryIdNum] }),
+  });
+
+  // Extract the blog from the array (useBlogsListing returns an array)
+  const blog = useMemo(() => {
+    if (!specificBlogData || !Array.isArray(specificBlogData) || specificBlogData.length === 0) {
+      return null;
     }
-    const imageKeys = Object.keys(blog.media.images);
-    if (imageKeys.length === 0) {
-      return 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
-    }
-    const firstKey = imageKeys[0];
-    return blog.media.images[firstKey] || 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
-  }, [blog?.media?.images]);
-  
+    return specificBlogData[0];
+  }, [specificBlogData]);
+
+
+  // Update recommended blogs when recommendedBlogsData or blog changes
   useEffect(() => {
-    if (!id) return;
-    setBlog(null);
-    setRecosState([]);
-    const isNumeric = /^[0-9]+$/.test(String(id));
+    if (recommendedBlogsData && Array.isArray(recommendedBlogsData) && blog) {
+      try {
+        // Exclude the current blog id
+        const currentBlogId = typeof blog?.id === 'number' ? blog.id : Number(blog?.id);
+        const filtered = recommendedBlogsData.filter((b: any) => {
+          const blogId = typeof b?.id === 'number' ? b.id : Number(b?.id);
+          return blogId !== currentBlogId;
+        });
 
-    fetchBlog(
-      isNumeric ? { id } : { slug: String(id) },
-      {
-        onSuccess: (res: any) => {
-          setBlog(res);
+        // Map to compact display shape (title, description, image)
+        // Include categoryId so we can pass it when navigating
+        const mapped = filtered.map((b: any) => {
+          const plain = (b.content || '').replace(/<[^>]*>/g, '');
+          const preview = plain.length > 120 ? `${plain.slice(0, 120).trim()}...` : plain;
+          const imageUrl = (b.media && b.media.images && typeof b.media.images === 'object')
+            ? b.media.images[Object.keys(b.media.images)[0]]
+            : 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
 
-          // Fetch recommended blogs of the same category (if category is present)
-          try {
-            const catId = Array.isArray(res?.categories) && res.categories.length
-              ? res.categories[0]?.id
-              : res?.categoryId ?? undefined;
-            if (catId !== undefined && catId !== null) {
-              fetchRecommendedBlogs(
-                { categoryIds: [catId] },
-                {
-                  onSuccess: (recRes: any) => {
-                    const received = recRes?.data?.blogs ?? recRes?.blogs ?? recRes ?? [];
-                    // Exclude the current blog id
-                    const filtered = Array.isArray(received)
-                      ? received.filter((b: any) => b?.id !== res?.id)
-                      : [];
+          return {
+            id: b.id,
+            title: b.title,
+            description: preview,
+            image: { uri: imageUrl },
+            categoryId: categoryIdNum, // Include categoryId from route params
+          };
+        });
 
-                    // Map to compact display shape (title, description, image)
-                    const mapped = filtered.map((b: any) => {
-                      const plain = (b.content || '').replace(/<[^>]*>/g, '');
-                      const preview = plain.length > 120 ? `${plain.slice(0, 120).trim()}...` : plain;
-                      const imageUrl = (b.media && b.media.images && typeof b.media.images === 'object')
-                        ? b.media.images[Object.keys(b.media.images)[0]]
-                        : 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
-
-                      return {
-                        id: b.id,
-                        title: b.title,
-                        description: preview,
-                        image: { uri: imageUrl },
-                      };
-                    });
-
-                    setRecosState(mapped);
-                  },
-                  onError: () => {
-                    setRecosState([]);
-                  },
-                }
-              );
-            }
-          } catch (err) {
-            console.error('[BlogDetail] Failed to fetch recommendations:', err);
-          }
-        },
-        onError: () => {
-          setBlog(null);
-        },
+        setRecosState(mapped);
+      } catch (err) {
+        console.error('[BlogDetail] Failed to process recommended blogs:', err);
+        setRecosState([]);
       }
-    );
-  }, [id, fetchBlog, fetchRecommendedBlogs]);
+    } else {
+      setRecosState([]);
+    }
+  }, [recommendedBlogsData, blog, categoryIdNum]);
 
   // Conditional returns AFTER all hooks
   if (blogLoading) {
@@ -133,8 +102,6 @@ export default function BlogDetailScreen() {
       </View>
     );
   }
-  
-  const recos: any[] = []; // kept for backwards compatibility (derived data is in recosState)
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -144,23 +111,24 @@ export default function BlogDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>{blog.title}</Text>
-        {/* <Text
-          style={styles.meta}
-          onPress={() => router.push(`/(tabs)/(home)/author/${encodeURIComponent(blog.author)}`)}
-        >
-          {blog.author} • {blog.date}
-        </Text> */}
-        {/* <Image source={{ uri: headerImageUrl }} style={styles.headerImage} /> */}
 
-        {/* Render HTML content with all features */}
         <HtmlContentRenderer html={blog.content || ''} media={blog.media} />
 
-        {/* Recommended row: uses a reusable component for horizontal scrolling */}
         {recosState.length > 0 && (
           <>
             <RecommendedRow
               items={recosState}
-              onPress={(it) => router.push(`/(tabs)/(home)/${it.id}`)}
+              onPress={(it: any) => {
+                // Navigate to blog detail with categoryId as query parameter
+                if (it.categoryId !== undefined) {
+                  router.push({
+                    pathname: '/blogs/[id]',
+                    params: { id: String(it.id), categoryId: String(it.categoryId) },
+                  });
+                } else {
+                  router.push(`/blogs/${it.id}`);
+                }
+              }}
             />
           </>
         )}

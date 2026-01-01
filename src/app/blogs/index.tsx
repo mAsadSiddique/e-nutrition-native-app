@@ -1,13 +1,16 @@
 import { SkeletonBlogCard } from "@/src/components/ui/SkeletonLoader";
-import { useGetWishlist } from "@/src/services/authApi";
-import { useBlogWishlistToggle, useGetFeaturedBlogs, useGetForYouBlogs } from "@/src/services/blogApi";
-import { useGetCategories } from "@/src/services/categoryApi";
-import { useWishlist } from "@/src/store/wishlist/hook";
+import { useBlogsListing, useBlogWishlistToggle } from "@/src/services/blogApi";
+import { useWishlistHandler } from "@/src/store/wishlist/hook";
+import { useWishlistSelector } from "@/src/store/wishlist/selector";
 import { TypographyStyles } from "@/src/theme/theme";
+import { stripHtml } from "@/src/utils/blogs-helper";
+import { UserAction } from "@/src/utils/enums";
+import { formatDate } from "@/src/utils/format-date";
+import type { TBlogsListing } from "@/src/utils/types/blogs";
+import React, { useCallback, useMemo, useState } from "react";
+
 import { Ionicons } from "@expo/vector-icons";
-import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -18,135 +21,24 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-// We use real blogs from API; remove dummy import
+
 export default function BlogListScreen() {
   const router = useRouter();
+  const { blogsWishlist, categoriesWishlist } = useWishlistSelector()
 
-  // Tab state management
-  const [activeTab, setActiveTab] = useState<"for-you" | "featured">("for-you");
-  const [loading, setLoading] = useState(true);
-  const {
-    mutate: fetchForYouBlogs,
-    isPending: forYouBlogsLoading,
-    error: forYouBlogsError,
-  } = useGetForYouBlogs();
-  const {
-    mutate: fetchFeaturedBlogs,
-    isPending: featuredBlogsLoading,
-    error: featuredBlogsError,
-  } = useGetFeaturedBlogs();
-  const {
-    refetch: fetchCategories,
-    data: categoriesApiData,
-    isLoading: categoriesLoading,
-    error: categoriesError,
-  } = useGetCategories();
-  const { blogsWishlist, setWishlist, categoriesWishlist, toggleBlogWishlist: toggleWishlistInStore } = useWishlist();
+  const [activeTab, setActiveTab] = useState<UserAction>(UserAction.For_YOU);
+
+  const { data: blogsListing, isLoading, refetch: refetchBlogsListing, error: blogsError } = useBlogsListing({
+    ...(activeTab === UserAction.For_YOU && { categoryIds: categoriesWishlist as number[] })
+  })
+
+  const { toggleBlogWishlist: toggleWishlistInStore } = useWishlistHandler();
   const {
     mutate: toggleBlogWishlist,
     isPending: wishlistLoading,
   } = useBlogWishlistToggle();
-  const {
-    mutate: fetchWishlist,
-  } = useGetWishlist();
-  const isFocused = useIsFocused();
 
-  // State to hold raw API blogs for both tabs
-  const [forYouBlogs, setForYouBlogs] = useState<any[]>([]);
-  const [featuredBlogs, setFeaturedBlogs] = useState<any[]>([]);
-  const didFetchForYouRef = useRef(false);
-  const didFetchFeaturedRef = useRef(false);
-
-  // Fetch For You blogs on mount
-  useEffect(() => {
-    if (didFetchForYouRef.current) return;
-    didFetchForYouRef.current = true;
-
-    const onForYouHandlers = {
-      onSuccess: (res: any) => {
-        const received = res?.data?.blogs ?? res?.blogs ?? res ?? [];
-        setForYouBlogs(Array.isArray(received) ? received : []);
-        console.debug(
-          "[BlogList] fetched For You blogs count:",
-          Array.isArray(received) ? received.length : 0
-        );
-      },
-      onError: (err: any) => console.error("For You blogs fetch error:", err?.response || err),
-    };
-
-      // Pass stored category IDs to the For You endpoint if present
-    // Sanitize: coerce to numbers, dedupe
-    const forYouCategoryIds = Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0
-      ? Array.from(new Set(categoriesWishlist.map((n: any) => Number(n)).filter((id) => Number.isInteger(id)))) as number[]
-      : [];
-
-    // If categories data is not yet available, fetch it first and only then validate stored IDs
-    if (!Array.isArray(categoriesApiData) || categoriesApiData.length === 0) {
-      fetchCategories()
-        .then((res: any) => {
-          const latestCategories = res?.data ?? res ?? [];
-          const validatedCategoryIds = Array.isArray(latestCategories) && latestCategories.length > 0
-            ? forYouCategoryIds.filter((id) => latestCategories.some((c: any) => c.id === id))
-            : [];
-
-          const forYouParams = validatedCategoryIds.length > 0 ? { categoryIds: validatedCategoryIds } : undefined;
-
-          if (validatedCategoryIds.length > 0) {
-            console.debug('[BlogList] Fetching For You with category IDs (after categories fetch):', validatedCategoryIds);
-            fetchForYouBlogs(forYouParams, onForYouHandlers);
-          } else if (Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0) {
-            // We have stored IDs but none validated against the fetched categories — avoid sending invalid IDs
-            console.warn('[BlogList] Stored categories present but none validated against fetched categories. Stored:', categoriesWishlist);
-            // Call For You without category filters to avoid server errors
-            fetchForYouBlogs(undefined, onForYouHandlers);
-          } else {
-            // No stored categories: fetch default For You
-            fetchForYouBlogs(undefined, onForYouHandlers);
-          }
-        })
-        .catch((err: any) => {
-          console.error("Categories fetch error:", err?.response || err);
-          console.warn('[BlogList] Categories fetch failed; skipping category-filtered For You request to avoid server errors.');
-          fetchForYouBlogs(undefined, onForYouHandlers);
-        });
-    } else {
-      // categoriesApiData is available; validate stored IDs against it and call the For You endpoint
-      const validatedCategoryIds = forYouCategoryIds.filter((id) => categoriesApiData.some((c: any) => c.id === id));
-      const forYouParams = validatedCategoryIds.length > 0 ? { categoryIds: validatedCategoryIds } : undefined;
-
-      if (validatedCategoryIds.length > 0) {
-        console.debug('[BlogList] Fetching For You with category IDs:', validatedCategoryIds);
-      } else if (Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0) {
-        console.warn('[BlogList] Stored categories present but none validated against categories data. Stored:', categoriesWishlist);
-      }
-
-      fetchForYouBlogs(forYouParams, onForYouHandlers);
-    }
-
-    const timer = setTimeout(() => setLoading(false), 150);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Fetch Featured blogs when switching to Featured tab
-  useEffect(() => {
-    if (activeTab === "featured" && !didFetchFeaturedRef.current) {
-      didFetchFeaturedRef.current = true;
-      fetchFeaturedBlogs(undefined, {
-        onSuccess: (res: any) => {
-          const received = res?.data?.blogs ?? res?.blogs ?? res ?? [];
-          setFeaturedBlogs(Array.isArray(received) ? received : []);
-          console.debug(
-            "[BlogList] fetched Featured blogs count:",
-            Array.isArray(received) ? received.length : 0
-          );
-        },
-        onError: (err: any) =>
-          console.error("Featured blogs fetch error:", err?.response || err),
-      });
-    }
-  }, [activeTab, fetchFeaturedBlogs]);
-
-  const handleTabPress = useCallback((tab: "for-you" | "featured") => {
+  const handleTabPress = useCallback((tab: UserAction) => {
     setActiveTab(tab);
   }, []);
 
@@ -154,7 +46,21 @@ export default function BlogListScreen() {
     (item: any) => {
       const slugOrId = item?.slug ?? item?.id ?? "";
       if (!slugOrId) return;
-      router.push(`/(tabs)/(home)/${slugOrId}`);
+      
+      // Get the first categoryId from the blog's categories array
+      const categoryId = Array.isArray(item?.categories) && item.categories.length > 0
+        ? item.categories[0]
+        : undefined;
+      
+      // Navigate to blog detail with categoryId as query parameter
+      if (categoryId !== undefined) {
+        router.push({
+          pathname: '/blogs/[id]',
+          params: { id: String(slugOrId), categoryId: String(categoryId) },
+        });
+      } else {
+        router.push(`/blogs/${slugOrId}`);
+      }
     },
     [router]
   );
@@ -241,9 +147,7 @@ export default function BlogListScreen() {
   const renderHeader = useCallback(
     () => (
       <View style={styles.headerContainer}>
-        {/* 
 
-       Title */}
         <View style={styles.logoWrapper}>
           <Image
             source={require("../../assets/logo.png")}
@@ -252,38 +156,36 @@ export default function BlogListScreen() {
           />
         </View>
 
-        {/* <Text style={styles.mediumTitle}>NutriLife</Text> */}
-
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
           <Pressable
             style={styles.tabButton}
-            onPress={() => handleTabPress("for-you")}
+            onPress={() => handleTabPress(UserAction.For_YOU)}
           >
             <Text
               style={[
                 styles.tabText,
-                activeTab === "for-you" && styles.tabTextActive,
+                activeTab === UserAction.For_YOU && styles.tabTextActive,
               ]}
             >
               For you
             </Text>
-            {activeTab === "for-you" && <View style={styles.tabUnderline} />}
+            {activeTab === UserAction.For_YOU && <View style={styles.tabUnderline} />}
           </Pressable>
 
           <Pressable
             style={styles.tabButton}
-            onPress={() => handleTabPress("featured")}
+            onPress={() => handleTabPress(UserAction.FEATURED)}
           >
             <Text
               style={[
                 styles.tabText,
-                activeTab === "featured" && styles.tabTextActive,
+                activeTab === UserAction.FEATURED && styles.tabTextActive,
               ]}
             >
               Featured
             </Text>
-            {activeTab === "featured" && <View style={styles.tabUnderline} />}
+            {activeTab === UserAction.FEATURED && <View style={styles.tabUnderline} />}
           </Pressable>
         </View>
       </View>
@@ -291,12 +193,7 @@ export default function BlogListScreen() {
     [activeTab, handleTabPress]
   );
 
-  const blogsLoading =
-    activeTab === "for-you" ? forYouBlogsLoading : featuredBlogsLoading;
-  const blogsError =
-    activeTab === "for-you" ? forYouBlogsError : featuredBlogsError;
-
-  if (loading || blogsLoading || categoriesLoading) {
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         {renderHeader()}
@@ -313,7 +210,7 @@ export default function BlogListScreen() {
     );
   }
 
-  if (blogsError || categoriesError) {
+  if (blogsError) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         {renderHeader()}
@@ -322,39 +219,7 @@ export default function BlogListScreen() {
             Failed to load content. Please try again.
           </Text>
           <TouchableOpacity
-            onPress={() => {
-              // Try to use validated category IDs when retrying to avoid sending stale/invalid IDs
-              if (activeTab === "for-you") {
-                if (Array.isArray(categoriesApiData) && categoriesApiData.length > 0) {
-                  const sanitized = Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0
-                    ? Array.from(new Set(categoriesWishlist.map((n: any) => Number(n)).filter((id) => Number.isInteger(id)))) as number[]
-                    : [];
-                  const validated = sanitized.filter((id) => categoriesApiData.some((c: any) => c.id === id));
-                  const params = validated.length > 0 ? { categoryIds: validated } : undefined;
-                  fetchForYouBlogs(params);
-                } else {
-                  // categories not available yet, fetch them then validate before calling For You
-                  fetchCategories()
-                    .then((res: any) => {
-                      const latestCategories = res?.data ?? res ?? [];
-                      const sanitized = Array.isArray(categoriesWishlist) && categoriesWishlist.length > 0
-                        ? Array.from(new Set(categoriesWishlist.map((n: any) => Number(n)).filter((id) => Number.isInteger(id)))) as number[]
-                        : [];
-                      const validated = Array.isArray(latestCategories) && latestCategories.length > 0
-                        ? sanitized.filter((id) => latestCategories.some((c: any) => c.id === id))
-                        : [];
-                      const params = validated.length > 0 ? { categoryIds: validated } : undefined;
-                      fetchForYouBlogs(params);
-                    })
-                    .catch(() => {
-                      console.warn('[BlogList] Categories fetch failed during retry; calling For You without category filters.');
-                      fetchForYouBlogs(undefined);
-                    });
-                }
-              } else {
-                fetchFeaturedBlogs();
-              }
-            }}
+            onPress={() => refetchBlogsListing()}
             style={styles.authTestButton}
           >
             <Text style={styles.authTestButtonText}>Retry</Text>
@@ -363,93 +228,43 @@ export default function BlogListScreen() {
       </SafeAreaView>
     );
   }
-  const currentBlogs = activeTab === "for-you" ? forYouBlogs : featuredBlogs;
-  const apiBlogs = (currentBlogs || []).map((b: any) => b as any);
-  const stripHtml = (html: string) => {
-    if (!html) return "";
-    const text = html.replace(/<[^>]*>/g, "");
-    return text.replace(/&nbsp;|&amp;|&lt;|&gt;|&quot;|&#39;/g, (s) => {
-      switch (s) {
-        case "&nbsp;":
-          return " ";
-        case "&amp;":
-          return "&";
-        case "&lt;":
-          return "<";
-        case "&gt;":
-          return ">";
-        case "&quot;":
-          return '"';
-        case "&#39;":
-          return "'";
-        default:
-          return s;
-      }
-    });
-  };
-
-  const formatDate = (iso?: string) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-  const categoryMap = new Map<number, string>();
-  // if (Array.isArray(categoriesApiData)) {
-  //   categoriesApiData.forEach((c: any) => categoryMap.set(c.id, c.name));
-  // }
 
   // Helper function to extract image URL from media object
-  const getImageUrlFromMedia = (media: any): string => {
+  const getImageUrlFromMedia = (media: TBlogsListing['media']): string => {
     if (!media || !media.images || typeof media.images !== "object") {
       return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
     }
-
-    // Get the first image key from the images object
     const imageKeys = Object.keys(media.images);
     if (imageKeys.length === 0) {
       return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
     }
-
-    // Get the first image key and split by "_"
     const firstKey = imageKeys[0];
-    const keyParts = firstKey.split("_");
-
-    // Use the URL from the images object
     const imageUrl = media.images[firstKey];
-
     return imageUrl || "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
   };
 
-  const mappedApiBlogs = apiBlogs.map((b: any) => {
-    const plain = stripHtml(b.content || "");
-    const preview =
-      plain.length > 120 ? `${plain.slice(0, 120).trim()}...` : plain;
-    const catId =
-      Array.isArray(b.categories) && b.categories.length
-        ? b.categories[0]
-        : undefined;
-    const catName = catId ? categoryMap.get(catId) || "General" : "General";
-    const imageUrl = getImageUrlFromMedia(b.media);
+  // Transform blogs listing data for display
+  const transformedBlogs = useMemo(() => {
+    if (!blogsListing || !Array.isArray(blogsListing)) return [];
+    return blogsListing.map((b: TBlogsListing) => {
+      // Use excerpt if available, otherwise strip HTML from content as fallback
+      const description = b.excerpt
+        ? b.excerpt
+        : stripHtml(b.content || "");
+      const preview = description.length > 120 ? `${description.slice(0, 120).trim()}...` : description;
+      const imageUrl = getImageUrlFromMedia(b.media);
+      return {
+        id: b.id,
+        title: b.title,
+        description: preview,
+        date: formatDate(b.publishedAt),
+        image: { uri: imageUrl },
+        categories: b.categories || [],
+      };
+    });
+  }, [blogsListing]);
 
-    return {
-      id: b.id,
-      title: b.title,
-      description: preview,
-      date: formatDate(b.publishedAt),
-      image: {
-        uri: imageUrl,
-      },
-      category: [catName],
-      author: "",
-    };
-  });
-
-  const finalBlogs = mappedApiBlogs;
-  const displayData = finalBlogs;
+  const displayData = transformedBlogs;
   // Debugging hint: log how many items will be rendered
   console.debug("[BlogList] displayData length:", displayData.length);
   return (
@@ -522,15 +337,6 @@ const styles = StyleSheet.create({
     marginBottom: -20,
     marginLeft: -70,
   },
-
-  //  mediumTitle: {
-  //   ...TypographyStyles.h2,
-  //   fontSize: 28,
-  //   // marginBottom: screenHeight * 0.08,
-  //   color: "#000",
-  //   letterSpacing: -0.5,
-  //   marginBottom: 20,
-  // },
 
   tabContainer: {
     ...TypographyStyles.body,
