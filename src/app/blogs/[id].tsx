@@ -114,6 +114,18 @@ export default function BlogDetailScreen() {
 
         <HtmlContentRenderer html={blog.content || ''} media={blog.media} />
 
+        {blog.tags && blog.tags.length > 0 && (
+          <View style={styles.tagsContainer}>
+            <View style={styles.tagsList}>
+              {blog.tags.map((tag, index) => (
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>#{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {recosState.length > 0 && (
           <>
             <RecommendedRow
@@ -281,7 +293,7 @@ const styles = StyleSheet.create({
   tagsList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    marginTop: 8,
   },
   tag: {
     backgroundColor: '#f0f0f0',
@@ -290,6 +302,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    marginRight: 8,
+    marginBottom: 8,
   },
   tagText: {
     ...TypographyStyles.bodySmall,

@@ -13,6 +13,7 @@ import type {
 // getting blogs listing...
 export const useBlogsListing = ({
   id,
+  ids,
   search,
   slug,
   sortBy,
@@ -23,6 +24,7 @@ export const useBlogsListing = ({
     queryKey: [
       QueryKey.BLOGS_LISTING,
       id,
+      ids,
       search,
       slug,
       sortBy,
@@ -32,6 +34,7 @@ export const useBlogsListing = ({
     queryFn: async (): Promise<TApiResponse> => {
       const payload = {
         ...(id && { id }),
+        ...(ids && { ids }),
         ...(slug && { slug }),
         ...(tags && { tags }),
         ...(search && { search }),

@@ -21,8 +21,11 @@ export function extractYouTubeId(url: string): string | null {
   if (!url) return null;
   
   const patterns = [
+    // Standard YouTube formats
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
     /youtube\.com\/v\/([^&\n?#]+)/,
+    // YouTube nocookie domain (privacy-enhanced mode)
+    /(?:youtube-nocookie\.com\/embed\/)([^&\n?#]+)/,
   ];
   
   for (const pattern of patterns) {
@@ -39,7 +42,7 @@ export function extractYouTubeId(url: string): string | null {
  * Check if a URL is a YouTube URL
  */
 export function isYouTubeUrl(url: string): boolean {
-  return /youtube\.com|youtu\.be/.test(url);
+  return /youtube\.com|youtu\.be|youtube-nocookie\.com/.test(url);
 }
 
 /**
@@ -96,12 +99,10 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
     iterations++;
     // Check for opening tags
     if (html[i] === '<') {
-      // Save any accumulated text
+      // Save any accumulated text and check for YouTube URLs
       if (currentText.trim()) {
-        elements.push({
-          type: 'text',
-          content: currentText.trim(),
-        });
+        const textWithYouTube = processTextForYouTube(currentText.trim());
+        elements.push(...textWithYouTube);
         currentText = '';
       }
       
@@ -265,6 +266,65 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
             i = tagEnd + 1;
             continue;
           }
+          
+          case 'iframe': {
+            // Extract src attribute
+            const srcMatch = tagContent.match(/src\s*=\s*["']([^"']+)["']/i);
+            const src = srcMatch ? srcMatch[1] : '';
+            
+            // Check if it's a YouTube iframe
+            if (src && isYouTubeUrl(src)) {
+              const youtubeId = extractYouTubeId(src);
+              if (youtubeId) {
+                // Check if iframe is self-closing (ends with />)
+                const isSelfClosing = tagContent.trim().endsWith('/') || html[tagEnd - 1] === '/';
+                
+                if (isSelfClosing) {
+                  // Self-closing iframe
+                  elements.push({
+                    type: 'youtube',
+                    content: '',
+                    href: src,
+                    youtubeId,
+                  });
+                  i = tagEnd + 1;
+                  continue;
+                } else {
+                  // Iframe with closing tag
+                  const closingTag = '</iframe>';
+                  const closingIndex = html.indexOf(closingTag, tagEnd);
+                  
+                  elements.push({
+                    type: 'youtube',
+                    content: '',
+                    href: src,
+                    youtubeId,
+                  });
+                  
+                  if (closingIndex !== -1) {
+                    i = closingIndex + closingTag.length;
+                  } else {
+                    i = tagEnd + 1;
+                  }
+                  continue;
+                }
+              }
+            }
+            // If not YouTube, skip the iframe
+            const isSelfClosing = tagContent.trim().endsWith('/') || html[tagEnd - 1] === '/';
+            if (isSelfClosing) {
+              i = tagEnd + 1;
+            } else {
+              const closingTag = '</iframe>';
+              const closingIndex = html.indexOf(closingTag, tagEnd);
+              if (closingIndex !== -1) {
+                i = closingIndex + closingTag.length;
+              } else {
+                i = tagEnd + 1;
+              }
+            }
+            continue;
+          }
         }
       }
       
@@ -277,9 +337,72 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
   
   // Add any remaining text
   if (currentText.trim()) {
+    // Check for YouTube URLs in plain text and split them
+    const textWithYouTube = processTextForYouTube(currentText.trim());
+    elements.push(...textWithYouTube);
+  }
+  
+  return elements;
+}
+
+/**
+ * Process text content to detect and extract YouTube URLs
+ * Splits text around YouTube URLs and creates separate elements
+ */
+function processTextForYouTube(text: string): ParsedElement[] {
+  const elements: ParsedElement[] = [];
+  
+  // Pattern to match YouTube URLs in various formats (including youtube-nocookie.com)
+  const youtubePattern = /(https?:\/\/(?:www\.)?(?:youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[^\s]*)?)/gi;
+  
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = youtubePattern.exec(text)) !== null) {
+    const url = match[0];
+    const videoId = match[2];
+    const matchIndex = match.index;
+    
+    // Add text before the YouTube URL
+    if (matchIndex > lastIndex) {
+      const textBefore = text.substring(lastIndex, matchIndex).trim();
+      if (textBefore) {
+        elements.push({
+          type: 'text',
+          content: textBefore,
+        });
+      }
+    }
+    
+    // Add YouTube element
+    if (videoId) {
+      elements.push({
+        type: 'youtube',
+        content: url,
+        href: url,
+        youtubeId: videoId,
+      });
+    }
+    
+    lastIndex = matchIndex + url.length;
+  }
+  
+  // Add remaining text after the last YouTube URL
+  if (lastIndex < text.length) {
+    const textAfter = text.substring(lastIndex).trim();
+    if (textAfter) {
+      elements.push({
+        type: 'text',
+        content: textAfter,
+      });
+    }
+  }
+  
+  // If no YouTube URLs were found, return the text as-is
+  if (elements.length === 0) {
     elements.push({
       type: 'text',
-      content: currentText.trim(),
+      content: text,
     });
   }
   

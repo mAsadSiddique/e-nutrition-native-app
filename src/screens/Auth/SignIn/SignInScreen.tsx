@@ -2,7 +2,7 @@ import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
 import { useLoginProfile } from "@/src/services/authApi";
 import { useAuth } from "@/src/store/auth/hook";
-import { useWishlist } from "@/src/store/wishlist/hook";
+import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { TypographyStyles } from "@/src/theme/theme";
 import storage from "@/src/utils/storage";
 import { toast } from "@/src/utils/toast";
@@ -38,7 +38,7 @@ type SignInEmailFormData = yup.InferType<typeof signInEmailSchema>;
 export default function SignInScreen() {
   const router = useRouter();
 
-  const { setWishlist } = useWishlist();
+  const { setWishlist } = useWishlistHandler();
   const { onSetProfile } = useAuth();
   const { email: prefilledEmail } = useLocalSearchParams<{ email?: string }>();
   const [showPassword, setShowPassword] = useState(false);

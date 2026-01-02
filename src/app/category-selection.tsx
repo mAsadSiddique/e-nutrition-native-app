@@ -12,7 +12,8 @@ import { SkeletonCategoryPill } from "../components/ui/SkeletonLoader";
 import { useAuth } from "../store/auth/hook";
 import { useCategories } from "../store/categories/hook";
 import { useCategoriesSelector } from "../store/categories/selector";
-import { useWishlist } from "../store/wishlist/hook";
+import { useWishlistHandler } from "../store/wishlist/hook";
+import { useWishlistSelector } from "../store/wishlist/selector";
 import { TypographyStyles } from "../theme/theme";
 const MIN_SELECTION = 3;
 const PADDING_HORIZONTAL = 20;
@@ -22,6 +23,7 @@ export default function CategorySelectionScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { selectedCategories } = useCategoriesSelector();
+  const { blogsWishlist } = useWishlistSelector()
   const { onToggleCategory, onSetSelectedCategories } = useCategories();
   const {
     data: categoriesApiData,
@@ -33,7 +35,7 @@ export default function CategorySelectionScreen() {
   } = useWishlistToggle();
 
   // Wishlist store updater
-  const { setCategoriesWishlist, setWishlist, blogsWishlist } = useWishlist();
+  const { setCategoriesWishlist, setWishlist } = useWishlistHandler();
 
   const toggle = (id: number) => {
     onToggleCategory(id);
@@ -41,7 +43,6 @@ export default function CategorySelectionScreen() {
 
 
   const canContinue = selectedCategories.length >= MIN_SELECTION;
-  console.log('canContinue: ', canContinue)
 
   // Check AsyncStorage on mount to see if there are previously saved categories
   useEffect(() => {
@@ -50,11 +51,7 @@ export default function CategorySelectionScreen() {
         const saved = await AsyncStorage.getItem('selected_categories');
         if (saved) {
           const parsed = JSON.parse(saved);
-          console.log('[CategorySelection] Found previously saved categories in AsyncStorage:', parsed);
-          console.log('[CategorySelection] Number of previously saved IDs:', parsed.length);
           onSetSelectedCategories(parsed);
-        } else {
-          console.log('[CategorySelection] No previously saved categories found in AsyncStorage');
         }
       } catch (err) {
         console.error('[CategorySelection] Error reading AsyncStorage:', err);

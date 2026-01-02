@@ -46,12 +46,12 @@ export default function BlogListScreen() {
     (item: any) => {
       const slugOrId = item?.slug ?? item?.id ?? "";
       if (!slugOrId) return;
-      
+
       // Get the first categoryId from the blog's categories array
       const categoryId = Array.isArray(item?.categories) && item.categories.length > 0
         ? item.categories[0]
         : undefined;
-      
+
       // Navigate to blog detail with categoryId as query parameter
       if (categoryId !== undefined) {
         router.push({
@@ -265,8 +265,7 @@ export default function BlogListScreen() {
   }, [blogsListing]);
 
   const displayData = transformedBlogs;
-  // Debugging hint: log how many items will be rendered
-  console.debug("[BlogList] displayData length:", displayData.length);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <FlatList

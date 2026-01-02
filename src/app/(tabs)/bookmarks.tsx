@@ -1,90 +1,207 @@
-import { useSavedBlogs } from '@/src/store/savedBlogs/hook';
+import { SkeletonBlogCard } from "@/src/components/ui/SkeletonLoader";
+import { useBlogsListing, useBlogWishlistToggle } from '@/src/services/blogApi';
+import { useWishlistHandler } from '@/src/store/wishlist/hook';
+import { useWishlistSelector } from '@/src/store/wishlist/selector';
 import { TypographyStyles } from '@/src/theme/theme';
+import { stripHtml } from '@/src/utils/blogs-helper';
+import { formatDate } from '@/src/utils/format-date';
+import type { TBlogsListing } from '@/src/utils/types/blogs';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo } from 'react';
 import { FlatList, Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { blogs as allBlogs } from '../../utils/data';
 
 export default function BookmarksTab() {
-  const { savedBlogs, toggleSaveBlog } = useSavedBlogs();
   const router = useRouter();
+  const { blogsWishlist } = useWishlistSelector();
 
-  // Filter blogs to show only saved ones
-  const savedBlogsList = useMemo(() => {
-    return allBlogs.filter(blog => savedBlogs.includes(blog.id));
-  }, [savedBlogs]);
+  const { data: wishListBlogs, isLoading, refetch: refetchBlogsListing, error: blogsError } = useBlogsListing({
+    ids: blogsWishlist?.length ? blogsWishlist : [-1]
+  });
 
-  const handleBlogPress = useCallback((blogId: number) => {
-    router.push(`/(tabs)/(home)/${blogId}`);
-  }, [router]);
+  const { toggleBlogWishlist: toggleWishlistInStore } = useWishlistHandler();
+  const {
+    mutate: toggleBlogWishlist,
+    isPending: wishlistLoading,
+  } = useBlogWishlistToggle();
 
-  const handleAuthorPress = useCallback((author: string) => {
-    router.push(`/(tabs)/(home)/author/${encodeURIComponent(author)}`);
-  }, [router]);
+  // Helper function to extract image URL from media object
+  const getImageUrlFromMedia = (media: TBlogsListing['media']): string => {
+    if (!media || !media.images || typeof media.images !== "object") {
+      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+    }
+    const imageKeys = Object.keys(media.images);
+    if (imageKeys.length === 0) {
+      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+    }
+    const firstKey = imageKeys[0];
+    const imageUrl = media.images[firstKey];
+    return imageUrl || "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+  };
 
-  const renderBlogItem = useCallback(({ item }: { item: any }) => (
-    <Pressable
-      style={({ pressed }) => [
-        styles.blogCard,
-        pressed && styles.blogCardPressed
-      ]}
-      onPress={() => handleBlogPress(item.id)}
-    >
-      <View style={styles.blogHeader}>
-        <View style={styles.authorRow}>
-          <Image
-            source={{ uri: `https://i.pravatar.cc/40?img=${item.id}` }}
-            style={styles.authorAvatar}
-          />
-          <Pressable onPress={() => handleAuthorPress(item.author)}>
-            <Text style={styles.authorText}>
-              <Text style={styles.grayText}>
-                Saved by
-              </Text>
-              <Text style={styles.blackText}> {item.author}</Text>
+  // Transform blogs listing data for display
+  const transformedBlogs = useMemo(() => {
+    if (!wishListBlogs || !Array.isArray(wishListBlogs)) return [];
+    return wishListBlogs.map((b: TBlogsListing) => {
+      // Use excerpt if available, otherwise strip HTML from content as fallback
+      const description = b.excerpt
+        ? b.excerpt
+        : stripHtml(b.content || "");
+      const preview = description.length > 120 ? `${description.slice(0, 120).trim()}...` : description;
+      const imageUrl = getImageUrlFromMedia(b.media);
+      return {
+        id: b.id,
+        title: b.title,
+        description: preview,
+        date: formatDate(b.publishedAt),
+        image: { uri: imageUrl },
+        categories: b.categories || [],
+        slug: b.slug,
+      };
+    });
+  }, [wishListBlogs]);
+
+  const handleBlogPress = useCallback(
+    (item: any) => {
+      const slugOrId = item?.slug ?? item?.id ?? "";
+      if (!slugOrId) return;
+
+      // Get the first categoryId from the blog's categories array
+      const categoryId = Array.isArray(item?.categories) && item.categories.length > 0
+        ? item.categories[0]
+        : undefined;
+
+      // Navigate to blog detail with categoryId as query parameter
+      if (categoryId !== undefined) {
+        router.push({
+          pathname: '/blogs/[id]',
+          params: { id: String(slugOrId), categoryId: String(categoryId) },
+        });
+      } else {
+        router.push(`/blogs/${slugOrId}`);
+      }
+    },
+    [router]
+  );
+
+  const handleToggleWishlist = useCallback(
+    (blogId: number) => {
+      // Toggle local wishlist state immediately for better UX
+      toggleWishlistInStore(blogId);
+
+      // Call API to toggle wishlist
+      toggleBlogWishlist(
+        { id: blogId },
+        {
+          onSuccess: (data) => {
+            console.log('[BookmarksTab] ✅ Successfully toggled blog wishlist:', data);
+          },
+          onError: (error: any) => {
+            console.error('[BookmarksTab] ❌ Failed to toggle blog wishlist:', error);
+            // Revert local state on error
+            toggleWishlistInStore(blogId);
+          },
+        }
+      );
+    },
+    [toggleWishlistInStore, toggleBlogWishlist]
+  );
+
+  const renderBlogItem = useCallback(
+    ({ item }: { item: any }) => (
+      <Pressable
+        style={({ pressed }) => [
+          styles.blogCard,
+          pressed && styles.blogCardPressed,
+        ]}
+        onPress={() => handleBlogPress(item)}
+      >
+        <View style={styles.blogContent}>
+          <View style={styles.blogTextContent}>
+            <Text numberOfLines={3} style={styles.blogTitle}>
+              {item.title}
             </Text>
-          </Pressable>
+            <Text numberOfLines={2} style={styles.blogDescription}>
+              {item.description}
+            </Text>
+          </View>
+          <View style={styles.rightColumn}>
+            <Pressable onPress={() => handleBlogPress(item)}>
+              <Image source={item.image} style={styles.blogImage} />
+            </Pressable>
+          </View>
         </View>
-      </View>
-
-      <View style={styles.blogContent}>
-        <View style={styles.blogTextContent}>
-          <Text numberOfLines={3} style={styles.blogTitle}>
-            {item.title}
-          </Text>
-          <Text numberOfLines={2} style={styles.blogDescription}>
-            {item.description}
-          </Text>
+        <View style={styles.metaRow}>
           <Text style={styles.blogMeta}>{item.date}</Text>
-        </View>
-          <TouchableOpacity style={styles.saveButton} onPress={() => toggleSaveBlog(item.id)}>
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => handleToggleWishlist(item.id)}
+            accessibilityLabel="Save article"
+            disabled={wishlistLoading}
+          >
             <Ionicons
-              name={savedBlogs.includes(item.id) ? 'bookmark' : 'bookmark-outline'}
+              name={
+                blogsWishlist.includes(item.id)
+                  ? "bookmark"
+                  : "bookmark-outline"
+              }
               size={18}
-              color={savedBlogs.includes(item.id) ? '#1A8917' : '#666'}
+              color={blogsWishlist.includes(item.id) ? "#1A8917" : "#666"}
             />
           </TouchableOpacity>
-          <Pressable onPress={() => handleBlogPress(item.id)}>
-            <Image source={item.image} style={styles.blogImage} />
-          </Pressable>
-      </View>
-      <View style={styles.divider} />
-    </Pressable>
-  ), [handleBlogPress, handleAuthorPress, toggleSaveBlog]);
+        </View>
+        <View style={styles.divider} />
+      </Pressable>
+    ),
+    [handleBlogPress, blogsWishlist, handleToggleWishlist, wishlistLoading]
+  );
 
   const renderHeader = useCallback(() => (
     <View style={styles.headerContainer}>
       <Text style={styles.mediumTitle}>Saved Articles</Text>
-
     </View>
-
   ), []);
 
-  if (savedBlogsList.length === 0) {
+  if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {renderHeader()}
+        <FlatList
+          data={Array.from({ length: 5 })}
+          keyExtractor={(_, index) => `skeleton-${index}`}
+          renderItem={() => <SkeletonBlogCard />}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={null}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (blogsError) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {renderHeader()}
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorMessage}>
+            Failed to load content. Please try again.
+          </Text>
+          <TouchableOpacity
+            onPress={() => refetchBlogsListing()}
+            style={styles.authTestButton}
+          >
+            <Text style={styles.authTestButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (transformedBlogs.length === 0) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
         {renderHeader()}
         <View style={styles.emptyContainer}>
           <Ionicons name="bookmark-outline" size={48} color="#ccc" />
@@ -98,14 +215,18 @@ export default function BookmarksTab() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <FlatList
-        data={savedBlogsList}
+        data={transformedBlogs}
         renderItem={renderBlogItem}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(item) => `${item.id}`}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.listContent}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        windowSize={10}
       />
     </SafeAreaView>
   );
@@ -116,14 +237,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 40,
+  },
+  errorMessage: {
+    color: "#666",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  authTestButton: {
+    backgroundColor: "#1A8917",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  authTestButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+  },
   headerContainer: {
     paddingHorizontal: 20,
     paddingTop: 25,
-    // paddingBottom: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5E5',
-
   },
   mediumTitle: {
     ...TypographyStyles.h2,
@@ -134,6 +275,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 20,
+  },
+  separator: {
+    height: 4,
   },
   emptyContainer: {
     flex: 1,
@@ -156,67 +300,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  // Blog card styles (same as home)
+  // Blog card styles (same as blogs/index.tsx)
   blogCard: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 12,
     backgroundColor: '#fff',
   },
   blogCardPressed: {
     backgroundColor: '#fafafa',
   },
-  blogHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  saveButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  authorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  authorAvatar: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 8,
-  },
-  authorText: {
-    ...TypographyStyles.body,
-    fontSize: 12,
-    color: '#6b6b6b',
-    fontWeight: '400',
-    lineHeight: 16,
-  },
-  grayText: {
-    color: '#6b6b6b',
-  },
-  blackText: {
-    color: '#000',
-    fontWeight: '500',
-  },
   blogContent: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingTop: 10,
   },
   blogTextContent: {
     flex: 1,
     paddingRight: 16,
+    justifyContent: 'flex-start',
   },
   blogTitle: {
     ...TypographyStyles.h2,
-
-    // ...TypographyStyles.body,
     fontSize: 22,
-    // fontWeight: '700',
     color: '#000',
     lineHeight: 24,
     marginBottom: 8,
@@ -241,10 +345,30 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#f0f0f0',
   },
+  rightColumn: {
+    width: 112,
+    marginLeft: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+  },
+  metaRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    paddingRight: 0,
+  },
+  saveButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   divider: {
     height: 1,
     backgroundColor: '#f0f0f0',
-    marginTop: 16,
+    marginTop: 4,
   },
 });
 

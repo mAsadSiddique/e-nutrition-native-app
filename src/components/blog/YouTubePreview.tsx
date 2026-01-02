@@ -1,8 +1,7 @@
-import { openBrowserAsync, WebBrowserPresentationStyle } from 'expo-web-browser';
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getYouTubeThumbnail } from '@/src/utils/htmlParser';
+import React, { useState } from 'react';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import YoutubePlayer from 'react-native-youtube-iframe';
 
 interface YouTubePreviewProps {
   videoId: string;
@@ -10,34 +9,54 @@ interface YouTubePreviewProps {
   title?: string;
 }
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 export default function YouTubePreview({ videoId, url, title }: YouTubePreviewProps) {
-  const thumbnailUrl = getYouTubeThumbnail(videoId);
-  
-  const handlePress = async () => {
-    try {
-      await openBrowserAsync(url, {
-        presentationStyle: WebBrowserPresentationStyle.AUTOMATIC,
-      });
-    } catch (error) {
-      console.error('Error opening YouTube link:', error);
+  const [playing, setPlaying] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  // Calculate player height based on screen width (16:9 aspect ratio)
+  const playerHeight = Math.floor((SCREEN_WIDTH - 32) * (9 / 16)); // 32 for padding
+
+  const handleStateChange = (state: string) => {
+    if (state === 'ended') {
+      setPlaying(false);
     }
   };
-  
+
+  const handleError = (error: string) => {
+    console.error('YouTube player error:', error);
+    setHasError(true);
+  };
+
+  if (hasError) {
+    // Fallback: Show a message with link to open in browser
+    return (
+      <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={24} color="#FF0000" style={styles.errorIcon} />
+        <Text style={styles.errorText}>
+          Unable to load video. Please check your connection.
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <TouchableOpacity 
-      style={styles.container} 
-      onPress={handlePress}
-      activeOpacity={0.8}
-    >
-      <View style={styles.thumbnailContainer}>
-        <Image 
-          source={{ uri: thumbnailUrl }} 
-          style={styles.thumbnail}
-          resizeMode="cover"
+    <View style={styles.container}>
+      <View style={styles.playerContainer}>
+        <YoutubePlayer
+          height={playerHeight}
+          width={SCREEN_WIDTH - 32} // Account for container padding
+          videoId={videoId}
+          play={playing}
+          onChangeState={handleStateChange}
+          onError={handleError}
+          webViewStyle={styles.webView}
+          webViewProps={{
+            allowsInlineMediaPlayback: true,
+            mediaPlaybackRequiresUserAction: false,
+          }}
         />
-        <View style={styles.playButton}>
-          <Ionicons name="play-circle" size={48} color="#fff" />
-        </View>
       </View>
       {title && (
         <Text style={styles.title} numberOfLines={2}>
@@ -45,10 +64,10 @@ export default function YouTubePreview({ videoId, url, title }: YouTubePreviewPr
         </Text>
       )}
       <View style={styles.footer}>
-        <Ionicons name="logo-youtube" size={16} color="#FF0000" />
-        <Text style={styles.footerText}>Watch on YouTube</Text>
+        <Ionicons name="logo-youtube" size={16} color="#FF0000" style={styles.footerIcon} />
+        <Text style={styles.footerText}>YouTube</Text>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -61,25 +80,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
-  thumbnailContainer: {
-    position: 'relative',
+  playerContainer: {
     width: '100%',
-    aspectRatio: 16 / 9,
     backgroundColor: '#000',
+    overflow: 'hidden',
   },
-  thumbnail: {
-    width: '100%',
-    height: '100%',
-  },
-  playButton: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  webView: {
+    backgroundColor: '#000',
   },
   title: {
     padding: 12,
@@ -92,11 +99,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingBottom: 12,
-    gap: 6,
+  },
+  footerIcon: {
+    marginRight: 6,
   },
   footerText: {
     fontSize: 12,
     color: '#666',
+  },
+  errorContainer: {
+    marginVertical: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#fff3cd',
+    borderWidth: 1,
+    borderColor: '#ffc107',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  errorIcon: {
+    marginRight: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#856404',
   },
 });
 

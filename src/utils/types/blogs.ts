@@ -2,6 +2,7 @@ import type { TAdmin } from "./profile";
 
 export type TExploreBlogs = {
   id?: string;
+  ids?: number[];
   search?: string;
   slug?: string;
   tags?: string | string[];
