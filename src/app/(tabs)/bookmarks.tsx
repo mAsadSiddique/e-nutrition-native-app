@@ -5,6 +5,7 @@ import { useWishlistSelector } from '@/src/store/wishlist/selector';
 import { TypographyStyles } from '@/src/theme/theme';
 import { stripHtml } from '@/src/utils/blogs-helper';
 import { formatDate } from '@/src/utils/format-date';
+import { toast } from '@/src/utils/toast';
 import type { TBlogsListing } from '@/src/utils/types/blogs';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -87,6 +88,9 @@ export default function BookmarksTab() {
 
   const handleToggleWishlist = useCallback(
     (blogId: number) => {
+      // Check if blog is currently in wishlist to determine action
+      const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
+      
       // Toggle local wishlist state immediately for better UX
       toggleWishlistInStore(blogId);
 
@@ -96,16 +100,21 @@ export default function BookmarksTab() {
         {
           onSuccess: (data) => {
             console.log('[BookmarksTab] ✅ Successfully toggled blog wishlist:', data);
+            // Show success toast - in bookmarks tab, we're always removing
+            toast.success('Removed from saved articles', 'Removed');
           },
           onError: (error: any) => {
             console.error('[BookmarksTab] ❌ Failed to toggle blog wishlist:', error);
             // Revert local state on error
             toggleWishlistInStore(blogId);
+            // Show error toast
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to remove from saved articles';
+            toast.error(errorMessage, 'Error');
           },
         }
       );
     },
-    [toggleWishlistInStore, toggleBlogWishlist]
+    [toggleWishlistInStore, toggleBlogWishlist, blogsWishlist]
   );
 
   const renderBlogItem = useCallback(

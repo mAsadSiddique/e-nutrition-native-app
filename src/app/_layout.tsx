@@ -4,13 +4,15 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState, ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import 'react-native-reanimated';
+import Toast from 'react-native-toast-message';
 import { Provider as ReduxProvider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { createQueryClient } from '../config/react-query';
-import store, { persistor } from '../store/store';
+import { toastConfig } from '../config/toastConfig';
 import { useAuth } from '../store/auth/hook';
+import store, { persistor } from '../store/store';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -68,6 +70,7 @@ export default function RootLayout() {
                 <Stack.Screen name="font-test" options={{ headerShown: false }} />
               </Stack>
               <StatusBar style="auto" />
+              <Toast config={toastConfig} topOffset={60} />
             </ThemeProvider>
           </AuthInitializer>
         </QueryClientProvider>

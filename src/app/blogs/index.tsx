@@ -6,6 +6,7 @@ import { TypographyStyles } from "@/src/theme/theme";
 import { stripHtml } from "@/src/utils/blogs-helper";
 import { UserAction } from "@/src/utils/enums";
 import { formatDate } from "@/src/utils/format-date";
+import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
 import React, { useCallback, useMemo, useState } from "react";
 
@@ -74,6 +75,9 @@ export default function BlogListScreen() {
 
   const handleToggleWishlist = useCallback(
     (blogId: number) => {
+      // Check if blog is currently in wishlist to determine action
+      const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
+      
       // Toggle local wishlist state immediately for better UX
       toggleWishlistInStore(blogId);
 
@@ -83,16 +87,25 @@ export default function BlogListScreen() {
         {
           onSuccess: (data) => {
             console.log('[BlogList] ✅ Successfully toggled blog wishlist:', data);
+            // Show success toast based on action
+            if (isCurrentlyInWishlist) {
+              toast.success('Removed from saved articles', 'Removed');
+            } else {
+              toast.success('Added to saved articles', 'Saved');
+            }
           },
           onError: (error: any) => {
             console.error('[BlogList] ❌ Failed to toggle blog wishlist:', error);
             // Revert local state on error
             toggleWishlistInStore(blogId);
+            // Show error toast
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update wishlist';
+            toast.error(errorMessage, 'Error');
           },
         }
       );
     },
-    [toggleWishlistInStore, toggleBlogWishlist]
+    [toggleWishlistInStore, toggleBlogWishlist, blogsWishlist]
   );
 
   const renderBlogItem = useCallback(

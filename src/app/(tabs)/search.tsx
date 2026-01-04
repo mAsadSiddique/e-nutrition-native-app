@@ -3,6 +3,7 @@ import { useBlogsListing, useBlogWishlistToggle } from '@/src/services';
 import { useWishlistHandler } from '@/src/store/wishlist/hook';
 import { useWishlistSelector } from '@/src/store/wishlist/selector';
 import { TypographyStyles } from '@/src/theme/theme';
+import { toast } from '@/src/utils/toast';
 import type { TBlogsListing } from '@/src/utils/types/blogs';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -111,6 +112,9 @@ export default function SearchTab() {
 
   const handleToggleWishlist = useCallback(
     (blogId: number) => {
+      // Check if blog is currently in wishlist to determine action
+      const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
+      
       // Toggle local wishlist state immediately for better UX
       toggleWishlistInStore(blogId);
 
@@ -120,16 +124,25 @@ export default function SearchTab() {
         {
           onSuccess: (data) => {
             console.log('[SearchTab] ✅ Successfully toggled blog wishlist:', data);
+            // Show success toast based on action
+            if (isCurrentlyInWishlist) {
+              toast.success('Removed from saved articles', 'Removed');
+            } else {
+              toast.success('Added to saved articles', 'Saved');
+            }
           },
           onError: (error: any) => {
             console.error('[SearchTab] ❌ Failed to toggle blog wishlist:', error);
             // Revert local state on error
             toggleWishlistInStore(blogId);
+            // Show error toast
+            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update wishlist';
+            toast.error(errorMessage, 'Error');
           },
         }
       );
     },
-    [toggleWishlistInStore, toggleBlogWishlist]
+    [toggleWishlistInStore, toggleBlogWishlist, blogsWishlist]
   );
 
   const renderBlogItem = useCallback(
