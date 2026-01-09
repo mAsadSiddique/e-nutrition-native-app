@@ -164,8 +164,8 @@ const styles = StyleSheet.create({
 
   buttonsContainer: {
     paddingHorizontal: 26,
-    marginTop: 10, // reduced gap above buttons
-    marginBottom: 14, // smoother bottom space
+    marginTop: 10,
+    marginBottom: 14,
   },
 
   footer: {

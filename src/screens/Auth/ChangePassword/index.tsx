@@ -133,6 +133,7 @@ export default function ChangePassword() {
         >
         {/* Header Section */}
         <View style={styles.headerSection}>
+
           {/* <View style={styles.iconContainer}>
             <Ionicons name="lock-closed" size={32} color="#00994C" />
           </View> */}
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     alignItems: "center",
-    // paddingTop: 32,
+    paddingTop: 32,
     paddingBottom: 24,
     paddingHorizontal: 20,
   },
