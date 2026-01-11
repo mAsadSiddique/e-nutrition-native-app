@@ -40,10 +40,11 @@ export default function EditProfile() {
   const router = useRouter();
 
   const [email, setEmail] = useState(userProfile?.email || "");
-  const [profileImageBase64, setProfileImageBase64] = useState<string | null>(
-    null
-  );
   const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
+  const [profileImagePayload, setProfileImagePayload] = useState<{
+    fileBase64: string;
+    fileName: string;
+  } | null>(null);
 
   const { mutate: updateUserProfileAPI, isPending: loading } = useUpdateProfile();
   const { mutate: fetchProfile, data: profileData } = useGetProfile();
@@ -58,7 +59,7 @@ export default function EditProfile() {
     defaultValues: {
       name: userProfile?.username || "",
     },
-    mode: "onChange",
+    mode: "onTouched",
   });
 
 
@@ -102,7 +103,14 @@ export default function EditProfile() {
             if (!cameraResult.canceled && cameraResult.assets[0]) {
               const asset = cameraResult.assets[0];
               setProfileImageUri(asset.uri);
-              setProfileImageBase64(asset.base64 || null);
+
+              // Prepare profile image payload when photo is uploaded
+              if (asset.base64) {
+                setProfileImagePayload({
+                  fileBase64: asset.base64,
+                  fileName: asset.fileName || "userProfileName",
+                });
+              }
             }
           },
         },
@@ -120,7 +128,14 @@ export default function EditProfile() {
             if (!result.canceled && result.assets[0]) {
               const asset = result.assets[0];
               setProfileImageUri(asset.uri);
-              setProfileImageBase64(asset.base64 || null);
+
+              // Prepare profile image payload when photo is uploaded
+              if (asset.base64) {
+                setProfileImagePayload({
+                  fileBase64: asset.base64,
+                  fileName: asset.fileName || "userProfileName",
+                });
+              }
             }
           },
         },
@@ -136,13 +151,11 @@ export default function EditProfile() {
         username: data.name.trim(),
       };
 
-      // Add profile image if selected
-      if (profileImageBase64) {
-        profilePayload.profileImage = {
-          fileBase64: profileImageBase64,
-          fileName: "userProfileName",
-        };
+      // Add prepared profile image payload if available
+      if (profileImagePayload) {
+        profilePayload.profileImage = profileImagePayload;
       }
+
       updateUserProfileAPI(profilePayload, {
         onSuccess: async (response: any) => {
           const newToken = response?.data?.jwt;
@@ -162,9 +175,8 @@ export default function EditProfile() {
 
     },
     [
-      profileImageBase64,
+      profileImagePayload,
       profileImageUri,
-      updateUserProfile,
       updateUserProfile,
       fetchProfile,
       router,
@@ -198,6 +210,8 @@ export default function EditProfile() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Sticky Header */}
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -272,13 +286,14 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 20,
+    paddingBottom: 16,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#E5E5E5",
+    zIndex: 10,
   },
   backButton: {
     padding: 4,

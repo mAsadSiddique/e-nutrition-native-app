@@ -143,155 +143,155 @@ export default function ForgotPasswordScreen() {
 
   return (
     <AuthLayout>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.content}>
-              {/* Header Section */}
-              <View style={styles.headerSection}>
-                <Text style={styles.title}>Forgot Password</Text>
-                <Text style={styles.subtitle}>
-                  Enter your email and new password to reset your account
-                </Text>
-              </View>
+          <View style={styles.content}>
+            {/* Header Section */}
+            <View style={styles.headerSection}>
+              <Text style={styles.title}>Forgot Password</Text>
+              <Text style={styles.subtitle}>
+                Enter your email and new password to reset your account
+              </Text>
+            </View>
 
-              <View style={styles.form}>
-                {/* EMAIL */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Your email</Text>
+            <View style={styles.form}>
+              {/* EMAIL */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <Controller
+                  control={control}
+                  name="email"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={styles.input}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder="Email"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      editable={!loading}
+                    />
+                  )}
+                />
+                {(isSubmitted || touchedFields.email) && errors.email && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    {errors.email.message}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>New Password</Text>
+                <View style={styles.passwordContainer}>
                   <Controller
                     control={control}
-                    name="email"
+                    name="newPassword"
                     render={({ field: { onChange, onBlur, value } }) => (
                       <TextInput
-                        style={styles.input}
+                        style={styles.passwordInput}
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        placeholder="email"
-                        keyboardType="email-address"
+                        placeholder="New Password"
+                        secureTextEntry={!showNewPassword}
                         autoCapitalize="none"
-                        autoComplete="email"
                         editable={!loading}
                       />
                     )}
                   />
-                  {(isSubmitted || touchedFields.email) && errors.email && (
-                    <Text style={[styles.validationText, styles.invalidText]}>
-                      {errors.email.message}
-                    </Text>
-                  )}
-                </View>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>New Password</Text>
-                  <View style={styles.passwordContainer}>
-                    <Controller
-                      control={control}
-                      name="newPassword"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <TextInput
-                          style={styles.passwordInput}
-                          value={value}
-                          onChangeText={onChange}
-                          onBlur={onBlur}
-                          placeholder="New password"
-                          secureTextEntry={!showNewPassword}
-                          autoCapitalize="none"
-                          editable={!loading}
-                        />
-                      )}
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    <Ionicons
+                      name={showNewPassword ? "eye" : "eye-off"}
+                      size={20}
+                      color="#666"
                     />
-                    <TouchableOpacity
-                      style={styles.eyeButton}
-                      onPress={() => setShowNewPassword(!showNewPassword)}
-                    >
-                      <Ionicons
-                        name={showNewPassword ? "eye" : "eye-off"}
-                        size={20}
-                        color="#666"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  {newPasswordValue && (
-                    <Text style={styles.passwordHintText}>
-                      Must be at least 8 characters, include an uppercase letter, a lowercase letter, a number and a special character.
-                    </Text>
-                  )}
-                  {(isSubmitted || touchedFields.newPassword) && errors.newPassword && (
-                    <Text style={[styles.validationText, styles.invalidText]}>
-                      {errors.newPassword.message}
-                    </Text>
-                  )}
-                </View>
-
-                {/* CONFIRM PASSWORD */}
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Confirm Password</Text>
-                  <View style={styles.passwordContainer}>
-                    <Controller
-                      control={control}
-                      name="confirmPassword"
-                      render={({ field: { onChange, onBlur, value } }) => (
-                        <TextInput
-                          style={styles.passwordInput}
-                          value={value}
-                          onChangeText={onChange}
-                          onBlur={onBlur}
-                          placeholder="Confirm new password"
-                          secureTextEntry={!showConfirmPassword}
-                          autoCapitalize="none"
-                          editable={!loading}
-                        />
-                      )}
-                    />
-                    <TouchableOpacity
-                      style={styles.eyeButton}
-                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      <Ionicons
-                        name={showConfirmPassword ? "eye" : "eye-off"}
-                        size={20}
-                        color="#666"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  {(isSubmitted || touchedFields.confirmPassword) && errors.confirmPassword && (
-                    <Text style={[styles.validationText, styles.invalidText]}>
-                      {errors.confirmPassword.message}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.buttonContainer}>
-                  <AuthButton
-                    text="Continue"
-                    onPress={handleSubmit(onSubmit)}
-                    variant="primary"
-                    loading={loading}
-                  />
-                </View>
-
-                {/* Footer - Back to Login Link */}
-                <View style={styles.footer}>
-                  <TouchableOpacity onPress={() => router.push("/auth/sign-in/email")}>
-                    <Text style={styles.footerText}>
-                      Back to login
-                    </Text>
                   </TouchableOpacity>
                 </View>
+                {newPasswordValue && (
+                  <Text style={styles.passwordHintText}>
+                    Must be at least 8 characters, include an uppercase letter, a lowercase letter, a number and a special character.
+                  </Text>
+                )}
+                {(isSubmitted || touchedFields.newPassword) && errors.newPassword && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    {errors.newPassword.message}
+                  </Text>
+                )}
+              </View>
+
+              {/* CONFIRM PASSWORD */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <View style={styles.passwordContainer}>
+                  <Controller
+                    control={control}
+                    name="confirmPassword"
+                    render={({ field: { onChange, onBlur, value } }) => (
+                      <TextInput
+                        style={styles.passwordInput}
+                        value={value}
+                        onChangeText={onChange}
+                        onBlur={onBlur}
+                        placeholder="Confirm Password"
+                        secureTextEntry={!showConfirmPassword}
+                        autoCapitalize="none"
+                        editable={!loading}
+                      />
+                    )}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? "eye" : "eye-off"}
+                      size={20}
+                      color="#666"
+                    />
+                  </TouchableOpacity>
+                </View>
+                {(isSubmitted || touchedFields.confirmPassword) && errors.confirmPassword && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    {errors.confirmPassword.message}
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.buttonContainer}>
+                <AuthButton
+                  text="Continue"
+                  onPress={handleSubmit(onSubmit)}
+                  variant="primary"
+                  loading={loading}
+                />
+              </View>
+
+              {/* Footer - Back to Login Link */}
+              <View style={styles.footer}>
+                <TouchableOpacity onPress={() => router.push("/auth/sign-in/email")}>
+                  <Text style={styles.footerText}>
+                    Back to login
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </AuthLayout>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </AuthLayout>
   );
 }
 

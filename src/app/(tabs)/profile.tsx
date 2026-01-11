@@ -77,14 +77,11 @@ export default function ProfileTab() {
   useEffect(() => {
     fetchProfile(undefined, {
       onSuccess: (data) => {
-        console.log("Profile fetch successful:", data);
       },
       onError: (error: any) => {
-        console.error("Profile fetch error:", error);
         const status = error?.response?.status;
 
         if (status === 401) {
-          console.log("Token expired, logging out...");
           signOut();
         }
       },
@@ -93,7 +90,6 @@ export default function ProfileTab() {
 
   useEffect(() => {
     if (profileData) {
-      console.log("Profile API data received:", profileData);
       updateUserProfile({
         username: profileData.username,
         email: profileData.email,
@@ -175,14 +171,15 @@ export default function ProfileTab() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Sticky Header */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.headerTitle}>Profile</Text>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerContainer}>
-          {/* <Text style={styles.headerTitle}>Profile</Text> */}
-        </View>
-
         {/* User Info Section */}
         <View style={styles.userSection}>
           <View style={styles.profileCard}>
@@ -355,8 +352,9 @@ const styles = StyleSheet.create({
     paddingTop: 25,
     paddingBottom: 20,
     backgroundColor: "#fff",
-    // borderBottomWidth: 1,
+    borderBottomWidth: 1,
     borderBottomColor: "#E5E5E5",
+    zIndex: 10,
   },
   headerTitle: {
     ...TypographyStyles.h2,

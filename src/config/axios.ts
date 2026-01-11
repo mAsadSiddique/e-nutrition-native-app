@@ -16,7 +16,6 @@ export const axios: AxiosInstance = Axios.create({
 
 const authRequestInterceptor: any = async (config: AxiosRequestConfig) => {
   const token = await storage.getToken();
-  console.log("token", token);
   const newConfig = { ...config };
   if (!newConfig.headers) {
     newConfig.headers = {};
@@ -39,7 +38,6 @@ axios.interceptors.response.use(
 
     if (status === 401) {
       createQueryClient().clear();
-      console.log("401 Unauthorized - Token may be invalid or expired");
     }
 
     return Promise.reject(error);

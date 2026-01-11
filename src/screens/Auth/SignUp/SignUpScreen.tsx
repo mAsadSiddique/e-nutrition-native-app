@@ -69,7 +69,6 @@ export default function SignUpScreen() {
 
   const handleGoogleSignUp = () => {
     // TODO: Implement Google sign up
-    console.log("Google sign up pressed");
     // Google sign up implementation will be added here
   };
 
@@ -118,7 +117,7 @@ export default function SignUpScreen() {
           <View style={styles.content}>
             {/* Header Section */}
             <View style={styles.headerSection}>
-              <Text style={styles.title}>Create Account</Text>
+              <Text style={styles.title}>Sign Up</Text>
               <Text style={styles.subtitle}>
                 Sign up to get started with your account
               </Text>
@@ -136,7 +135,7 @@ export default function SignUpScreen() {
                       value={value}
                       onChangeText={onChange}
                       onBlur={onBlur}
-                      placeholder="email"
+                      placeholder="Email"
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoComplete="email"
@@ -163,7 +162,7 @@ export default function SignUpScreen() {
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        placeholder="password"
+                        placeholder="Password"
                         secureTextEntry={!showPassword}
                         autoCapitalize="none"
                         autoComplete="off"
@@ -210,7 +209,7 @@ export default function SignUpScreen() {
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        placeholder="Confirm password"
+                        placeholder="Confirm Password"
                         secureTextEntry={!showConfirmPassword}
                         autoCapitalize="none"
                         autoComplete="off"

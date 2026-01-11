@@ -73,9 +73,6 @@ export default function SignInScreen() {
       },
       {
         onSuccess: async (response: any) => {
-          console.log('Login response: ', response);
-          console.log('User data: ', response?.data?.user);
-
           // Axios interceptor already unwraps response.data, so response is already the data object
           if (response?.data?.jwt) {
             await storage.setToken(response?.data?.jwt);
@@ -83,7 +80,6 @@ export default function SignInScreen() {
 
           // Set user profile if available
           if (response?.data?.user) {
-            console.log('Setting user profile in store:', response?.data?.user);
             onSetProfile(response?.data?.user);
           }
 
@@ -102,7 +98,7 @@ export default function SignInScreen() {
           }
 
           toast.success(response.message || "Login successful");
-          router.replace("/category-selection");
+          router.replace(response?.data?.userWishlist ? "/" : "/category-selection");
 
         },
         onError: (error: any) => {
@@ -140,7 +136,7 @@ export default function SignInScreen() {
           <View style={styles.content}>
             {/* Header Section */}
             <View style={styles.headerSection}>
-              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.title}>Sign In</Text>
               <Text style={styles.subtitle}>
                 Sign in to continue to your account
               </Text>
@@ -158,7 +154,7 @@ export default function SignInScreen() {
                       value={value}
                       onChangeText={onChange}
                       onBlur={onBlur}
-                      placeholder="email"
+                      placeholder="Email"
                       keyboardType="email-address"
                       autoCapitalize="none"
                       autoComplete="email"
@@ -184,7 +180,7 @@ export default function SignInScreen() {
                         value={value}
                         onChangeText={onChange}
                         onBlur={onBlur}
-                        placeholder="password"
+                        placeholder="Password"
                         secureTextEntry={!showPassword}
                         autoCapitalize="none"
                         autoComplete="off"

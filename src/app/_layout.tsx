@@ -29,28 +29,24 @@ function AuthInitializer({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 export default function RootLayout() {
-  console.log('Font loading started...');
   const [queryClient] = useState(() => createQueryClient());
   const [loaded, error] = useFonts({
     "Georgia-Regular": require("../assets/fonts/Georgia-Regular.ttf"),
     "Georgia-Bold": require("../assets/fonts/Georgia-Bold.ttf"),
   });
-  // console.log("📌 loaded:", loaded);
-  // console.log("📌 error:", error);
+
   useEffect(() => {
     if (loaded) {
-      console.log("✅ Fonts loaded successfully!");
       SplashScreen.hideAsync();
     }
 
     if (error) {
-      console.log("❌ Font load failed:", error);
       SplashScreen.hideAsync();
     }
   }, [loaded, error]);
-  if (!loaded) {
-    return null;
-  }
+
+  if (!loaded) return null;
+
   return (
     <ReduxProvider store={store}>
       <PersistGate loading={null} persistor={persistor}>
