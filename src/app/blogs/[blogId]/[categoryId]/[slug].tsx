@@ -18,9 +18,9 @@ const CARD_WIDTH = Math.floor((AVAILABLE_WIDTH - CARD_GAP) / 2);
 export default function BlogDetailScreen() {
   const router = useRouter();
   // Extract params from route: /blogs/[blogId]/[categoryId]/[slug]
-  const { blogId, categoryId, slug } = useLocalSearchParams<{ 
-    blogId: string; 
-    categoryId: string; 
+  const { blogId, categoryId, slug } = useLocalSearchParams<{
+    blogId: string;
+    categoryId: string;
     slug: string;
   }>();
 
@@ -33,8 +33,6 @@ export default function BlogDetailScreen() {
   const { data: specificBlogData, isLoading: blogLoading } = useBlogsListing({
     ...(blogIdNum ? { id: String(blogIdNum) } : slug ? { slug } : {}),
   });
-
-  console.log('Route params:', { blogId, categoryId, slug, categoryIdNum, blogIdNum });
 
   // Fetch recommended blogs by categoryId
   const { data: recommendedBlogsData, isLoading } = useBlogsListing({

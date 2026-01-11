@@ -7,8 +7,8 @@ import { toast } from '@/src/utils/toast';
 import type { TBlogsListing } from '@/src/utils/types/blogs';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, FlatList, Image, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SearchTab() {
@@ -17,6 +17,23 @@ export default function SearchTab() {
 
   // Tabs state (moved up so effect can use it)
   const [selectedTab, setSelectedTab] = useState<'Latest' | 'Tags' | 'Blogs'>('Latest');
+
+  // Store measured tab widths and positions
+  const [latestTabWidth, setLatestTabWidth] = useState(0);
+  const [tagsTabWidth, setTagsTabWidth] = useState(0);
+  const [blogsTabWidth, setBlogsTabWidth] = useState(0);
+  const [latestTabX, setLatestTabX] = useState(0);
+  const [tagsTabX, setTagsTabX] = useState(0);
+  const [blogsTabX, setBlogsTabX] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  // Animation values for tab transitions
+  const underlinePosition = useRef(new Animated.Value(0)).current;
+  const underlineWidth = useRef(new Animated.Value(0)).current;
+  const latestOpacity = useRef(new Animated.Value(1)).current;
+  const tagsOpacity = useRef(new Animated.Value(0)).current;
+  const blogsOpacity = useRef(new Animated.Value(0)).current;
+  const isInitialized = useRef(false);
 
   const isSlugLike = /^[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(tabsAction);
 
@@ -105,11 +122,94 @@ export default function SearchTab() {
     });
   }, [blogsListing]);
 
+  // Recalculate X positions when containerWidth or text widths change
+  useEffect(() => {
+    if (containerWidth === 0 || latestTabWidth === 0 || tagsTabWidth === 0 || blogsTabWidth === 0) return;
+
+    const buttonWidth = containerWidth / 3;
+
+    // Calculate positions for each tab
+    const latestX = (buttonWidth / 2) - (latestTabWidth / 2);
+    const tagsX = buttonWidth + (buttonWidth / 2) - (tagsTabWidth / 2);
+    const blogsX = (buttonWidth * 2) + (buttonWidth / 2) - (blogsTabWidth / 2);
+
+    setLatestTabX(latestX);
+    setTagsTabX(tagsX);
+    setBlogsTabX(blogsX);
+
+    // Initialize if not already done
+    if (!isInitialized.current && selectedTab === 'Latest') {
+      underlinePosition.setValue(latestX);
+      underlineWidth.setValue(latestTabWidth);
+      isInitialized.current = true;
+    }
+  }, [containerWidth, latestTabWidth, tagsTabWidth, blogsTabWidth, selectedTab]);
+
+  // Animate tab transitions
+  useEffect(() => {
+    if (latestTabWidth === 0 || tagsTabWidth === 0 || blogsTabWidth === 0 || containerWidth === 0) return; // Wait for measurements
+
+    let targetX = 0;
+    let targetWidth = 0;
+    let isLatest = false;
+    let isTags = false;
+    let isBlogs = false;
+
+    const buttonWidth = containerWidth / 3;
+
+    if (selectedTab === 'Latest') {
+      targetX = (buttonWidth / 2) - (latestTabWidth / 2);
+      targetWidth = latestTabWidth;
+      isLatest = true;
+    } else if (selectedTab === 'Tags') {
+      targetX = buttonWidth + (buttonWidth / 2) - (tagsTabWidth / 2);
+      targetWidth = tagsTabWidth;
+      isTags = true;
+    } else if (selectedTab === 'Blogs') {
+      targetX = (buttonWidth * 2) + (buttonWidth / 2) - (blogsTabWidth / 2);
+      targetWidth = blogsTabWidth;
+      isBlogs = true;
+    }
+
+    Animated.parallel([
+      // Animate underline position with spring effect
+      Animated.spring(underlinePosition, {
+        toValue: targetX,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: false, // We need to animate layout properties
+      }),
+      // Animate underline width
+      Animated.spring(underlineWidth, {
+        toValue: targetWidth,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: false,
+      }),
+      // Animate text opacity for smooth color transition
+      Animated.timing(latestOpacity, {
+        toValue: isLatest ? 1 : 0.5,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(tagsOpacity, {
+        toValue: isTags ? 1 : 0.5,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(blogsOpacity, {
+        toValue: isBlogs ? 1 : 0.5,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [selectedTab, latestTabWidth, tagsTabWidth, blogsTabWidth, containerWidth]);
+
   const handleBlogPress = useCallback(
     (item: any) => {
       const blogId = item?.id;
       const slug = item?.slug;
-      
+
       if (!blogId || !slug) {
         console.warn('[SearchTab] Missing required blogId or slug:', { blogId, slug });
         return;
@@ -135,7 +235,7 @@ export default function SearchTab() {
     (blogId: number) => {
       // Check if blog is currently in wishlist to determine action
       const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
-      
+
       // Toggle local wishlist state immediately for better UX
       toggleWishlistInStore(blogId);
 
@@ -144,7 +244,6 @@ export default function SearchTab() {
         { id: blogId },
         {
           onSuccess: (data) => {
-            console.log('[SearchTab] ✅ Successfully toggled blog wishlist:', data);
             // Show success toast based on action
             if (isCurrentlyInWishlist) {
               toast.success('Removed from saved articles', 'Removed');
@@ -240,20 +339,107 @@ export default function SearchTab() {
         </View>
       </View>
       {/* tabs selection... */}
-      <View style={styles.tabsContainer}>
-        {['Latest', 'Tags', 'Blogs'].map((t) => (
-          <TouchableOpacity
-            key={t}
-            onPress={() => setSelectedTab(t as any)}
-            style={styles.tabButton}
-            activeOpacity={0.8}
+      <View
+        style={styles.tabsContainer}
+        onLayout={(event) => {
+          const { width } = event.nativeEvent.layout;
+          setContainerWidth(width);
+        }}
+      >
+        <TouchableOpacity
+          style={styles.tabButton}
+          onPress={() => setSelectedTab('Latest')}
+          activeOpacity={0.8}
+        >
+          <View
+            onLayout={(event) => {
+              const { width: textWidth } = event.nativeEvent.layout;
+              setLatestTabWidth(textWidth);
+            }}
           >
-            <View style={styles.tabInner}>
-              <Text style={[styles.tabText, selectedTab === t && styles.tabTextActive]}>{t}</Text>
-              {selectedTab === t && <View style={styles.tabIndicator} />}
-            </View>
-          </TouchableOpacity>
-        ))}
+            <Animated.Text
+              style={[
+                styles.tabText,
+                {
+                  color: latestOpacity.interpolate({
+                    inputRange: [0.5, 1],
+                    outputRange: ['#8e8e8e', '#1A8917'],
+                  }),
+                },
+                selectedTab === 'Latest' && { fontWeight: '500' },
+              ]}
+            >
+              Latest
+            </Animated.Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.tabButton}
+          onPress={() => setSelectedTab('Tags')}
+          activeOpacity={0.8}
+        >
+          <View
+            onLayout={(event) => {
+              const { width: textWidth } = event.nativeEvent.layout;
+              setTagsTabWidth(textWidth);
+            }}
+          >
+            <Animated.Text
+              style={[
+                styles.tabText,
+                {
+                  color: tagsOpacity.interpolate({
+                    inputRange: [0.5, 1],
+                    outputRange: ['#8e8e8e', '#1A8917'],
+                  }),
+                },
+                selectedTab === 'Tags' && { fontWeight: '500' },
+              ]}
+            >
+              Tags
+            </Animated.Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.tabButton}
+          onPress={() => setSelectedTab('Blogs')}
+          activeOpacity={0.8}
+        >
+          <View
+            onLayout={(event) => {
+              const { width: textWidth } = event.nativeEvent.layout;
+              setBlogsTabWidth(textWidth);
+            }}
+          >
+            <Animated.Text
+              style={[
+                styles.tabText,
+                {
+                  color: blogsOpacity.interpolate({
+                    inputRange: [0.5, 1],
+                    outputRange: ['#8e8e8e', '#1A8917'],
+                  }),
+                },
+                selectedTab === 'Blogs' && { fontWeight: '500' },
+              ]}
+            >
+              Blogs
+            </Animated.Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Animated Underline */}
+        <Animated.View
+          style={[
+            styles.tabUnderline,
+            {
+              left: underlinePosition,
+              width: underlineWidth,
+            },
+          ]}
+        />
       </View>
       {tabsAction.trim() === '' && selectedTab !== 'Latest' ? (
         <View style={styles.emptyContainer}>
@@ -308,12 +494,18 @@ const styles = StyleSheet.create({
   searchIcon: { marginRight: 10, fontSize: 18 },
   inputExpanded: { ...TypographyStyles.bodySans, flex: 1, paddingVertical: 6, paddingHorizontal: 0, backgroundColor: 'transparent', fontSize: 15 },
 
-  tabsContainer: { flexDirection: 'row', paddingHorizontal: 0, paddingTop: 8, paddingBottom: 8 },
-  tabButton: { flex: 1, alignItems: 'center' },
+  tabsContainer: { flexDirection: 'row', paddingHorizontal: 0, paddingTop: 8, paddingBottom: 8, position: 'relative', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, position: 'relative' },
   tabInner: { alignItems: 'center', paddingBottom: 8 },
-  tabText: { ...TypographyStyles.bodySmallSans, color: '#666' },
-  tabTextActive: { color: '#111', fontWeight: '600' },
-  tabIndicator: { marginTop: 8, height: 2, width: 36, backgroundColor: '#111', borderRadius: 2, alignSelf: 'center' },
+  tabText: { ...TypographyStyles.bodySmallSans, fontSize: 16, fontWeight: '400', color: '#8e8e8e', lineHeight: 20 },
+  tabTextActive: { color: '#1A8917', fontWeight: '500' },
+  tabUnderline: {
+    position: 'absolute',
+    bottom: 2,
+    left: 0,
+    height: 2,
+    backgroundColor: '#1A8917',
+  },
 
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyTitle: { ...TypographyStyles.h4, color: '#111', marginBottom: 20 },

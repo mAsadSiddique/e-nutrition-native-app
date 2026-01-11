@@ -8,11 +8,12 @@ import { UserAction } from "@/src/utils/enums";
 import { formatDate } from "@/src/utils/format-date";
 import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
+  Animated,
   FlatList,
   Image,
   Pressable,
@@ -29,6 +30,18 @@ export default function BlogListScreen() {
 
   const [activeTab, setActiveTab] = useState<UserAction>(UserAction.For_YOU);
 
+  // Store measured tab widths
+  const [forYouTabWidth, setForYouTabWidth] = useState(0);
+  const [featuredTabWidth, setFeaturedTabWidth] = useState(0);
+  const [forYouTabX, setForYouTabX] = useState(0);
+  const [featuredTabX, setFeaturedTabX] = useState(0);
+
+  // Animation values for tab transitions
+  const underlinePosition = useRef(new Animated.Value(0)).current;
+  const underlineWidth = useRef(new Animated.Value(0)).current;
+  const forYouOpacity = useRef(new Animated.Value(1)).current;
+  const featuredOpacity = useRef(new Animated.Value(0)).current;
+
   const { data: blogsListing, isLoading, refetch: refetchBlogsListing, error: blogsError } = useBlogsListing({
     ...(activeTab === UserAction.For_YOU && { categoryIds: categoriesWishlist as number[] })
   })
@@ -39,6 +52,43 @@ export default function BlogListScreen() {
     isPending: wishlistLoading,
   } = useBlogWishlistToggle();
 
+  // Animate tab transitions
+  useEffect(() => {
+    if (forYouTabWidth === 0 || featuredTabWidth === 0) return; // Wait for measurements
+
+    const isForYou = activeTab === UserAction.For_YOU;
+    const targetX = isForYou ? forYouTabX : featuredTabX;
+    const targetWidth = isForYou ? forYouTabWidth : featuredTabWidth;
+
+    Animated.parallel([
+      // Animate underline position with spring effect
+      Animated.spring(underlinePosition, {
+        toValue: targetX,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: false, // We need to animate layout properties
+      }),
+      // Animate underline width
+      Animated.spring(underlineWidth, {
+        toValue: targetWidth,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: false,
+      }),
+      // Animate text opacity for smooth color transition
+      Animated.timing(forYouOpacity, {
+        toValue: isForYou ? 1 : 0.5,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(featuredOpacity, {
+        toValue: isForYou ? 0.5 : 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [activeTab, forYouTabWidth, featuredTabWidth, forYouTabX, featuredTabX, underlinePosition, underlineWidth, forYouOpacity, featuredOpacity]);
+
   const handleTabPress = useCallback((tab: UserAction) => {
     setActiveTab(tab);
   }, []);
@@ -47,7 +97,7 @@ export default function BlogListScreen() {
     (item: any) => {
       const blogId = item?.id;
       const slug = item?.slug;
-      
+
       if (!blogId || !slug) {
         console.warn('[BlogList] Missing required blogId or slug:', { blogId, slug });
         return;
@@ -89,7 +139,6 @@ export default function BlogListScreen() {
         { id: blogId },
         {
           onSuccess: (data) => {
-            console.log('[BlogList] ✅ Successfully toggled blog wishlist:', data);
             // Show success toast based on action
             if (isCurrentlyInWishlist) {
               toast.success('Removed from saved articles', 'Removed');
@@ -161,52 +210,98 @@ export default function BlogListScreen() {
   );
 
   const renderHeader = useCallback(
-    () => (
-      <View style={styles.headerContainer}>
+    () => {
+      const forYouTextColor = forYouOpacity.interpolate({
+        inputRange: [0.5, 1],
+        outputRange: ['#8e8e8e', '#1A8917'],
+      });
 
-        <View style={styles.logoWrapper}>
-          <Image
-            source={require("../../assets/logo.png")}
-            style={styles.mediumTitle}
-            resizeMode="contain"
-          />
-        </View>
+      const featuredTextColor = featuredOpacity.interpolate({
+        inputRange: [0.5, 1],
+        outputRange: ['#8e8e8e', '#1A8917'],
+      });
 
-        {/* Tab Navigation */}
-        <View style={styles.tabContainer}>
-          <Pressable
-            style={styles.tabButton}
-            onPress={() => handleTabPress(UserAction.For_YOU)}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === UserAction.For_YOU && styles.tabTextActive,
-              ]}
+      return (
+        <View style={styles.headerContainer}>
+          <View style={styles.logoWrapper}>
+            <Image
+              source={require("../../assets/logo.png")}
+              style={styles.mediumTitle}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Tab Navigation */}
+          <View style={styles.tabContainer}>
+            <Pressable
+              style={styles.tabButton}
+              onPress={() => handleTabPress(UserAction.For_YOU)}
+              onLayout={(event) => {
+                const { width, x } = event.nativeEvent.layout;
+                setForYouTabWidth(width);
+                setForYouTabX(x);
+                // Initialize underline position and width on first measurement
+                if (activeTab === UserAction.For_YOU && underlineWidth._value === 0) {
+                  underlinePosition.setValue(x);
+                  underlineWidth.setValue(width);
+                }
+              }}
             >
-              For you
-            </Text>
-            {activeTab === UserAction.For_YOU && <View style={styles.tabUnderline} />}
-          </Pressable>
+              <Animated.Text
+                style={[
+                  styles.tabText,
+                  {
+                    color: forYouTextColor,
+                  },
+                  activeTab === UserAction.For_YOU && { fontWeight: '500' },
+                ]}
+              >
+                For you
+              </Animated.Text>
+            </Pressable>
 
-          <Pressable
-            style={styles.tabButton}
-            onPress={() => handleTabPress(UserAction.FEATURED)}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === UserAction.FEATURED && styles.tabTextActive,
-              ]}
+            <Pressable
+              style={styles.tabButton}
+              onPress={() => handleTabPress(UserAction.FEATURED)}
+              onLayout={(event) => {
+                const { width, x } = event.nativeEvent.layout;
+                setFeaturedTabWidth(width);
+                setFeaturedTabX(x);
+                // Initialize underline position and width on first measurement
+                if (activeTab === UserAction.FEATURED && underlineWidth._value === 0) {
+                  underlinePosition.setValue(x);
+                  underlineWidth.setValue(width);
+                }
+              }}
             >
-              Featured
-            </Text>
-            {activeTab === UserAction.FEATURED && <View style={styles.tabUnderline} />}
-          </Pressable>
+              <Animated.Text
+                style={[
+                  styles.tabText,
+                  {
+                    color: featuredTextColor,
+                  },
+                  activeTab === UserAction.FEATURED && { fontWeight: '500' },
+                ]}
+              >
+                Featured
+              </Animated.Text>
+            </Pressable>
+
+            {/* Animated Underline */}
+            <Animated.View
+              style={[
+                styles.tabUnderline,
+                {
+                  left: underlinePosition,
+                  width: underlineWidth,
+                },
+              ]}
+            />
+          </View>
         </View>
-      </View>
-    ),
-    [activeTab, handleTabPress]
+      );
+    },
+    [activeTab, handleTabPress, underlinePosition, underlineWidth, forYouOpacity, featuredOpacity]
   );
 
   // Helper function to extract image URL from media object
@@ -360,6 +455,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
+    position: "relative",
   },
   tabButton: {
     paddingVertical: 12,
@@ -375,16 +471,16 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   tabTextActive: {
-    color: "#000",
+    color: "#1A8917",
     fontWeight: "500",
   },
   tabUnderline: {
     position: "absolute",
     bottom: -1,
     left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "#000",
+    width: 80, // Approximate width of tab button
+    height: 2,
+    backgroundColor: "#1A8917",
   },
 
   // Blog card styles

@@ -1,15 +1,14 @@
 import storage from "@/src/utils/storage";
 import type { TUserProfile } from "@/src/utils/types";
-import { useCallback } from "react";
-import React from "react";
+import React, { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../store";
 import {
-    setLoading,
-    setUserProfile,
-    signIn,
-    signOut,
-    updateUserProfile,
+  setLoading,
+  setUserProfile,
+  signIn,
+  signOut,
+  updateUserProfile,
 } from "./action";
 import { useAuthSelector } from "./selector";
 
@@ -30,7 +29,6 @@ export const useAuth = () => {
 
   const onSetProfile = useCallback(
     (profile: TUserProfile) => {
-      console.log('Dispatching setUserProfile with:', profile);
       dispatch(setUserProfile({ profile }));
     },
     [dispatch]
@@ -61,20 +59,20 @@ export const useAuth = () => {
 
   const onSignOut = useCallback(async () => {
     try {
-      console.log("🚪 Redux Auth - Signing out user");
       await storage.clearToken();
       dispatch(signOut());
       setHasToken(false);
-      console.log("✅ Redux Auth - User signed out successfully");
     } catch (error) {
-      console.error("Error during logout:", error);
       dispatch(signOut());
       setHasToken(false);
     }
   }, [dispatch]);
 
   // Check if user is authenticated (has token and userProfile)
-  const isAuthenticated = hasToken && !!authState.userProfile && Object.keys(authState.userProfile).length > 0;
+  const isAuthenticated =
+    hasToken &&
+    !!authState.userProfile &&
+    Object.keys(authState.userProfile).length > 0;
 
   // Return interface matching AuthContext
   return {

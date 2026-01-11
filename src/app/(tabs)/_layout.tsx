@@ -4,7 +4,7 @@ import React from 'react';
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: '#000', headerShown: false }}>
+    <Tabs screenOptions={{ tabBarActiveTintColor: '#1A8917', headerShown: false }}>
       <Tabs.Screen
         name="(home)"
         options={{

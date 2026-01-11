@@ -1,11 +1,11 @@
 import type { TUserProfile } from "@/src/utils/types";
 import { createReducer } from "@reduxjs/toolkit";
 import {
-    setLoading,
-    setUserProfile,
-    signIn,
-    signOut,
-    updateUserProfile,
+  setLoading,
+  setUserProfile,
+  signIn,
+  signOut,
+  updateUserProfile,
 } from "./action";
 import { TAuthState } from "./type";
 
@@ -17,9 +17,7 @@ const initialState: TAuthState = {
 export const auth = createReducer(initialState, (builder) => {
   builder
     .addCase(setUserProfile, (state, { payload: { profile } }) => {
-      console.log('Reducer: Setting userProfile to:', profile);
       state.userProfile = profile;
-      console.log('Reducer: Updated state.userProfile:', state.userProfile);
     })
     .addCase(updateUserProfile, (state, { payload: { profile } }) => {
       if (state.userProfile) {

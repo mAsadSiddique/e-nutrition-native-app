@@ -84,12 +84,10 @@ export const Wishlist = () => {
                 console.warn('[Wishlist] Missing required blogId or slug:', { blogId, slug });
                 return;
             }
-            console.log('item: ', item)
             // Get the first categoryId from the blog's categories array
             const categoryId = Array.isArray(item?.categories) && item.categories.length > 0
                 ? item.categories[0]
                 : undefined;
-            console.log('categoryId: ', categoryId)
             if (!categoryId) {
                 console.warn('[Wishlist] Missing categoryId for blog:', { blogId, slug });
                 return;
@@ -114,12 +112,10 @@ export const Wishlist = () => {
                 { id: blogId },
                 {
                     onSuccess: (data) => {
-                        console.log('[BookmarksTab] ✅ Successfully toggled blog wishlist:', data);
                         // Show success toast - in bookmarks tab, we're always removing
                         toast.success('Removed from saved articles', 'Removed');
                     },
                     onError: (error: any) => {
-                        console.error('[BookmarksTab] ❌ Failed to toggle blog wishlist:', error);
                         // Revert local state on error
                         toggleWishlistInStore(blogId);
                         // Show error toast

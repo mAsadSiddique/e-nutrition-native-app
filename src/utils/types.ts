@@ -20,6 +20,17 @@ export interface TChangePassword {
 
 export interface TUpdateProfile {
   username: string;
+  email?: string;
+  phoneNumber?: string;
+  firstName?: string;
+  lastName?: string;
+  gender?: string;
+  address?: string;
+  dob?: {
+    day: number;
+    month: number;
+    year: number;
+  };
   profileImage?: {
     fileBase64: string;
     fileName: string;
