@@ -99,13 +99,34 @@ export default function SearchTab() {
         description: preview,
         date: formatDate(b.publishedAt),
         image: { uri: imageUrl },
+        categories: b.categories || [],
+        slug: b.slug,
       };
     });
   }, [blogsListing]);
 
   const handleBlogPress = useCallback(
     (item: any) => {
-      router.push(`/(tabs)/(home)/${item.id}`);
+      const blogId = item?.id;
+      const slug = item?.slug;
+      
+      if (!blogId || !slug) {
+        console.warn('[SearchTab] Missing required blogId or slug:', { blogId, slug });
+        return;
+      }
+
+      // Get the first categoryId from the blog's categories array
+      const categoryId = Array.isArray(item?.categories) && item.categories.length > 0
+        ? item.categories[0]
+        : undefined;
+
+      if (!categoryId) {
+        console.warn('[SearchTab] Missing categoryId for blog:', { blogId, slug });
+        return;
+      }
+
+      // Navigate to blog detail with required format: /blogs/{blogId}/{categoryId}/{slug}
+      router.push(`/blogs/${blogId}/${categoryId}/${slug}`);
     },
     [router]
   );

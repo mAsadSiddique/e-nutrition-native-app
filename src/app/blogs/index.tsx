@@ -45,23 +45,26 @@ export default function BlogListScreen() {
 
   const handleBlogPress = useCallback(
     (item: any) => {
-      const slugOrId = item?.slug ?? item?.id ?? "";
-      if (!slugOrId) return;
+      const blogId = item?.id;
+      const slug = item?.slug;
+      
+      if (!blogId || !slug) {
+        console.warn('[BlogList] Missing required blogId or slug:', { blogId, slug });
+        return;
+      }
 
       // Get the first categoryId from the blog's categories array
       const categoryId = Array.isArray(item?.categories) && item.categories.length > 0
         ? item.categories[0]
         : undefined;
 
-      // Navigate to blog detail with categoryId as query parameter
-      if (categoryId !== undefined) {
-        router.push({
-          pathname: '/blogs/[id]',
-          params: { id: String(slugOrId), categoryId: String(categoryId) },
-        });
-      } else {
-        router.push(`/blogs/${slugOrId}`);
+      if (!categoryId) {
+        console.warn('[BlogList] Missing categoryId for blog:', { blogId, slug });
+        return;
       }
+
+      // Navigate to blog detail with required format: /blogs/{blogId}/{categoryId}/{slug}
+      router.push(`/blogs/${blogId}/${categoryId}/${slug}`);
     },
     [router]
   );
@@ -77,7 +80,7 @@ export default function BlogListScreen() {
     (blogId: number) => {
       // Check if blog is currently in wishlist to determine action
       const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
-      
+
       // Toggle local wishlist state immediately for better UX
       toggleWishlistInStore(blogId);
 
@@ -206,6 +209,45 @@ export default function BlogListScreen() {
     [activeTab, handleTabPress]
   );
 
+  // Helper function to extract image URL from media object
+  const getImageUrlFromMedia = (media: TBlogsListing['media']): string => {
+    if (!media || !media.images || typeof media.images !== "object") {
+      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+    }
+    const imageKeys = Object.keys(media.images);
+    if (imageKeys.length === 0) {
+      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+    }
+    const firstKey = imageKeys[0];
+    const imageUrl = media.images[firstKey];
+    return imageUrl || "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+  };
+
+  // Transform blogs listing data for display
+  // IMPORTANT: This hook must be called before any conditional returns
+  const transformedBlogs = useMemo(() => {
+    if (!blogsListing || !Array.isArray(blogsListing)) return [];
+    return blogsListing.map((b: TBlogsListing) => {
+      // Use excerpt if available, otherwise strip HTML from content as fallback
+      const description = b.excerpt
+        ? b.excerpt
+        : stripHtml(b.content || "");
+      const preview = description.length > 120 ? `${description.slice(0, 120).trim()}...` : description;
+      const imageUrl = getImageUrlFromMedia(b.media);
+      return {
+        id: b.id,
+        title: b.title,
+        description: preview,
+        date: formatDate(b.publishedAt),
+        image: { uri: imageUrl },
+        categories: b.categories || [],
+        slug: b.slug,
+      };
+    });
+  }, [blogsListing]);
+
+  const displayData = transformedBlogs;
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -241,43 +283,6 @@ export default function BlogListScreen() {
       </SafeAreaView>
     );
   }
-
-  // Helper function to extract image URL from media object
-  const getImageUrlFromMedia = (media: TBlogsListing['media']): string => {
-    if (!media || !media.images || typeof media.images !== "object") {
-      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
-    }
-    const imageKeys = Object.keys(media.images);
-    if (imageKeys.length === 0) {
-      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
-    }
-    const firstKey = imageKeys[0];
-    const imageUrl = media.images[firstKey];
-    return imageUrl || "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
-  };
-
-  // Transform blogs listing data for display
-  const transformedBlogs = useMemo(() => {
-    if (!blogsListing || !Array.isArray(blogsListing)) return [];
-    return blogsListing.map((b: TBlogsListing) => {
-      // Use excerpt if available, otherwise strip HTML from content as fallback
-      const description = b.excerpt
-        ? b.excerpt
-        : stripHtml(b.content || "");
-      const preview = description.length > 120 ? `${description.slice(0, 120).trim()}...` : description;
-      const imageUrl = getImageUrlFromMedia(b.media);
-      return {
-        id: b.id,
-        title: b.title,
-        description: preview,
-        date: formatDate(b.publishedAt),
-        image: { uri: imageUrl },
-        categories: b.categories || [],
-      };
-    });
-  }, [blogsListing]);
-
-  const displayData = transformedBlogs;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

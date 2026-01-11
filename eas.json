@@ -1,20 +1,27 @@
 {
   "cli": {
-    "version": ">= 13.2.1"
+    "version": ">= 13.2.1",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "node": "20.18.0"
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "node": "20.18.0"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "node": "20.18.0",
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      }
     }
   },
   "submit": {

@@ -7,25 +7,34 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 // note: no local dummy blogs used; fetching from API
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTAINER_PADDING = 16;
 const CARD_GAP = 12;
 const AVAILABLE_WIDTH = SCREEN_WIDTH - (CONTAINER_PADDING * 2);
 const CARD_WIDTH = Math.floor((AVAILABLE_WIDTH - CARD_GAP) / 2);
+
 export default function BlogDetailScreen() {
   const router = useRouter();
-  const { id, categoryId } = useLocalSearchParams<{ id: string; categoryId?: string }>();
+  // Extract params from route: /blogs/[blogId]/[categoryId]/[slug]
+  const { blogId, categoryId, slug } = useLocalSearchParams<{ 
+    blogId: string; 
+    categoryId: string; 
+    slug: string;
+  }>();
 
   const [recosState, setRecosState] = useState<any[]>([]);
 
   const categoryIdNum = categoryId ? Number(categoryId) : undefined;
+  const blogIdNum = blogId ? Number(blogId) : undefined;
 
-  // Fetch specific blog by id or slug
-  const isNumericId = id ? /^[0-9]+$/.test(String(id)) : false;
+  // Fetch specific blog by id (preferred) or slug (fallback)
   const { data: specificBlogData, isLoading: blogLoading } = useBlogsListing({
-    ...(id && (isNumericId ? { id } : { slug: id })),
+    ...(blogIdNum ? { id: String(blogIdNum) } : slug ? { slug } : {}),
   });
+
+  console.log('Route params:', { blogId, categoryId, slug, categoryIdNum, blogIdNum });
 
   // Fetch recommended blogs by categoryId
   const { data: recommendedBlogsData, isLoading } = useBlogsListing({
@@ -40,7 +49,6 @@ export default function BlogDetailScreen() {
     return specificBlogData[0];
   }, [specificBlogData]);
 
-
   // Update recommended blogs when recommendedBlogsData or blog changes
   useEffect(() => {
     if (recommendedBlogsData && Array.isArray(recommendedBlogsData) && blog) {
@@ -48,12 +56,12 @@ export default function BlogDetailScreen() {
         // Exclude the current blog id
         const currentBlogId = typeof blog?.id === 'number' ? blog.id : Number(blog?.id);
         const filtered = recommendedBlogsData.filter((b: any) => {
-          const blogId = typeof b?.id === 'number' ? b.id : Number(b?.id);
-          return blogId !== currentBlogId;
+          const bId = typeof b?.id === 'number' ? b.id : Number(b?.id);
+          return bId !== currentBlogId;
         });
 
         // Map to compact display shape (title, description, image)
-        // Include categoryId so we can pass it when navigating
+        // Include blogId, categoryId, and slug so we can pass it when navigating
         const mapped = filtered.map((b: any) => {
           const plain = (b.content || '').replace(/<[^>]*>/g, '');
           const preview = plain.length > 120 ? `${plain.slice(0, 120).trim()}...` : plain;
@@ -61,12 +69,18 @@ export default function BlogDetailScreen() {
             ? b.media.images[Object.keys(b.media.images)[0]]
             : 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
 
+          // Get first categoryId from blog's categories array
+          const blogCategoryId = Array.isArray(b?.categories) && b.categories.length > 0
+            ? b.categories[0]
+            : undefined;
+
           return {
             id: b.id,
             title: b.title,
             description: preview,
             image: { uri: imageUrl },
-            categoryId: categoryIdNum, // Include categoryId from route params
+            categoryId: blogCategoryId,
+            slug: b.slug,
           };
         });
 
@@ -78,7 +92,7 @@ export default function BlogDetailScreen() {
     } else {
       setRecosState([]);
     }
-  }, [recommendedBlogsData, blog, categoryIdNum]);
+  }, [recommendedBlogsData, blog]);
 
   // Conditional returns AFTER all hooks
   if (blogLoading) {
@@ -131,14 +145,9 @@ export default function BlogDetailScreen() {
             <RecommendedRow
               items={recosState}
               onPress={(it: any) => {
-                // Navigate to blog detail with categoryId as query parameter
-                if (it.categoryId !== undefined) {
-                  router.push({
-                    pathname: '/blogs/[id]',
-                    params: { id: String(it.id), categoryId: String(it.categoryId) },
-                  });
-                } else {
-                  router.push(`/blogs/${it.id}`);
+                // Navigate to blog detail with new URL format: /blogs/{blogId}/{categoryId}/{slug}
+                if (it.id && it.categoryId && it.slug) {
+                  router.push(`/blogs/${it.id}/${it.categoryId}/${it.slug}`);
                 }
               }}
             />
@@ -191,9 +200,7 @@ const styles = StyleSheet.create({
   },
   contentHeading: {
     ...TypographyStyles.h1,
-    // ...TypographyStyles.h3,
     fontSize: Math.max(20, Math.min(24, SCREEN_WIDTH * 0.055)),
-    // fontWeight: '700',
     color: '#000',
     marginTop: 12,
     marginBottom: 6,
@@ -211,14 +218,12 @@ const styles = StyleSheet.create({
   },
   recommendedSection: {
     marginTop: 32,
-    marginBottom: 0, // No bottom margin
+    marginBottom: 0,
   },
   sectionTitle: {
     ...TypographyStyles.h2,
-    // ...TypographyStyles.h2,
     fontSize: Math.max(20, Math.min(24, SCREEN_WIDTH * 0.06)),
     marginBottom: 16,
-    // fontWeight: '700',
     color: '#000',
   },
   recommendedScrollView: {
@@ -235,7 +240,6 @@ const styles = StyleSheet.create({
     marginRight: CARD_GAP,
     backgroundColor: '#fff',
     borderRadius: 12,
-    // marginVertical: 12,
     marginBottom: 20,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -343,5 +347,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-
 

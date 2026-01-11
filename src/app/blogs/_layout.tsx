@@ -8,7 +8,7 @@ export default function BlogsLayout() {
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen
-        name="[id]"
+        name="[blogId]/[categoryId]/[slug]"
         options={({ navigation }) => ({
           headerShown: true,
           headerTitle: '',

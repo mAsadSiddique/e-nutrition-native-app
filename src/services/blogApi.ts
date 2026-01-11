@@ -19,7 +19,8 @@ export const useBlogsListing = ({
   sortBy,
   tags,
   categoryIds,
-}: TExploreBlogs) => {
+  enabled,
+}: TExploreBlogs & { enabled?: boolean }) => {
   return useQuery({
     queryKey: [
       QueryKey.BLOGS_LISTING,
@@ -47,6 +48,7 @@ export const useBlogsListing = ({
     select: (response) => {
       return response?.data?.blogs as TBlogsListing[];
     },
+    enabled: enabled !== undefined ? enabled : true,
   });
 };
 

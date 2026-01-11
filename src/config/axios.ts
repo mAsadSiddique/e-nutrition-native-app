@@ -2,7 +2,7 @@ import Axios, { AxiosInstance, type AxiosRequestConfig } from "axios";
 import storage from "../utils/storage";
 import { createQueryClient } from "./react-query";
 
-const BASE_URL = "http://3.97.95.70:3000/";
+const BASE_URL = "https://quickwagon.com/";
 
 export const axios: AxiosInstance = Axios.create({
   baseURL: BASE_URL,

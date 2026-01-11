@@ -8,18 +8,6 @@ export default function HomeStackLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
       <Stack.Screen
-        name="[id]"
-        options={({ navigation }) => ({
-          headerShown: true,
-          headerTitle: '',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingHorizontal: 8 }}>
-              <Ionicons name="arrow-back" size={24} color="#000" />
-            </TouchableOpacity>
-          ),
-        })}
-      />
-      <Stack.Screen
         name="author/[author]"
         options={({ navigation }) => ({
           headerShown: true,

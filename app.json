@@ -3,7 +3,9 @@
     "name": "NutriLife",
     "slug": "nutrilife-app",
     "version": "1.0.0",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "orientation": "portrait",
     "icon": "./src/assets/images/icon.png",
     "scheme": "myexpoapp",
@@ -43,8 +45,13 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c9ff5706-0b60-4298-b8d5-e43f80c89d47"
+      }
     }
   }
 }
