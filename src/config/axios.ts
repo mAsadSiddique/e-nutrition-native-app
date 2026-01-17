@@ -1,4 +1,7 @@
 import Axios, { AxiosInstance, type AxiosRequestConfig } from "axios";
+import { signOut } from "../store/auth/action";
+import store from "../store/store";
+import { navigateToMain } from "../utils/navigation";
 import storage from "../utils/storage";
 import { createQueryClient } from "./react-query";
 
@@ -33,11 +36,21 @@ axios.interceptors.response.use(
   (response) => {
     return response.data;
   },
-  (error) => {
+  async (error) => {
     const status = error.response?.status || 500;
 
     if (status === 401) {
+      // Clear query cache
       createQueryClient().clear();
+      
+      // Clear token from storage
+      await storage.clearToken();
+      
+      // Sign out user from Redux store
+      store.dispatch(signOut());
+      
+      // Navigate to main screen
+      navigateToMain();
     }
 
     return Promise.reject(error);

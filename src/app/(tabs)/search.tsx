@@ -1,5 +1,6 @@
 
 import { useBlogsListing, useBlogWishlistToggle } from '@/src/services';
+import { useAuth } from '@/src/store/auth/hook';
 import { useWishlistHandler } from '@/src/store/wishlist/hook';
 import { useWishlistSelector } from '@/src/store/wishlist/selector';
 import { TypographyStyles } from '@/src/theme/theme';
@@ -13,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SearchTab() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [tabsAction, setTabsAction] = useState('');
 
   // Tabs state (moved up so effect can use it)
@@ -233,6 +235,12 @@ export default function SearchTab() {
 
   const handleToggleWishlist = useCallback(
     (blogId: number) => {
+      // Check if user is authenticated before allowing save
+      if (!isAuthenticated) {
+        router.replace('/auth/sign-in');
+        return;
+      }
+
       // Check if blog is currently in wishlist to determine action
       const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
 
@@ -262,7 +270,7 @@ export default function SearchTab() {
         }
       );
     },
-    [toggleWishlistInStore, toggleBlogWishlist, blogsWishlist]
+    [isAuthenticated, router, toggleWishlistInStore, toggleBlogWishlist, blogsWishlist]
   );
 
   const renderBlogItem = useCallback(

@@ -1,8 +1,8 @@
 import AuthButton from '@/src/components/auth/AuthButton';
 import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
 import AuthLayout from '@/src/components/auth/AuthLayout';
-import { useAuth } from '@/src/store/auth/hook';
 import { useResendVerification, useVerification } from '@/src/services/authApi';
+import { useAuth } from '@/src/store/auth/hook';
 import { TypographyStyles } from '@/src/theme/theme';
 import { toast } from '@/src/utils/toast';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -61,6 +61,17 @@ export default function VerifyCode() {
       setErrorMessage('');
     }
   }, [codeValue, codeError]);
+
+  // Auto-submit when all digits are entered
+  React.useEffect(() => {
+    if (codeValue && codeValue.length === 6 && !verifyLoading && !codeError) {
+      // Small delay to ensure the last digit is properly set
+      const timer = setTimeout(() => {
+        handleSubmit(onSubmit)();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [codeValue, verifyLoading, codeError]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number): string => {

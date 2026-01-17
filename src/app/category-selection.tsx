@@ -1,7 +1,7 @@
 import { useGetCategories } from "@/src/services/categoryApi";
 import { useWishlistToggle } from "@/src/services/wishlistToggle";
 
-import store, { persistor } from "@/src/store/store";
+import store from "@/src/store/store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
@@ -131,34 +131,24 @@ export default function CategorySelectionScreen() {
               }
               return true;
             });
-            console.log('[CategorySelection] Saving to AsyncStorage - Selected category IDs (sanitized):', payloadCopy);
-            console.log('[CategorySelection] Number of selected categories (sanitized):', payloadCopy.length);
-            const jsonString = JSON.stringify(payloadCopy);
-            console.log('[CategorySelection] JSON string to save:', jsonString);
 
+            // Always save to Redux store (categories)
+            onSetSelectedCategories(payloadCopy);
+
+            // Always save to AsyncStorage
+            const jsonString = JSON.stringify(payloadCopy);
             await AsyncStorage.setItem('selected_categories', jsonString);
 
-            // Verify it was saved by reading it back
-            const saved = await AsyncStorage.getItem('selected_categories');
-            console.log('[CategorySelection] Verification - Read back from AsyncStorage:', saved);
+            // Update wishlist store with selected categories
+            setCategoriesWishlist(payloadCopy);
 
-            if (saved) {
-              const parsed = JSON.parse(saved);
-              console.log('[CategorySelection] Verification - Parsed saved data:', parsed);
-              console.log('[CategorySelection] Verification - Number of saved IDs:', parsed.length);
-              console.log('[CategorySelection] ✅ Successfully saved to AsyncStorage');
-            } else {
-              console.warn('[CategorySelection] ⚠️ Warning: Could not read back from AsyncStorage');
-            }
-
-            // Add selected categories to wishlist via API
-            if (payloadCopy.length > 0) {
-              console.log('[CategorySelection] Adding categories to wishlist (payload):', payloadCopy);
+            // If user is authenticated, sync with API
+            if (isAuthenticated && payloadCopy.length > 0) {
+              console.log('[CategorySelection] User authenticated - Adding categories to wishlist via API:', payloadCopy);
               toggleWishlist(
                 { ids: payloadCopy },
                 {
                   onSuccess: (data) => {
-                    console.log('[CategorySelection] ✅ Successfully added categories to wishlist:', data);
                     // Use server response if it contains the saved categories, otherwise fallback to local selection
                     try {
                       const serverCategories = (data as any)?.data?.userWishlist?.categoriesWishlist ?? (data as any)?.userWishlist?.categoriesWishlist ?? (data as any)?.categoriesWishlist;
@@ -180,80 +170,43 @@ export default function CategorySelectionScreen() {
                           const serverBlogs = (data as any)?.data?.userWishlist?.blogsWishlist ?? (data as any)?.userWishlist?.blogsWishlist ?? (data as any)?.blogsWishlist ?? blogsWishlist ?? [];
                           console.debug('[CategorySelection] Pre-set wishlist state:', store.getState().wishlist);
                           setWishlist({ blogsWishlist: serverBlogs || [], categoriesWishlist: copy });
-                          // Log post-update state in next tick (allow Redux to process)
-                          setTimeout(() => {
-                            console.debug('[CategorySelection] Post-set wishlist state:', store.getState().wishlist);
-                          }, 0);
 
-                          // Ensure persisted storage is flushed and then log the persisted root
-                          try {
-                            persistor.flush().then(async () => {
-                              try {
-                                const persisted = await AsyncStorage.getItem('persist:root');
-                                console.debug('[CategorySelection] Persisted root after flush:', persisted);
-                                if (persisted) {
-                                  try {
-                                    const parsed = JSON.parse(persisted);
-                                    console.debug('[CategorySelection] Persisted wishlist slice:', parsed?.wishlist);
-                                    console.debug('[CategorySelection] Persisted categories slice:', parsed?.categories);
-                                  } catch (e) {
-                                    console.error('[CategorySelection] Failed to parse persisted root:', e);
-                                  }
-                                }
-                              } catch (e) {
-                                console.error('[CategorySelection] Failed to read persist:root from AsyncStorage:', e);
-                              }
-                            }).catch((e) => console.error('[CategorySelection] persistor.flush() failed:', e));
-                          } catch (err) {
-                            console.error('[CategorySelection] Error while flushing persistor:', err);
-                          }
-
-                          console.log('[CategorySelection] ✅ Wishlist store replaced from server response:', { blogsWishlist: serverBlogs, categoriesWishlist: copy });
+                          // Redux Persist will automatically persist the changes
                         } catch (err) {
                           // Fallback to setting categories only
                           setCategoriesWishlist(copy);
-                          console.error('[CategorySelection] Failed to set full wishlist from server response, set categories only:', err);
                         }
                       } else {
+                        // Fallback to local selection if server doesn't return categories
                         const copy = [...payloadCopy];
-                        try {
-                          onSetSelectedCategories(copy);
-                          AsyncStorage.setItem('selected_categories', JSON.stringify(copy))
-                            .then(() => console.debug('[CategorySelection] Persisted local selection to AsyncStorage:', copy))
-                            .catch((e) => console.error('[CategorySelection] Failed to persist local selection to AsyncStorage:', e));
-                        } catch (err) {
-                          console.error('[CategorySelection] Failed to update selected categories from local selection:', err);
-                        }
-
+                        onSetSelectedCategories(copy);
                         setCategoriesWishlist(copy);
-                        // flush persisted storage after updating categories only
-                        try {
-                          persistor.flush().then(async () => {
-                            const persisted = await AsyncStorage.getItem('persist:root');
-                            console.debug('[CategorySelection] Persisted root after categories-only save:', persisted);
-                          }).catch((e) => console.error('[CategorySelection] persistor.flush() failed (categories-only):', e));
-                        } catch (e) {
-                          console.error('[CategorySelection] Error flushing persistor (categories-only):', e);
-                        }
                         console.log('[CategorySelection] ✅ Wishlist store updated from local selection:', copy);
                       }
                     } catch (err) {
                       console.error('[CategorySelection] Failed to update wishlist store from response:', err);
                     }
+
+                    // Navigate after successful API call
+                    router.replace('/(tabs)');
                   },
                   onError: (error: any) => {
                     console.error('[CategorySelection] ❌ Failed to add categories to wishlist:', error);
-                    // Continue navigation even if wishlist update fails
+                    // Still navigate even if API call fails
+                    router.replace('/(tabs)');
                   },
                 }
               );
-            }
-
-            // Navigate to home tabs if authenticated, otherwise to index route
-            if (isAuthenticated) {
-              router.replace('/(tabs)');
             } else {
-              router.replace('/');
+              // User is not authenticated - just save locally and navigate
+              console.log('[CategorySelection] User not authenticated - Saving categories locally and navigating to main app');
+
+              // Redux Persist will automatically persist the changes
+              // No need to manually flush as it happens automatically
+              console.log('[CategorySelection] ✅ Categories saved to store (will be persisted automatically)');
+
+              // Navigate to main application
+              router.replace('/(tabs)');
             }
           } catch (err) {
             console.error('[CategorySelection] ❌ Failed to save selected categories:', err);

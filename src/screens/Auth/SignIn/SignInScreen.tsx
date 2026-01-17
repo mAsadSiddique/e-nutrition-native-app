@@ -311,7 +311,9 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 32,
     fontWeight: "700",
+    lineHeight: 44,
     marginBottom: 8,
+    includeFontPadding: false,
   },
   subtitle: {
     ...TypographyStyles.body,

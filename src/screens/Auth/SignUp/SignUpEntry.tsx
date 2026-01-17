@@ -1,5 +1,6 @@
 import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
+import { useCategoriesSelector } from "@/src/store/categories/selector";
 import { TypographyStyles } from "@/src/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -19,9 +20,16 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 export default function SignUpEntry() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { selectedCategories } = useCategoriesSelector();
 
   const handleSkip = () => {
-    router.replace("/category-selection");
+    // If user already has selected categories, go directly to dashboard
+    if (selectedCategories && selectedCategories.length >= 3) {
+      router.replace("/(tabs)");
+    } else {
+      // Otherwise, show category selection
+      router.replace("/category-selection");
+    }
   };
 
   return (

@@ -1,6 +1,6 @@
 import storage from "@/src/utils/storage";
 import type { TUserProfile } from "@/src/utils/types";
-import React, { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../store";
 import {
@@ -16,10 +16,10 @@ import { useAuthSelector } from "./selector";
 export const useAuth = () => {
   const dispatch = useDispatch<AppDispatch>();
   const authState = useAuthSelector();
-  const [hasToken, setHasToken] = React.useState<boolean>(false);
+  const [hasToken, setHasToken] = useState(false);
 
   // Check if token exists in storage on mount and when userProfile changes
-  React.useEffect(() => {
+  useEffect(() => {
     const checkToken = async () => {
       const token = await storage.getToken();
       setHasToken(!!token);

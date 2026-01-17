@@ -95,6 +95,17 @@ export default function ForgotPasswordCodeScreen() {
     }
   }, [codeValue, codeError]);
 
+  // Auto-submit when all digits are entered
+  React.useEffect(() => {
+    if (codeValue && codeValue.length === 6 && !resetLoading && !codeError && storedData) {
+      // Small delay to ensure the last digit is properly set
+      const timer = setTimeout(() => {
+        handleSubmit(onSubmit)();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [codeValue, resetLoading, codeError, storedData]);
+
   // Load stored data on component mount
   useEffect(() => {
     const loadStoredData = async () => {

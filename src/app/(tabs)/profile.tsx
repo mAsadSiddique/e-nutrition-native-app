@@ -1,4 +1,5 @@
 import LogoutSheet from "@/src/components/auth/LogoutSheet";
+import { useCurrentProfile } from "@/src/hooks";
 import { useGetProfile } from "@/src/services/authApi";
 import { useAuth } from "@/src/store/auth/hook";
 import { TypographyStyles } from "@/src/theme/theme";
@@ -62,6 +63,10 @@ export default function ProfileTab() {
   const { userProfile, updateUserProfile, signOut } = useAuth();
   const router = useRouter();
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
+
+  // Require authentication - automatically redirects to login if not authenticated
+  const { isLoggedIn } = useCurrentProfile();
+
   // Social links (only the three requested)
   const handleLinkedIn = () => Linking.openURL("https://www.linkedin.com/in/oneplatforms");
   const handleFacebookEnutrition = () => Linking.openURL("https://www.facebook.com/enutrition.me");
@@ -155,19 +160,10 @@ export default function ProfileTab() {
     router.replace("/auth/sign-in");
   }, [signOut, router]);
 
-  const renderProfileImage = () => {
-    const imageUri = profileData?.profileImage || userProfile.profileImage;
-
-    if (imageUri) {
-      return <Image source={{ uri: imageUri }} style={styles.profileImage} />;
-    }
-
-    return (
-      <View style={styles.profileImagePlaceholder}>
-        <Ionicons name="person" size={40} color="#999" />
-      </View>
-    );
-  };
+  // Don't render profile if loading or not authenticated (will redirect)
+  if (!isLoggedIn) {
+    return router.replace('/auth/sign-in');
+  }
 
   return (
     <SafeAreaView style={styles.container}>

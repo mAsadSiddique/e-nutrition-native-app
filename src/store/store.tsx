@@ -37,7 +37,7 @@ function makeStore(preloadedState = undefined) {
             getDefaultMiddleware({
                 thunk: true,
                 serializableCheck: {
-                    ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+                    ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE', 'persist/FLUSH', 'persist/PAUSE', 'persist/PURGE', 'persist/REGISTER'],
                 },
             }),
         preloadedState,

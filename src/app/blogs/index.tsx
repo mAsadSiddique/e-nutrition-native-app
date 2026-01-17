@@ -10,6 +10,7 @@ import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useCurrentProfile } from "@/src/hooks";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
@@ -26,6 +27,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BlogListScreen() {
   const router = useRouter();
+  const { isLoggedIn } = useCurrentProfile()
   const { blogsWishlist, categoriesWishlist } = useWishlistSelector()
 
   const [activeTab, setActiveTab] = useState<UserAction>(UserAction.For_YOU);
@@ -128,36 +130,33 @@ export default function BlogListScreen() {
 
   const handleToggleWishlist = useCallback(
     (blogId: number) => {
+      // Check if user is authenticated before allowing save
+      if (!isLoggedIn) {
+        router.replace('/auth/sign-in');
+        return;
+      }
+
       // Check if blog is currently in wishlist to determine action
       const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
 
-      // Toggle local wishlist state immediately for better UX
-      toggleWishlistInStore(blogId);
-
       // Call API to toggle wishlist
-      toggleBlogWishlist(
-        { id: blogId },
-        {
-          onSuccess: (data) => {
-            // Show success toast based on action
-            if (isCurrentlyInWishlist) {
-              toast.success('Removed from saved articles', 'Removed');
-            } else {
-              toast.success('Added to saved articles', 'Saved');
-            }
-          },
-          onError: (error: any) => {
-            console.error('[BlogList] ❌ Failed to toggle blog wishlist:', error);
-            // Revert local state on error
-            toggleWishlistInStore(blogId);
-            // Show error toast
-            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update wishlist';
-            toast.error(errorMessage, 'Error');
-          },
-        }
-      );
+      toggleBlogWishlist({ id: blogId }, {
+        onSuccess: (data) => {
+          if (isCurrentlyInWishlist) {
+            toast.success('Removed from saved articles', 'Removed');
+          } else {
+            toast.success('Added to saved articles', 'Saved');
+          }
+        },
+        onError: (error: any) => {
+          // Show error toast
+          const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update wishlist';
+          toast.error(errorMessage, 'Error');
+        },
+      });
+      toggleWishlistInStore(blogId);
     },
-    [toggleWishlistInStore, toggleBlogWishlist, blogsWishlist]
+    [isLoggedIn, router, toggleWishlistInStore, toggleBlogWishlist, blogsWishlist]
   );
 
   const renderBlogItem = useCallback(
