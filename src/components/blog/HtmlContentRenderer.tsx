@@ -1,5 +1,5 @@
 import { TypographyStyles } from '@/src/theme/theme';
-import { ParsedElement, parseHtmlContent } from '@/src/utils/htmlParser';
+import { ParsedElement, parseHtmlContent, TextSegment } from '@/src/utils/htmlParser';
 import { Image } from 'expo-image';
 import { openBrowserAsync, WebBrowserPresentationStyle } from 'expo-web-browser';
 import React from 'react';
@@ -36,6 +36,26 @@ export default function HtmlContentRenderer({ html, media }: HtmlContentRenderer
     }
   };
   
+  const renderFormattedText = (segments: TextSegment[], baseStyle: any) => {
+    return (
+      <Text style={baseStyle}>
+        {segments.map((segment, segIndex) => {
+          const segmentStyles = [];
+          if (segment.styles?.bold) segmentStyles.push(styles.bold);
+          if (segment.styles?.italic) segmentStyles.push(styles.italic);
+          if (segment.styles?.underline) segmentStyles.push(styles.underline);
+          if (segment.styles?.code) segmentStyles.push(styles.code);
+          
+          return (
+            <Text key={segIndex} style={segmentStyles.length > 0 ? segmentStyles : undefined}>
+              {segment.text}
+            </Text>
+          );
+        })}
+      </Text>
+    );
+  };
+
   const renderElement = (element: ParsedElement, index: number) => {
     switch (element.type) {
       case 'text':
@@ -45,6 +65,26 @@ export default function HtmlContentRenderer({ html, media }: HtmlContentRenderer
             {element.content}
           </Text>
         );
+      
+      case 'formattedText':
+        if (!element.content.trim()) return null;
+        return (
+          <Text key={index} style={styles.text}>
+            {element.segments?.map((segment, segIndex) => {
+              const segmentStyles = [];
+              if (segment.styles?.bold) segmentStyles.push(styles.bold);
+              if (segment.styles?.italic) segmentStyles.push(styles.italic);
+              if (segment.styles?.underline) segmentStyles.push(styles.underline);
+              if (segment.styles?.code) segmentStyles.push(styles.code);
+              
+              return (
+                <Text key={segIndex} style={segmentStyles.length > 0 ? segmentStyles : undefined}>
+                  {segment.text}
+                </Text>
+              );
+            })}
+          </Text>
+        );
         
       case 'heading':
         const headingStyle = element.level === 1 
@@ -52,6 +92,28 @@ export default function HtmlContentRenderer({ html, media }: HtmlContentRenderer
           : element.level === 2 
           ? styles.heading2 
           : styles.heading3;
+        
+        if (element.segments) {
+          // Heading with inline formatting
+          return (
+            <Text key={index} style={[headingStyle, index > 0 && styles.headingSpacing]}>
+              {element.segments.map((segment, segIndex) => {
+                const segmentStyles = [];
+                if (segment.styles?.bold) segmentStyles.push(styles.bold);
+                if (segment.styles?.italic) segmentStyles.push(styles.italic);
+                if (segment.styles?.underline) segmentStyles.push(styles.underline);
+                if (segment.styles?.code) segmentStyles.push(styles.code);
+                
+                return (
+                  <Text key={segIndex} style={segmentStyles.length > 0 ? segmentStyles : undefined}>
+                    {segment.text}
+                  </Text>
+                );
+              })}
+            </Text>
+          );
+        }
+        
         return (
           <Text key={index} style={[headingStyle, index > 0 && styles.headingSpacing]}>
             {element.content}
@@ -193,6 +255,26 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 200,
     maxHeight: 400,
+  },
+  textContainer: {
+    marginBottom: 12,
+  },
+  bold: {
+    fontWeight: '700',
+  },
+  italic: {
+    fontStyle: 'italic',
+  },
+  underline: {
+    textDecorationLine: 'underline',
+  },
+  code: {
+    fontFamily: 'monospace',
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 3,
+    fontSize: Math.max(14, Math.min(16, SCREEN_WIDTH * 0.038)),
   },
 });
 

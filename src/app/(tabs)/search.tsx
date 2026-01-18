@@ -39,11 +39,15 @@ export default function SearchTab() {
 
   const isSlugLike = /^[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(tabsAction);
 
+  // Only fetch blogs when user has entered a search query
+  const shouldFetchBlogs = tabsAction.trim() !== '';
+  
   const { data: blogsListing, isLoading } = useBlogsListing({
     ...(isSlugLike && { slug: tabsAction }),
     ...(selectedTab === 'Latest' && tabsAction.trim() && { search: tabsAction }),
     ...(selectedTab === 'Blogs' && tabsAction.trim() && { search: tabsAction }),
     ...(selectedTab === 'Tags' && tabsAction.trim() && { tags: tabsAction }),
+    enabled: shouldFetchBlogs,
   })
 
   const { blogsWishlist } = useWishlistSelector()
@@ -449,7 +453,7 @@ export default function SearchTab() {
           ]}
         />
       </View>
-      {tabsAction.trim() === '' && selectedTab !== 'Latest' ? (
+      {tabsAction.trim() === '' ? (
         <View style={styles.emptyContainer}>
           <Image
             source={require('@/src/assets/images/partial-react-logo.jpg')}
@@ -459,7 +463,7 @@ export default function SearchTab() {
         </View>
       ) : (
         <>
-          {isLoading && (selectedTab === 'Blogs' || selectedTab === 'Latest' || selectedTab === 'Tags') ? (
+          {isLoading && shouldFetchBlogs ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>Loading blogs...</Text>
             </View>
@@ -470,7 +474,7 @@ export default function SearchTab() {
               contentContainerStyle={styles.listContent}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
               ListEmptyComponent={
-                ((selectedTab === 'Blogs' || selectedTab === 'Tags') && tabsAction.trim()) || (selectedTab === 'Latest' && displayData.length === 0) ? (
+                (shouldFetchBlogs && displayData.length === 0) ? (
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyTitle}>No blogs found</Text>
                   </View>

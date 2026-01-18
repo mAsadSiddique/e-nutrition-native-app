@@ -12,8 +12,9 @@ export default function SignInEntry() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { selectedCategories } = useCategoriesSelector();
-  
+
   const handleSkip = () => {
+    console.log('here')
     // If user already has selected categories, go directly to dashboard
     if (selectedCategories && selectedCategories.length >= 3) {
       router.replace("/(tabs)");

@@ -38,6 +38,9 @@ export default function BlogListScreen() {
   const [forYouTabX, setForYouTabX] = useState(0);
   const [featuredTabX, setFeaturedTabX] = useState(0);
 
+  // Track if underline has been initialized
+  const isUnderlineInitialized = useRef(false);
+
   // Animation values for tab transitions
   const underlinePosition = useRef(new Animated.Value(0)).current;
   const underlineWidth = useRef(new Animated.Value(0)).current;
@@ -221,83 +224,88 @@ export default function BlogListScreen() {
       });
 
       return (
-        <View style={styles.headerContainer}>
-          <View style={styles.logoWrapper}>
-            <Image
-              source={require("../../assets/logo.png")}
-              style={styles.mediumTitle}
-              resizeMode="contain"
-            />
+        <>
+          <View style={styles.headerContainer}>
+            <View style={styles.logoWrapper}>
+              <Text style={styles.logoText}>Energy Healing</Text>
+              {/* <Image
+                source={require("../../assets/logo.png")}
+                style={styles.mediumTitle}
+                resizeMode="contain"
+              /> */}
+            </View>
           </View>
-
-          {/* Tab Navigation */}
           <View style={styles.tabContainer}>
-            <Pressable
-              style={styles.tabButton}
-              onPress={() => handleTabPress(UserAction.For_YOU)}
-              onLayout={(event) => {
-                const { width, x } = event.nativeEvent.layout;
-                setForYouTabWidth(width);
-                setForYouTabX(x);
-                // Initialize underline position and width on first measurement
-                if (activeTab === UserAction.For_YOU && underlineWidth._value === 0) {
-                  underlinePosition.setValue(x);
-                  underlineWidth.setValue(width);
-                }
-              }}
-            >
-              <Animated.Text
-                style={[
-                  styles.tabText,
-                  {
-                    color: forYouTextColor,
-                  },
-                  activeTab === UserAction.For_YOU && { fontWeight: '500' },
-                ]}
+            <View style={styles.tabContent}>
+              <Pressable
+                style={styles.tabButton}
+                onPress={() => handleTabPress(UserAction.For_YOU)}
+                onLayout={(event) => {
+                  const { width, x } = event.nativeEvent.layout;
+                  setForYouTabWidth(width);
+                  setForYouTabX(x);
+                  // Initialize underline position and width on first measurement
+                  if (activeTab === UserAction.For_YOU && !isUnderlineInitialized.current) {
+                    underlinePosition.setValue(x);
+                    underlineWidth.setValue(width);
+                    isUnderlineInitialized.current = true;
+                  }
+                }}
               >
-                For you
-              </Animated.Text>
-            </Pressable>
+                <Animated.Text
+                  style={[
+                    styles.tabText,
+                    {
+                      color: forYouTextColor,
+                    },
+                    activeTab === UserAction.For_YOU && { fontWeight: '500' },
+                  ]}
+                >
+                  For you
+                </Animated.Text>
+              </Pressable>
 
-            <Pressable
-              style={styles.tabButton}
-              onPress={() => handleTabPress(UserAction.FEATURED)}
-              onLayout={(event) => {
-                const { width, x } = event.nativeEvent.layout;
-                setFeaturedTabWidth(width);
-                setFeaturedTabX(x);
-                // Initialize underline position and width on first measurement
-                if (activeTab === UserAction.FEATURED && underlineWidth._value === 0) {
-                  underlinePosition.setValue(x);
-                  underlineWidth.setValue(width);
-                }
-              }}
-            >
-              <Animated.Text
-                style={[
-                  styles.tabText,
-                  {
-                    color: featuredTextColor,
-                  },
-                  activeTab === UserAction.FEATURED && { fontWeight: '500' },
-                ]}
+              <Pressable
+                style={styles.tabButton}
+                onPress={() => handleTabPress(UserAction.FEATURED)}
+                onLayout={(event) => {
+                  const { width, x } = event.nativeEvent.layout;
+                  setFeaturedTabWidth(width);
+                  setFeaturedTabX(x);
+                  // Initialize underline position and width on first measurement
+                  if (activeTab === UserAction.FEATURED && !isUnderlineInitialized.current) {
+                    underlinePosition.setValue(x);
+                    underlineWidth.setValue(width);
+                    isUnderlineInitialized.current = true;
+                  }
+                }}
               >
-                Featured
-              </Animated.Text>
-            </Pressable>
+                <Animated.Text
+                  style={[
+                    styles.tabText,
+                    {
+                      color: featuredTextColor,
+                    },
+                    activeTab === UserAction.FEATURED && { fontWeight: '500' },
+                  ]}
+                >
+                  Featured
+                </Animated.Text>
+              </Pressable>
 
-            {/* Animated Underline */}
-            <Animated.View
-              style={[
-                styles.tabUnderline,
-                {
-                  left: underlinePosition,
-                  width: underlineWidth,
-                },
-              ]}
-            />
+              {/* Animated Underline */}
+              <Animated.View
+                style={[
+                  styles.tabUnderline,
+                  {
+                    left: underlinePosition,
+                    width: underlineWidth,
+                  },
+                ]}
+              />
+            </View>
           </View>
-        </View>
+        </>
       );
     },
     [activeTab, handleTabPress, underlinePosition, underlineWidth, forYouOpacity, featuredOpacity]
@@ -432,15 +440,21 @@ const styles = StyleSheet.create({
     height: 4,
   },
   logoWrapper: {
-    width: "10%",
+    width: "100%",
     alignItems: "flex-start",
+  },
+  logoText: {
+    ...TypographyStyles.h2,
+    fontSize: 26,
+    fontWeight: "600",
+    letterSpacing: -0.5,
   },
   headerContainer: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 0,
+    paddingBottom: 12,
     backgroundColor: "#fff",
-    alignItems: "flex-start", // 🔥 start alignment
+    alignItems: "flex-start",
   },
   mediumTitle: {
     width: 210, // logo visually bara
@@ -450,11 +464,16 @@ const styles = StyleSheet.create({
   },
 
   tabContainer: {
-    ...TypographyStyles.body,
-    flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
+    backgroundColor: "#fff",
+    width: "100%",
+  },
+  tabContent: {
+    ...TypographyStyles.body,
+    flexDirection: "row",
     position: "relative",
+    paddingHorizontal: 20,
   },
   tabButton: {
     paddingVertical: 12,

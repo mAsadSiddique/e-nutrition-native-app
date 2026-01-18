@@ -3,9 +3,20 @@
  * Extracts tags, links, images, and other elements from HTML content
  */
 
+export interface TextSegment {
+  text: string;
+  styles?: {
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    code?: boolean;
+  };
+}
+
 export interface ParsedElement {
-  type: 'text' | 'heading' | 'paragraph' | 'link' | 'image' | 'youtube' | 'tag';
+  type: 'text' | 'heading' | 'paragraph' | 'link' | 'image' | 'youtube' | 'tag' | 'formattedText';
   content: string;
+  segments?: TextSegment[]; // for formatted text with inline formatting
   level?: number; // for headings (1-6)
   href?: string; // for links
   src?: string; // for images
@@ -124,6 +135,13 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
           // Handle closing tags
           if (['p', 'div', 'br'].includes(tagName)) {
             // Paragraph or div closing - add newline context
+          }
+          // Preserve closing inline formatting tags in text
+          const inlineFormattingTags = ['strong', 'b', 'em', 'i', 'u', 'code'];
+          if (inlineFormattingTags.includes(tagName)) {
+            currentText += html.substring(i, tagEnd + 1);
+            i = tagEnd + 1;
+            continue;
           }
           i = tagEnd + 1;
           continue;
@@ -326,8 +344,18 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
             continue;
           }
         }
+        
+        // Handle inline formatting tags - preserve them in text for later parsing
+        const inlineFormattingTags = ['strong', 'b', 'em', 'i', 'u', 'code'];
+        if (inlineFormattingTags.includes(tagName)) {
+          // Add the tag to currentText so it's preserved for inline formatting parsing
+          currentText += html.substring(i, tagEnd + 1);
+          i = tagEnd + 1;
+          continue;
+        }
       }
       
+      // For unrecognized tags, skip them (don't add to text)
       i = tagEnd + 1;
     } else {
       currentText += html[i];
@@ -342,7 +370,104 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
     elements.push(...textWithYouTube);
   }
   
-  return elements;
+  // Process all text elements to parse inline formatting
+  return elements.map(element => {
+    if (element.type === 'text' || element.type === 'heading') {
+      const segments = parseInlineFormatting(element.content);
+      if (segments.some(s => s.styles && Object.keys(s.styles).length > 0)) {
+        return {
+          ...element,
+          type: element.type === 'text' ? 'formattedText' : element.type,
+          segments,
+        };
+      }
+    }
+    return element;
+  });
+}
+
+/**
+ * Parse inline formatting tags (strong, b, em, i, u, code) from text content
+ */
+function parseInlineFormatting(text: string): TextSegment[] {
+  const segments: TextSegment[] = [];
+  let i = 0;
+  let currentText = '';
+  let currentStyles: TextSegment['styles'] = {};
+  const styleStack: Array<TextSegment['styles']> = [{}];
+  
+  while (i < text.length) {
+    if (text[i] === '<') {
+      // Save current text if any
+      if (currentText) {
+        segments.push({
+          text: decodeHtmlEntities(currentText),
+          styles: { ...currentStyles },
+        });
+        currentText = '';
+      }
+      
+      const tagEnd = text.indexOf('>', i);
+      if (tagEnd === -1) {
+        currentText += text[i];
+        i++;
+        continue;
+      }
+      
+      const tagContent = text.substring(i + 1, tagEnd);
+      const tagMatch = tagContent.match(/^(\/?)(\w+)/);
+      
+      if (tagMatch) {
+        const isClosing = tagMatch[1] === '/';
+        const tagName = tagMatch[2].toLowerCase();
+        
+        if (isClosing) {
+          // Handle closing tags - pop style from stack
+          if (['strong', 'b', 'em', 'i', 'u', 'code'].includes(tagName)) {
+            styleStack.pop();
+            currentStyles = styleStack[styleStack.length - 1] || {};
+          }
+        } else {
+          // Handle opening tags - push style to stack
+          if (['strong', 'b'].includes(tagName)) {
+            currentStyles = { ...currentStyles, bold: true };
+            styleStack.push(currentStyles);
+          } else if (['em', 'i'].includes(tagName)) {
+            currentStyles = { ...currentStyles, italic: true };
+            styleStack.push(currentStyles);
+          } else if (tagName === 'u') {
+            currentStyles = { ...currentStyles, underline: true };
+            styleStack.push(currentStyles);
+          } else if (tagName === 'code') {
+            currentStyles = { ...currentStyles, code: true };
+            styleStack.push(currentStyles);
+          }
+        }
+      }
+      
+      i = tagEnd + 1;
+    } else {
+      currentText += text[i];
+      i++;
+    }
+  }
+  
+  // Add remaining text
+  if (currentText) {
+    segments.push({
+      text: decodeHtmlEntities(currentText),
+      styles: { ...currentStyles },
+    });
+  }
+  
+  // If no formatting was found, return single segment
+  if (segments.length === 0) {
+    segments.push({
+      text: decodeHtmlEntities(text),
+    });
+  }
+  
+  return segments;
 }
 
 /**

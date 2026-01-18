@@ -54,7 +54,9 @@ export const Wishlist = () => {
     };
 
     // Transform blogs listing data for display
+    // Only transform data if shouldCallEndpoint is true, otherwise return empty array
     const transformedBlogs = useMemo(() => {
+        if (!shouldCallEndpoint) return [];
         if (!wishListBlogs || !Array.isArray(wishListBlogs)) return [];
         return wishListBlogs.map((b: TBlogsListing) => {
             // Use excerpt if available, otherwise strip HTML from content as fallback
@@ -73,7 +75,7 @@ export const Wishlist = () => {
                 slug: b.slug,
             };
         });
-    }, [wishListBlogs]);
+    }, [wishListBlogs, shouldCallEndpoint]);
 
     const handleBlogPress = useCallback(
         (item: any) => {
@@ -81,7 +83,6 @@ export const Wishlist = () => {
             const slug = item?.slug;
 
             if (!blogId || !slug) {
-                console.warn('[Wishlist] Missing required blogId or slug:', { blogId, slug });
                 return;
             }
             // Get the first categoryId from the blog's categories array
@@ -183,7 +184,8 @@ export const Wishlist = () => {
         </View>
     ), []);
 
-    if (isLoading) {
+    // Only show loading state when shouldCallEndpoint is true
+    if (isLoading && shouldCallEndpoint) {
         return (
             <SafeAreaView style={styles.container} edges={["top"]}>
                 {renderHeader()}
@@ -200,7 +202,8 @@ export const Wishlist = () => {
         );
     }
 
-    if (blogsError) {
+    // Only show error state when shouldCallEndpoint is true
+    if (blogsError && shouldCallEndpoint) {
         return (
             <SafeAreaView style={styles.container} edges={["top"]}>
                 {renderHeader()}

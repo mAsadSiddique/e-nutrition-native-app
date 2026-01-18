@@ -95,7 +95,7 @@ export default function BlogDetailScreen() {
   // Conditional returns AFTER all hooks
   if (blogLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={[]}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -116,7 +116,7 @@ export default function BlogDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={[]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -139,7 +139,7 @@ export default function BlogDetailScreen() {
         )}
 
         {recosState.length > 0 && (
-          <>
+          <View style={styles.recommendedWrapper}>
             <RecommendedRow
               items={recosState}
               onPress={(it: any) => {
@@ -149,7 +149,7 @@ export default function BlogDetailScreen() {
                 }
               }}
             />
-          </>
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: CONTAINER_PADDING,
-    paddingBottom: 0, // Minimal padding for bottom tabs
+    paddingBottom: 40, // Add space from bottom of screen to ensure cards are fully visible
   },
   title: {
     ...TypographyStyles.h1,
@@ -232,6 +232,9 @@ const styles = StyleSheet.create({
     paddingLeft: CONTAINER_PADDING,
     paddingRight: CONTAINER_PADDING,
     paddingBottom: 0,
+  },
+  recommendedWrapper: {
+    marginBottom: 32,
   },
   hCard: {
     width: CARD_WIDTH,

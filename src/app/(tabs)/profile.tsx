@@ -1,13 +1,13 @@
 import LogoutSheet from "@/src/components/auth/LogoutSheet";
+import { SkeletonAvatar, SkeletonText } from "@/src/components/ui/SkeletonLoader";
 import { useCurrentProfile } from "@/src/hooks";
 import { useGetProfile } from "@/src/services/authApi";
 import { useAuth } from "@/src/store/auth/hook";
 import { TypographyStyles } from "@/src/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, type FC } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Linking,
@@ -29,7 +29,7 @@ interface SettingItemProps {
   isDestructive?: boolean;
 }
 
-const SettingItem: React.FC<SettingItemProps> = ({
+const SettingItem: FC<SettingItemProps> = ({
   title,
   iconName,
   onPress,
@@ -182,7 +182,9 @@ export default function ProfileTab() {
             <View style={styles.profileStack}>
               {/* Left Side - Profile Image or Username Initial */}
               <View style={styles.leftSection}>
-                {(() => {
+                {profileLoading ? (
+                  <SkeletonAvatar size={70} style={styles.skeletonAvatar} />
+                ) : (() => {
                   const imageUri = profileData?.profileImage || userProfile.profileImage;
                   const username = profileData?.username || userProfile?.username || "User";
 
@@ -209,9 +211,9 @@ export default function ProfileTab() {
               {/* Right Side - User Info */}
               <View style={styles.rightSection}>
                 {profileLoading ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color="#00994C" />
-                    <Text style={styles.loadingText}>Loading profile...</Text>
+                  <View style={styles.skeletonContainer}>
+                    <SkeletonText width="60%" height={20} style={{ marginBottom: 8 }} />
+                    <SkeletonText width="80%" height={14} />
                   </View>
                 ) : profileError ? (
                   <View style={styles.errorContainer}>
@@ -544,17 +546,12 @@ const styles = StyleSheet.create({
     marginLeft: 20,
     marginRight: 20,
   },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+  skeletonContainer: {
     justifyContent: "center",
-    paddingVertical: 8,
   },
-  loadingText: {
-    ...TypographyStyles.body,
-    fontSize: 14,
-    color: "#666",
-    marginLeft: 8,
+  skeletonAvatar: {
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   errorContainer: {
     alignItems: "center",
