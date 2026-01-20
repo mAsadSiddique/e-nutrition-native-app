@@ -4,6 +4,7 @@ import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useResendVerification, useVerification } from '@/src/services/authApi';
 import { useAuth } from '@/src/store/auth/hook';
 import { TypographyStyles } from '@/src/theme/theme';
+import { AppRoutes } from '@/src/utils/enums';
 import { toast } from '@/src/utils/toast';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -120,7 +121,7 @@ export default function VerifyCode() {
           if (response.success && response.data) {
             toast.success('Welcome! Redirecting to your dashboard...');
             await signIn(response.data.token);
-            router.replace('/(tabs)/(home)');
+            router.replace(AppRoutes.TABS_HOME);
           }
         },
         onError: (error: any) => {

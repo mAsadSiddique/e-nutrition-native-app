@@ -2,6 +2,7 @@ import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
 import { useCategoriesSelector } from "@/src/store/categories/selector";
 import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes } from "@/src/utils/enums";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -25,10 +26,10 @@ export default function SignUpEntry() {
   const handleSkip = () => {
     // If user already has selected categories, go directly to dashboard
     if (selectedCategories && selectedCategories.length >= 3) {
-      router.replace("/(tabs)");
+      router.replace(AppRoutes.TABS);
     } else {
       // Otherwise, show category selection
-      router.replace("/category-selection");
+      router.replace(AppRoutes.CATEGORY_SELECTION);
     }
   };
 
@@ -82,7 +83,7 @@ export default function SignUpEntry() {
           />
           <AuthButton
             text="Sign up with Email"
-            onPress={() => router.push("/auth/sign-up/email")}
+            onPress={() => router.push(AppRoutes.AUTH_SIGN_UP_EMAIL)}
             variant="outline"
             leftIcon={
               <Image
@@ -102,7 +103,7 @@ export default function SignUpEntry() {
             Already have an account?{" "}
             <Text
               style={styles.footerLink}
-              onPress={() => router.push("/auth/sign-in")}
+              onPress={() => router.push(AppRoutes.AUTH_SIGN_IN)}
             >
               Sign in
             </Text>

@@ -2,6 +2,7 @@ import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
 import { useSignup } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes } from "@/src/utils/enums";
 import { toast } from "@/src/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -276,7 +277,7 @@ export default function SignUpScreen() {
                   Already have an account?{" "}
                   <Text
                     style={styles.footerLink}
-                    onPress={() => router.push("/auth/sign-in/email")}
+                    onPress={() => router.push(AppRoutes.AUTH_SIGN_IN_EMAIL)}
                   >
                     Sign in
                   </Text>
@@ -287,14 +288,14 @@ export default function SignUpScreen() {
                   By creating an account, you agree to our{" "}
                   <Text
                     style={styles.termsLink}
-                    onPress={() => router.push("/legal/terms")}
+                    onPress={() => router.push(AppRoutes.LEGAL_TERMS)}
                   >
                     Terms & Services
                   </Text>{" "}
                   and acknowledge that our{" "}
                   <Text
                     style={styles.termsLink}
-                    onPress={() => router.push("/legal/privacy")}
+                    onPress={() => router.push(AppRoutes.LEGAL_PRIVACY)}
                   >
                     Privacy Policy
                   </Text>{" "}

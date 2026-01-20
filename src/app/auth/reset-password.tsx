@@ -3,6 +3,7 @@ import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
 import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useResetPassword } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
+import { AppRoutes } from '@/src/utils/enums';
 import { toast } from '@/src/utils/toast';
 import { Ionicons } from '@expo/vector-icons';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -83,7 +84,7 @@ export default function ResetPasswordScreen() {
         onSuccess: (response: any) => {
           if (response.success || response.status === 200) {
             toast.success('Password reset successfully!');
-            router.replace('/auth/sign-in/email');
+            router.replace(AppRoutes.AUTH_SIGN_IN_EMAIL);
           }
         },
         onError: (error: any) => {

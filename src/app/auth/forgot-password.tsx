@@ -2,6 +2,7 @@ import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
 import { useForgetPassword } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes } from "@/src/utils/enums";
 import { toast } from "@/src/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -124,7 +125,7 @@ export default function ForgotPasswordScreen() {
               // Show success toast
               toast.success(response.message);
               // Navigate to code screen for OTP verification
-              router.push("/auth/forgot-password-code");
+              router.push(AppRoutes.AUTH_FORGOT_PASSWORD_CODE);
             }
           },
           onError: (error: any) => {
@@ -281,7 +282,7 @@ export default function ForgotPasswordScreen() {
 
               {/* Footer - Back to Login Link */}
               <View style={styles.footer}>
-                <TouchableOpacity onPress={() => router.push("/auth/sign-in/email")}>
+                <TouchableOpacity onPress={() => router.push(AppRoutes.AUTH_SIGN_IN_EMAIL)}>
                   <Text style={styles.footerText}>
                     Back to login
                   </Text>

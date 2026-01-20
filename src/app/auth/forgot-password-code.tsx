@@ -3,6 +3,7 @@ import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
 import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useResendVerification, useResetPassword } from '@/src/services/authApi';
 import { TypographyStyles } from '@/src/theme/theme';
+import { AppRoutes } from '@/src/utils/enums';
 import { toast } from '@/src/utils/toast';
 import { yupResolver } from '@hookform/resolvers/yup';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -112,7 +113,7 @@ export default function ForgotPasswordCodeScreen() {
       const data = await forgotPasswordStorage.retrieve();
       if (!data) {
         toast.error('Session expired. Please start over.');
-        router.replace('/auth/forgot-password');
+        router.replace(AppRoutes.AUTH_FORGOT_PASSWORD);
         return;
       }
       setStoredData(data);
@@ -142,7 +143,7 @@ export default function ForgotPasswordCodeScreen() {
   const onSubmit = async (data: ForgotPasswordCodeFormData) => {
     if (!storedData) {
       toast.error('Session expired. Please start over.');
-      router.replace('/auth/forgot-password');
+      router.replace(AppRoutes.AUTH_FORGOT_PASSWORD);
       return;
     }
 
@@ -165,7 +166,7 @@ export default function ForgotPasswordCodeScreen() {
           toast.success(response.message || 'Password reset successfully!');
 
           // Redirect to login screen
-          router.replace('/auth/sign-in/email');
+          router.replace(AppRoutes.AUTH_SIGN_IN_EMAIL);
         }
       },
       onError: (error: any) => {
@@ -181,7 +182,7 @@ export default function ForgotPasswordCodeScreen() {
   const handleResendCode = () => {
     if (!storedData) {
       toast.error('Session expired. Please start over.');
-      router.replace('/auth/forgot-password');
+      router.replace(AppRoutes.AUTH_FORGOT_PASSWORD);
       return;
     }
 

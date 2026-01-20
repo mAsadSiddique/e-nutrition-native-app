@@ -3,6 +3,7 @@ import RecommendedRow from '@/src/components/blog/RecommendedRow';
 import { SkeletonBlogDetail } from '@/src/components/ui/SkeletonLoader';
 import { useBlogsListing } from '@/src/services/blogApi';
 import { TypographyStyles } from '@/src/theme/theme';
+import { extractTags } from '@/src/utils/htmlParser';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -46,6 +47,32 @@ export default function BlogDetailScreen() {
     }
     return specificBlogData[0];
   }, [specificBlogData]);
+
+  // Extract all tags from content and combine with API tags
+  const allTags = useMemo(() => {
+    const apiTags = blog?.tags || [];
+    const contentTags = blog?.content ? extractTags(blog.content) : [];
+    
+    // Combine and deduplicate tags
+    const combinedTags = new Set<string>();
+    
+    // Add API tags (these are usually topic tags like "nutrition", "health", etc.)
+    apiTags.forEach(tag => {
+      if (tag && typeof tag === 'string') {
+        combinedTags.add(tag.toLowerCase());
+      }
+    });
+    
+    // Add all content HTML tags (including "code", "p", "h1", etc.)
+    // The extractTags function already excludes structural tags like 'html', 'head', 'body', 'script', 'style'
+    contentTags.forEach(tag => {
+      if (tag && typeof tag === 'string') {
+        combinedTags.add(tag.toLowerCase());
+      }
+    });
+    
+    return Array.from(combinedTags).sort();
+  }, [blog]);
 
   // Update recommended blogs when recommendedBlogsData or blog changes
   useEffect(() => {
@@ -126,10 +153,10 @@ export default function BlogDetailScreen() {
 
         <HtmlContentRenderer html={blog.content || ''} media={blog.media} />
 
-        {blog.tags && blog.tags.length > 0 && (
+        {allTags && allTags.length > 0 && (
           <View style={styles.tagsContainer}>
             <View style={styles.tagsList}>
-              {blog.tags.map((tag, index) => (
+              {allTags.map((tag, index) => (
                 <View key={index} style={styles.tag}>
                   <Text style={styles.tagText}>#{tag}</Text>
                 </View>

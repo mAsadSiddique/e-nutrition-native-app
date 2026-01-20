@@ -4,6 +4,7 @@ import AuthLayout from '@/src/components/auth/AuthLayout';
 import { useResendVerification, useVerification } from '@/src/services/authApi';
 import { useAuth } from '@/src/store/auth/hook';
 import { TypographyStyles } from '@/src/theme/theme';
+import { AppRoutes } from '@/src/utils/enums';
 import { toast } from '@/src/utils/toast';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -136,7 +137,7 @@ export default function VerifyCode() {
             if (response.data && response.data.token) {
               await signIn(response.data.token);
             }
-            router.replace('/auth/sign-in/email');
+            router.replace(AppRoutes.AUTH_SIGN_IN_EMAIL);
           }
         },
         onError: (error: any) => {

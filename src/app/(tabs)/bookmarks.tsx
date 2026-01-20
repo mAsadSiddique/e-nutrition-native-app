@@ -1,5 +1,6 @@
 import { useCurrentProfile } from "@/src/hooks";
 import { Wishlist } from "@/src/screens";
+import { AppRoutes } from "@/src/utils/enums";
 import { useRouter } from "expo-router";
 import React, { useEffect } from 'react';
 
@@ -12,7 +13,7 @@ export default function BookmarksTab() {
   // Redirect to sign-in if not authenticated (useEffect to avoid render-time navigation)
   useEffect(() => {
     if (!isLoggedIn) {
-      router.replace('/auth/sign-in');
+      router.replace(AppRoutes.AUTH_SIGN_IN);
     }
   }, [isLoggedIn, router]);
 

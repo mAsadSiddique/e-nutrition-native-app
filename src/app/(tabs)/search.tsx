@@ -4,6 +4,7 @@ import { useAuth } from '@/src/store/auth/hook';
 import { useWishlistHandler } from '@/src/store/wishlist/hook';
 import { useWishlistSelector } from '@/src/store/wishlist/selector';
 import { TypographyStyles } from '@/src/theme/theme';
+import { AppRoutes, buildRoute } from '@/src/utils/enums';
 import { toast } from '@/src/utils/toast';
 import type { TBlogsListing } from '@/src/utils/types/blogs';
 import { Ionicons } from '@expo/vector-icons';
@@ -232,7 +233,7 @@ export default function SearchTab() {
       }
 
       // Navigate to blog detail with required format: /blogs/{blogId}/{categoryId}/{slug}
-      router.push(`/blogs/${blogId}/${categoryId}/${slug}`);
+      router.push(buildRoute.blogDetail(blogId, categoryId, slug) as any);
     },
     [router]
   );
@@ -241,7 +242,7 @@ export default function SearchTab() {
     (blogId: number) => {
       // Check if user is authenticated before allowing save
       if (!isAuthenticated) {
-        router.replace('/auth/sign-in');
+        router.replace(AppRoutes.AUTH_SIGN_IN);
         return;
       }
 

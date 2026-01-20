@@ -4,7 +4,7 @@ import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { useWishlistSelector } from "@/src/store/wishlist/selector";
 import { TypographyStyles } from "@/src/theme/theme";
 import { stripHtml } from "@/src/utils/blogs-helper";
-import { UserAction } from "@/src/utils/enums";
+import { AppRoutes, buildRoute, UserAction } from "@/src/utils/enums";
 import { formatDate } from "@/src/utils/format-date";
 import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
@@ -119,14 +119,14 @@ export default function BlogListScreen() {
       }
 
       // Navigate to blog detail with required format: /blogs/{blogId}/{categoryId}/{slug}
-      router.push(`/blogs/${blogId}/${categoryId}/${slug}`);
+      router.push(buildRoute.blogDetail(blogId, categoryId, slug) as any);
     },
     [router]
   );
 
   const handleAuthorPress = useCallback(
     (author: string) => {
-      router.push(`/(tabs)/(home)/author/${encodeURIComponent(author)}`);
+      router.push(buildRoute.authorProfile(author) as any);
     },
     [router]
   );
@@ -135,7 +135,7 @@ export default function BlogListScreen() {
     (blogId: number) => {
       // Check if user is authenticated before allowing save
       if (!isLoggedIn) {
-        router.replace('/auth/sign-in');
+        router.replace(AppRoutes.AUTH_SIGN_IN);
         return;
       }
 

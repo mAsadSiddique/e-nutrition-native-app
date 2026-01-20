@@ -4,6 +4,7 @@ import { useLoginProfile } from "@/src/services/authApi";
 import { useAuth } from "@/src/store/auth/hook";
 import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes } from "@/src/utils/enums";
 import storage from "@/src/utils/storage";
 import { toast } from "@/src/utils/toast";
 import { Ionicons } from "@expo/vector-icons";
@@ -98,7 +99,7 @@ export default function SignInScreen() {
           }
 
           toast.success(response.message || "Login successful");
-          router.replace(response?.data?.userWishlist ? "/" : "/category-selection");
+          router.replace(response?.data?.userWishlist ? AppRoutes.HOME_INDEX : AppRoutes.CATEGORY_SELECTION);
 
         },
         onError: (error: any) => {
@@ -208,7 +209,7 @@ export default function SignInScreen() {
                   </Text>
                 )}
                 <TouchableOpacity
-                  onPress={() => router.push("/auth/forgot-password")}
+                  onPress={() => router.push(AppRoutes.AUTH_FORGOT_PASSWORD)}
                   style={styles.forgotPasswordContainer}
                 >
                   <Text style={styles.forgotPassword}>Forgot password?</Text>
@@ -252,7 +253,7 @@ export default function SignInScreen() {
                   Don't have an account?{" "}
                   <Text
                     style={styles.footerLink}
-                    onPress={() => router.push("/auth/sign-up/email")}
+                    onPress={() => router.push(AppRoutes.AUTH_SIGN_UP_EMAIL)}
                   >
                     Sign up
                   </Text>
@@ -263,14 +264,14 @@ export default function SignInScreen() {
                   By creating an account, you agree to our{" "}
                   <Text
                     style={styles.termsLink}
-                    onPress={() => router.push("/legal/terms")}
+                    onPress={() => router.push(AppRoutes.LEGAL_TERMS)}
                   >
                     Terms & Services
                   </Text>{" "}
                   and acknowledge that our{" "}
                   <Text
                     style={styles.termsLink}
-                    onPress={() => router.push("/legal/privacy")}
+                    onPress={() => router.push(AppRoutes.LEGAL_PRIVACY)}
                   >
                     Privacy Policy
                   </Text>{" "}

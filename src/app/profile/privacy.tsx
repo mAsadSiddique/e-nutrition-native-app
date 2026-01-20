@@ -1,4 +1,5 @@
 import { TypographyStyles } from '@/src/theme/theme';
+import { AppRoutes } from '@/src/utils/enums';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -81,12 +82,12 @@ export default function PrivacyScreen() {
 
         {/* Privacy Policy */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.linkItem} onPress={() => router.push('/legal/privacy')}>
+          <TouchableOpacity style={styles.linkItem} onPress={() => router.push(AppRoutes.LEGAL_PRIVACY)}>
             <Text style={styles.linkText}>Privacy Policy</Text>
             <Ionicons name="chevron-forward-outline" size={16} color="#ccc" />
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.linkItem} onPress={() => router.push('/legal/terms')}>
+          <TouchableOpacity style={styles.linkItem} onPress={() => router.push(AppRoutes.LEGAL_TERMS)}>
             <Text style={styles.linkText}>Terms of Service</Text>
             <Ionicons name="chevron-forward-outline" size={16} color="#ccc" />
           </TouchableOpacity>

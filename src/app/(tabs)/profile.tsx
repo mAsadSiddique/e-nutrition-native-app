@@ -3,6 +3,7 @@ import { useCurrentProfile } from "@/src/hooks";
 import { useAuth } from "@/src/store/auth/hook";
 import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes, ExternalUrls } from "@/src/utils/enums";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState, type FC } from "react";
@@ -69,9 +70,9 @@ export default function ProfileTab() {
   const { isLoggedIn, userName, profileUrl, email } = useCurrentProfile();
 
   // Social links (only the three requested)
-  const handleLinkedIn = () => Linking.openURL("https://www.linkedin.com/in/oneplatforms");
-  const handleFacebookEnutrition = () => Linking.openURL("https://www.facebook.com/enutrition.me");
-  const handleYouTube = () => Linking.openURL("https://www.youtube.com/@e.nutrition");
+  const handleLinkedIn = () => Linking.openURL(ExternalUrls.LINKEDIN);
+  const handleFacebookEnutrition = () => Linking.openURL(ExternalUrls.FACEBOOK);
+  const handleYouTube = () => Linking.openURL(ExternalUrls.YOUTUBE);
 
 
   const handleImagePicker = useCallback(async () => {
@@ -84,7 +85,7 @@ export default function ProfileTab() {
           text: "Use Demo Image",
           onPress: () => {
             updateUserProfile({
-              profileImage: "https://i.pravatar.cc/200?img=1",
+              profileImage: ExternalUrls.PRAVATAR_DEMO,
             });
           },
         },
@@ -93,30 +94,30 @@ export default function ProfileTab() {
   }, [updateUserProfile]);
 
   const handleEditProfile = useCallback(() => {
-    router.push("/profile/edit");
+    router.push(AppRoutes.PROFILE_EDIT);
   }, [router]);
 
   const handleChangePassword = useCallback(() => {
-    router.push("/profile/change-password");
+    router.push(AppRoutes.PROFILE_CHANGE_PASSWORD);
   }, [router]);
 
   const handlePrivacy = useCallback(() => {
-    router.push("/profile/privacy");
+    router.push(AppRoutes.PROFILE_PRIVACY);
   }, [router]);
   const handleRateApp = () => {
     Linking.openURL(
       Platform.OS === "android"
-        ? "https://play.google.com/store/apps/details?id=YOUR_PACKAGE_NAME"
-        : "https://apps.apple.com/app/idYOUR_APP_ID"
+        ? ExternalUrls.PLAY_STORE
+        : ExternalUrls.APP_STORE
     );
   };
 
   const handleTerms = useCallback(() => {
-    router.push("/legal/terms");
+    router.push(AppRoutes.LEGAL_TERMS);
   }, [router]);
 
   const handlePrivacyPolicy = useCallback(() => {
-    router.push("/legal/privacy");
+    router.push(AppRoutes.LEGAL_PRIVACY);
   }, [router]);
 
   const handleLogout = useCallback(() => {
@@ -127,13 +128,13 @@ export default function ProfileTab() {
     setShowLogoutSheet(false);
     await signOut();
     setBlogsWishlist([])
-    router.replace("/auth/sign-in");
-  }, [signOut, router]);
+    router.replace(AppRoutes.AUTH_SIGN_IN);
+  }, [signOut, router, setBlogsWishlist]);
 
   // Redirect to sign-in if not authenticated (useEffect to avoid render-time navigation)
   useEffect(() => {
     if (!isLoggedIn) {
-      router.replace('/auth/sign-in');
+      router.replace(AppRoutes.AUTH_SIGN_IN);
     }
   }, [isLoggedIn, router]);
 

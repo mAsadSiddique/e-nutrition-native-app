@@ -1,7 +1,7 @@
 import { useGetCategories } from "@/src/services/categoryApi";
 import { useWishlistToggle } from "@/src/services/wishlistToggle";
-
 import store from "@/src/store/store";
+import { AppRoutes } from "@/src/utils/enums";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
@@ -188,12 +188,12 @@ export default function CategorySelectionScreen() {
                     }
 
                     // Navigate after successful API call
-                    router.replace('/(tabs)');
+                    router.replace(AppRoutes.TABS);
                   },
                   onError: (error: any) => {
                     console.error('[CategorySelection] ❌ Failed to add categories to wishlist:', error);
                     // Still navigate even if API call fails
-                    router.replace('/(tabs)');
+                    router.replace(AppRoutes.TABS);
                   },
                 }
               );
@@ -206,7 +206,7 @@ export default function CategorySelectionScreen() {
               console.log('[CategorySelection] ✅ Categories saved to store (will be persisted automatically)');
 
               // Navigate to main application
-              router.replace('/(tabs)');
+              router.replace(AppRoutes.TABS);
             }
           } catch (err) {
             console.error('[CategorySelection] ❌ Failed to save selected categories:', err);

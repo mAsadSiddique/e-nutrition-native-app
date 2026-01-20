@@ -1,6 +1,7 @@
 import AuthButton from '@/src/components/auth/AuthButton';
 import AuthLayout from '@/src/components/auth/AuthLayout';
 import { TypographyStyles } from '@/src/theme/theme';
+import { AppRoutes } from '@/src/utils/enums';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -13,12 +14,12 @@ export default function AuthChoiceScreen() {
         <View style={styles.buttons}>
           <AuthButton
             text="Sign up"
-            onPress={() => router.push('/auth/sign-up')}
+            onPress={() => router.push(AppRoutes.AUTH_SIGN_UP)}
             variant="primary"
           />
           <AuthButton
             text="Sign in"
-            onPress={() => router.push('/auth/sign-in')}
+            onPress={() => router.push(AppRoutes.AUTH_SIGN_IN)}
             variant="outline"
           />
         </View>

@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "../store/auth/hook";
+import { AppRoutes } from "../utils/enums";
 
 export default function EntryScreen() {
   const router = useRouter();
@@ -17,9 +18,9 @@ export default function EntryScreen() {
   useEffect(() => {
     if (!isReady || isLoading) return;
     if (isAuthenticated) {
-      router.replace('/(tabs)');
+      router.replace(AppRoutes.TABS);
     } else {
-      router.replace('/auth/sign-up');
+      router.replace(AppRoutes.AUTH_SIGN_UP);
     }
   }, [isAuthenticated, isLoading, router, isReady]);
 
