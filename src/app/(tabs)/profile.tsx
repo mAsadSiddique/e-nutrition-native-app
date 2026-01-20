@@ -1,8 +1,7 @@
 import LogoutSheet from "@/src/components/auth/LogoutSheet";
-import { SkeletonAvatar, SkeletonText } from "@/src/components/ui/SkeletonLoader";
 import { useCurrentProfile } from "@/src/hooks";
-import { useGetProfile } from "@/src/services/authApi";
 import { useAuth } from "@/src/store/auth/hook";
+import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { TypographyStyles } from "@/src/theme/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -60,50 +59,20 @@ const SettingItem: FC<SettingItemProps> = ({
 );
 
 export default function ProfileTab() {
-  const { userProfile, updateUserProfile, signOut } = useAuth();
   const router = useRouter();
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
 
+  const { updateUserProfile, signOut } = useAuth();
+  const { setBlogsWishlist } = useWishlistHandler()
+
   // Require authentication - automatically redirects to login if not authenticated
-  const { isLoggedIn } = useCurrentProfile();
+  const { isLoggedIn, userName, profileUrl, email } = useCurrentProfile();
 
   // Social links (only the three requested)
   const handleLinkedIn = () => Linking.openURL("https://www.linkedin.com/in/oneplatforms");
   const handleFacebookEnutrition = () => Linking.openURL("https://www.facebook.com/enutrition.me");
   const handleYouTube = () => Linking.openURL("https://www.youtube.com/@e.nutrition");
 
-  const {
-    mutate: fetchProfile,
-    data: profileData,
-    isPending: profileLoading,
-    error: profileError,
-  } = useGetProfile();
-
-  useEffect(() => {
-    fetchProfile(undefined, {
-      onSuccess: (data) => {
-      },
-      onError: (error: any) => {
-        const status = error?.response?.status;
-
-        if (status === 401) {
-          signOut();
-        }
-      },
-    });
-  }, [fetchProfile, signOut]);
-
-  useEffect(() => {
-    if (profileData) {
-      updateUserProfile({
-        username: profileData.username,
-        email: profileData.email,
-        ...(profileData.profileImage && {
-          profileImage: profileData.profileImage,
-        }),
-      });
-    }
-  }, [profileData, updateUserProfile]);
 
   const handleImagePicker = useCallback(async () => {
     Alert.alert(
@@ -157,12 +126,20 @@ export default function ProfileTab() {
   const handleLogoutConfirm = useCallback(async () => {
     setShowLogoutSheet(false);
     await signOut();
+    setBlogsWishlist([])
     router.replace("/auth/sign-in");
   }, [signOut, router]);
 
-  // Don't render profile if loading or not authenticated (will redirect)
+  // Redirect to sign-in if not authenticated (useEffect to avoid render-time navigation)
+  useEffect(() => {
+    if (!isLoggedIn) {
+      router.replace('/auth/sign-in');
+    }
+  }, [isLoggedIn, router]);
+
+  // Don't render profile if not authenticated (will redirect)
   if (!isLoggedIn) {
-    return router.replace('/auth/sign-in');
+    return null;
   }
 
   return (
@@ -182,21 +159,16 @@ export default function ProfileTab() {
             <View style={styles.profileStack}>
               {/* Left Side - Profile Image or Username Initial */}
               <View style={styles.leftSection}>
-                {profileLoading ? (
-                  <SkeletonAvatar size={70} style={styles.skeletonAvatar} />
-                ) : (() => {
-                  const imageUri = profileData?.profileImage || userProfile.profileImage;
-                  const username = profileData?.username || userProfile?.username || "User";
-
-                  if (imageUri) {
+                {(() => {
+                  if (profileUrl) {
                     return (
                       <Pressable onPress={handleImagePicker} style={styles.imageContainer}>
-                        <Image source={{ uri: imageUri }} style={styles.profileImageStack} />
+                        <Image source={{ uri: profileUrl }} style={styles.profileImageStack} />
                       </Pressable>
                     );
                   } else {
                     // Show username initial in a circle
-                    const initial = username.charAt(0).toUpperCase();
+                    const initial = userName.charAt(0).toUpperCase();
                     return (
                       <Pressable onPress={handleImagePicker} style={styles.imageContainer}>
                         <View style={styles.usernameInitial}>
@@ -210,25 +182,12 @@ export default function ProfileTab() {
 
               {/* Right Side - User Info */}
               <View style={styles.rightSection}>
-                {profileLoading ? (
-                  <View style={styles.skeletonContainer}>
-                    <SkeletonText width="60%" height={20} style={{ marginBottom: 8 }} />
-                    <SkeletonText width="80%" height={14} />
-                  </View>
-                ) : profileError ? (
-                  <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Failed to load profile</Text>
-                  </View>
-                ) : (
-                  <>
-                    <Text style={styles.userName} numberOfLines={1}>
-                      {profileData?.username || userProfile?.username || "User"}
-                    </Text>
-                    <Text style={styles.userEmail} numberOfLines={1}>
-                      {profileData?.email || userProfile.email}
-                    </Text>
-                  </>
-                )}
+                <Text style={styles.userName} numberOfLines={1}>
+                  {userName}
+                </Text>
+                <Text style={styles.userEmail} numberOfLines={1}>
+                  {email}
+                </Text>
               </View>
             </View>
           </View>

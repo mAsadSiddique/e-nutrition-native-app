@@ -7,7 +7,6 @@ import { useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { auth } from "./auth/reducer";
 import { categories } from "./categories/reducer";
-import { savedBlogs } from "./savedBlogs/reducer";
 import { wishlist } from "./wishlist/reducer";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,7 +20,6 @@ const persistConfig = {
 
 const rootReducer = combineReducers({
     auth,
-    savedBlogs,
     categories,
     wishlist,
 });

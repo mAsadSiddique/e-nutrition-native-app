@@ -1,7 +1,7 @@
 import { useCurrentProfile } from "@/src/hooks";
 import { Wishlist } from "@/src/screens";
 import { useRouter } from "expo-router";
-import React from 'react';
+import React, { useEffect } from 'react';
 
 export default function BookmarksTab() {
   // Require authentication - automatically redirects to login if not authenticated
@@ -9,9 +9,16 @@ export default function BookmarksTab() {
 
   const router = useRouter();
 
+  // Redirect to sign-in if not authenticated (useEffect to avoid render-time navigation)
+  useEffect(() => {
+    if (!isLoggedIn) {
+      router.replace('/auth/sign-in');
+    }
+  }, [isLoggedIn, router]);
+
   // Don't render wishlist if not authenticated (will redirect)
   if (!isLoggedIn) {
-    return router.replace('/auth/sign-in');
+    return null;
   }
 
   return <Wishlist />;

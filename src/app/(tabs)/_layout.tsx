@@ -23,8 +23,6 @@ export default function TabsLayout() {
         name="bookmarks"
         options={{
           title: 'Saved',
-
-          
           tabBarIcon: ({ color, size }) => <Ionicons name="bookmark-outline" color={color} size={size} />,
         }}
       />
