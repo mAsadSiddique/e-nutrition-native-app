@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "../store/auth/hook";
 import { AppRoutes } from "../utils/enums";
 
@@ -7,6 +8,7 @@ export default function EntryScreen() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const [isReady, setIsReady] = useState(false);
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -14,15 +16,29 @@ export default function EntryScreen() {
     }, 100);
     return () => clearTimeout(timer);
   }, []);
-  
+
   useEffect(() => {
-    if (!isReady || isLoading) return;
+    if (!isReady || isLoading || hasNavigated) return;
+    setHasNavigated(true);
     if (isAuthenticated) {
       router.replace(AppRoutes.TABS);
     } else {
       router.replace(AppRoutes.AUTH_SIGN_UP);
     }
-  }, [isAuthenticated, isLoading, router, isReady]);
+  }, [isAuthenticated, isLoading, isReady, hasNavigated, router]);
 
-  return null;
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color="#0a7ea4" />
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+});

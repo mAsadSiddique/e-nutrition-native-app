@@ -5,29 +5,69 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { ReactNode, useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
 import { Provider as ReduxProvider } from 'react-redux';
-import { PersistGate } from 'redux-persist/integration/react';
+import type { Persistor } from 'redux-persist';
 import { createQueryClient } from '../config/react-query';
 import { toastConfig } from '../config/toastConfig';
 import { useAuth } from '../store/auth/hook';
 import store, { persistor } from '../store/store';
 
+const REHYDRATE_TIMEOUT_MS = 4000;
+
 SplashScreen.preventAutoHideAsync();
+
+const LoadingView = () => (
+  <View style={styles.loadingContainer}>
+    <ActivityIndicator size="large" color="#0a7ea4" />
+  </View>
+);
+
+// Shows children once rehydration completes OR after timeout (so app never stays stuck)
+function RehydrationGate({
+  persistor: p,
+  loadingView,
+  children,
+}: {
+  persistor: Persistor;
+  loadingView: ReactNode;
+  children: ReactNode;
+}) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const state = p.getState();
+    if (state.bootstrapped) {
+      setReady(true);
+      return;
+    }
+    const unsub = p.subscribe(() => {
+      if (p.getState().bootstrapped) setReady(true);
+    });
+    const timeout = setTimeout(() => setReady(true), REHYDRATE_TIMEOUT_MS);
+    return () => {
+      unsub();
+      clearTimeout(timeout);
+    };
+  }, [p]);
+
+  if (!ready) return <>{loadingView}</>;
+  return <>{children}</>;
+}
 
 // Component to initialize auth state
 function AuthInitializer({ children }: { children: ReactNode }) {
   const { onSetLoading } = useAuth();
 
   useEffect(() => {
-    // Set loading to false after initial check
-    // Token is managed separately in storage, profile will be loaded when needed
     onSetLoading(false);
   }, [onSetLoading]);
 
   return <>{children}</>;
 }
+
 export default function RootLayout() {
   const [queryClient] = useState(() => createQueryClient());
   const [loaded, error] = useFonts({
@@ -36,21 +76,26 @@ export default function RootLayout() {
     "Inter-Regular": require("../assets/fonts/Inter-Regular.ttf"),
   });
 
+  const fontsReady = loaded || !!error;
+
   useEffect(() => {
-    if (loaded) {
+    if (fontsReady) {
       SplashScreen.hideAsync();
     }
+  }, [fontsReady]);
 
-    if (error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
-
-  if (!loaded) return null;
+  // Always show something: loading spinner until fonts ready, then app (with its own loading gate)
+  if (!fontsReady) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0a7ea4" />
+      </View>
+    );
+  }
 
   return (
     <ReduxProvider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
+      <RehydrationGate loadingView={<LoadingView />} persistor={persistor}>
         <QueryClientProvider client={queryClient}>
           <AuthInitializer>
             <ThemeProvider value={DefaultTheme}>
@@ -68,7 +113,16 @@ export default function RootLayout() {
             </ThemeProvider>
           </AuthInitializer>
         </QueryClientProvider>
-      </PersistGate>
+      </RehydrationGate>
     </ReduxProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+});

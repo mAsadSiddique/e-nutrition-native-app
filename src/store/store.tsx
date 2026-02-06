@@ -15,7 +15,7 @@ import { persistReducer, persistStore } from "redux-persist";
 const persistConfig = {
     key: "root",
     storage: AsyncStorage,
-    whitelist: ["auth", "savedBlogs", "categories", "wishlist"],
+    whitelist: ["auth", "categories", "wishlist"],
 };
 
 const rootReducer = combineReducers({
