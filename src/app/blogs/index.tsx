@@ -8,7 +8,13 @@ import { AppRoutes, buildRoute, UserAction } from "@/src/utils/enums";
 import { formatDate } from "@/src/utils/format-date";
 import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useCurrentProfile } from "@/src/hooks";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,8 +33,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BlogListScreen() {
   const router = useRouter();
-  const { isLoggedIn } = useCurrentProfile()
-  const { blogsWishlist, categoriesWishlist } = useWishlistSelector()
+  const { isLoggedIn } = useCurrentProfile();
+  const { blogsWishlist, categoriesWishlist } = useWishlistSelector();
 
   const [activeTab, setActiveTab] = useState<UserAction>(UserAction.For_YOU);
 
@@ -47,15 +53,20 @@ export default function BlogListScreen() {
   const forYouOpacity = useRef(new Animated.Value(1)).current;
   const featuredOpacity = useRef(new Animated.Value(0)).current;
 
-  const { data: blogsListing, isLoading, refetch: refetchBlogsListing, error: blogsError } = useBlogsListing({
-    ...(activeTab === UserAction.For_YOU && { categoryIds: categoriesWishlist as number[] })
-  })
+  const {
+    data: blogsListing,
+    isLoading,
+    refetch: refetchBlogsListing,
+    error: blogsError,
+  } = useBlogsListing({
+    ...(activeTab === UserAction.For_YOU && {
+      categoryIds: categoriesWishlist as number[],
+    }),
+  });
 
   const { toggleBlogWishlist: toggleWishlistInStore } = useWishlistHandler();
-  const {
-    mutate: toggleBlogWishlist,
-    isPending: wishlistLoading,
-  } = useBlogWishlistToggle();
+  const { mutate: toggleBlogWishlist, isPending: wishlistLoading } =
+    useBlogWishlistToggle();
 
   // Animate tab transitions
   useEffect(() => {
@@ -92,7 +103,17 @@ export default function BlogListScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [activeTab, forYouTabWidth, featuredTabWidth, forYouTabX, featuredTabX, underlinePosition, underlineWidth, forYouOpacity, featuredOpacity]);
+  }, [
+    activeTab,
+    forYouTabWidth,
+    featuredTabWidth,
+    forYouTabX,
+    featuredTabX,
+    underlinePosition,
+    underlineWidth,
+    forYouOpacity,
+    featuredOpacity,
+  ]);
 
   const handleTabPress = useCallback((tab: UserAction) => {
     setActiveTab(tab);
@@ -104,31 +125,38 @@ export default function BlogListScreen() {
       const slug = item?.slug;
 
       if (!blogId || !slug) {
-        console.warn('[BlogList] Missing required blogId or slug:', { blogId, slug });
+        console.warn("[BlogList] Missing required blogId or slug:", {
+          blogId,
+          slug,
+        });
         return;
       }
 
       // Get the first categoryId from the blog's categories array
-      const categoryId = Array.isArray(item?.categories) && item.categories.length > 0
-        ? item.categories[0]
-        : undefined;
+      const categoryId =
+        Array.isArray(item?.categories) && item.categories.length > 0
+          ? item.categories[0]
+          : undefined;
 
       if (!categoryId) {
-        console.warn('[BlogList] Missing categoryId for blog:', { blogId, slug });
+        console.warn("[BlogList] Missing categoryId for blog:", {
+          blogId,
+          slug,
+        });
         return;
       }
 
       // Navigate to blog detail with required format: /blogs/{blogId}/{categoryId}/{slug}
       router.push(buildRoute.blogDetail(blogId, categoryId, slug) as any);
     },
-    [router]
+    [router],
   );
 
   const handleAuthorPress = useCallback(
     (author: string) => {
       router.push(buildRoute.authorProfile(author) as any);
     },
-    [router]
+    [router],
   );
 
   const handleToggleWishlist = useCallback(
@@ -143,23 +171,35 @@ export default function BlogListScreen() {
       const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
 
       // Call API to toggle wishlist
-      toggleBlogWishlist({ id: blogId }, {
-        onSuccess: (data) => {
-          if (isCurrentlyInWishlist) {
-            toast.success('Removed from saved articles', 'Removed');
-          } else {
-            toast.success('Added to saved articles', 'Saved');
-          }
+      toggleBlogWishlist(
+        { id: blogId },
+        {
+          onSuccess: (data) => {
+            if (isCurrentlyInWishlist) {
+              toast.success("Removed from saved articles", "Removed");
+            } else {
+              toast.success("Added to saved articles", "Saved");
+            }
+          },
+          onError: (error: any) => {
+            // Show error toast
+            const errorMessage =
+              error?.response?.data?.message ||
+              error?.message ||
+              "Failed to update wishlist";
+            toast.error(errorMessage, "Error");
+          },
         },
-        onError: (error: any) => {
-          // Show error toast
-          const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update wishlist';
-          toast.error(errorMessage, 'Error');
-        },
-      });
+      );
       toggleWishlistInStore(blogId);
     },
-    [isLoggedIn, router, toggleWishlistInStore, toggleBlogWishlist, blogsWishlist]
+    [
+      isLoggedIn,
+      router,
+      toggleWishlistInStore,
+      toggleBlogWishlist,
+      blogsWishlist,
+    ],
   );
 
   const renderBlogItem = useCallback(
@@ -208,111 +248,130 @@ export default function BlogListScreen() {
         <View style={styles.divider} />
       </Pressable>
     ),
-    [activeTab, handleBlogPress, handleAuthorPress, blogsWishlist, handleToggleWishlist, wishlistLoading]
+    [
+      activeTab,
+      handleBlogPress,
+      handleAuthorPress,
+      blogsWishlist,
+      handleToggleWishlist,
+      wishlistLoading,
+    ],
   );
 
-  const renderHeader = useCallback(
-    () => {
-      const forYouTextColor = forYouOpacity.interpolate({
-        inputRange: [0.5, 1],
-        outputRange: ['#8e8e8e', '#1A8917'],
-      });
+  const renderHeader = useCallback(() => {
+    const forYouTextColor = forYouOpacity.interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
+      extrapolate: "clamp",
+    });
 
-      const featuredTextColor = featuredOpacity.interpolate({
-        inputRange: [0.5, 1],
-        outputRange: ['#8e8e8e', '#1A8917'],
-      });
+    const featuredTextColor = featuredOpacity.interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
+      extrapolate: "clamp",
+    });
 
-      return (
-        <>
-          <View style={styles.headerContainer}>
-            <View style={styles.logoWrapper}>
-              <Text style={styles.logoText}>Energy Healing</Text>
-              {/* <Image
+    return (
+      <>
+        <View style={styles.headerContainer}>
+          <View style={styles.logoWrapper}>
+            <Text style={styles.logoText}>Energy Healing</Text>
+            {/* <Image
                 source={require("../../assets/logo.png")}
                 style={styles.mediumTitle}
                 resizeMode="contain"
               /> */}
-            </View>
           </View>
-          <View style={styles.tabContainer}>
-            <View style={styles.tabContent}>
-              <Pressable
-                style={styles.tabButton}
-                onPress={() => handleTabPress(UserAction.For_YOU)}
-                onLayout={(event) => {
-                  const { width, x } = event.nativeEvent.layout;
-                  setForYouTabWidth(width);
-                  setForYouTabX(x);
-                  // Initialize underline position and width on first measurement
-                  if (activeTab === UserAction.For_YOU && !isUnderlineInitialized.current) {
-                    underlinePosition.setValue(x);
-                    underlineWidth.setValue(width);
-                    isUnderlineInitialized.current = true;
-                  }
-                }}
-              >
-                <Animated.Text
-                  style={[
-                    styles.tabText,
-                    {
-                      color: forYouTextColor,
-                    },
-                    activeTab === UserAction.For_YOU && { fontWeight: '500' },
-                  ]}
-                >
-                  For you
-                </Animated.Text>
-              </Pressable>
-
-              <Pressable
-                style={styles.tabButton}
-                onPress={() => handleTabPress(UserAction.FEATURED)}
-                onLayout={(event) => {
-                  const { width, x } = event.nativeEvent.layout;
-                  setFeaturedTabWidth(width);
-                  setFeaturedTabX(x);
-                  // Initialize underline position and width on first measurement
-                  if (activeTab === UserAction.FEATURED && !isUnderlineInitialized.current) {
-                    underlinePosition.setValue(x);
-                    underlineWidth.setValue(width);
-                    isUnderlineInitialized.current = true;
-                  }
-                }}
-              >
-                <Animated.Text
-                  style={[
-                    styles.tabText,
-                    {
-                      color: featuredTextColor,
-                    },
-                    activeTab === UserAction.FEATURED && { fontWeight: '500' },
-                  ]}
-                >
-                  Featured
-                </Animated.Text>
-              </Pressable>
-
-              {/* Animated Underline */}
-              <Animated.View
+        </View>
+        <View style={styles.tabContainer}>
+          <View style={styles.tabContent}>
+            <Pressable
+              style={styles.tabButton}
+              onPress={() => handleTabPress(UserAction.For_YOU)}
+              onLayout={(event) => {
+                const { width, x } = event.nativeEvent.layout;
+                setForYouTabWidth(width);
+                setForYouTabX(x);
+                // Initialize underline position and width on first measurement
+                if (
+                  activeTab === UserAction.For_YOU &&
+                  !isUnderlineInitialized.current
+                ) {
+                  underlinePosition.setValue(x);
+                  underlineWidth.setValue(width);
+                  isUnderlineInitialized.current = true;
+                }
+              }}
+            >
+              <Animated.Text
                 style={[
-                  styles.tabUnderline,
+                  styles.tabText,
                   {
-                    left: underlinePosition,
-                    width: underlineWidth,
+                    color: forYouTextColor,
                   },
+                  activeTab === UserAction.For_YOU && { fontWeight: "500" },
                 ]}
-              />
-            </View>
+              >
+                For you
+              </Animated.Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.tabButton}
+              onPress={() => handleTabPress(UserAction.FEATURED)}
+              onLayout={(event) => {
+                const { width, x } = event.nativeEvent.layout;
+                setFeaturedTabWidth(width);
+                setFeaturedTabX(x);
+                // Initialize underline position and width on first measurement
+                if (
+                  activeTab === UserAction.FEATURED &&
+                  !isUnderlineInitialized.current
+                ) {
+                  underlinePosition.setValue(x);
+                  underlineWidth.setValue(width);
+                  isUnderlineInitialized.current = true;
+                }
+              }}
+            >
+              <Animated.Text
+                style={[
+                  styles.tabText,
+                  {
+                    color: featuredTextColor,
+                  },
+                  activeTab === UserAction.FEATURED && { fontWeight: "500" },
+                ]}
+              >
+                Featured
+              </Animated.Text>
+            </Pressable>
+
+            {/* Animated Underline */}
+            <Animated.View
+              style={[
+                styles.tabUnderline,
+                {
+                  left: underlinePosition,
+                  width: underlineWidth,
+                },
+              ]}
+            />
           </View>
-        </>
-      );
-    },
-    [activeTab, handleTabPress, underlinePosition, underlineWidth, forYouOpacity, featuredOpacity]
-  );
+        </View>
+      </>
+    );
+  }, [
+    activeTab,
+    handleTabPress,
+    underlinePosition,
+    underlineWidth,
+    forYouOpacity,
+    featuredOpacity,
+  ]);
 
   // Helper function to extract image URL from media object
-  const getImageUrlFromMedia = (media: TBlogsListing['media']): string => {
+  const getImageUrlFromMedia = (media: TBlogsListing["media"]): string => {
     if (!media || !media.images || typeof media.images !== "object") {
       return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
     }
@@ -322,7 +381,10 @@ export default function BlogListScreen() {
     }
     const firstKey = imageKeys[0];
     const imageUrl = media.images[firstKey];
-    return imageUrl || "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+    return (
+      imageUrl ||
+      "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop"
+    );
   };
 
   // Transform blogs listing data for display
@@ -331,10 +393,11 @@ export default function BlogListScreen() {
     if (!blogsListing || !Array.isArray(blogsListing)) return [];
     return blogsListing.map((b: TBlogsListing) => {
       // Use excerpt if available, otherwise strip HTML from content as fallback
-      const description = b.excerpt
-        ? b.excerpt
-        : stripHtml(b.content || "");
-      const preview = description.length > 120 ? `${description.slice(0, 120).trim()}...` : description;
+      const description = b.excerpt ? b.excerpt : stripHtml(b.content || "");
+      const preview =
+        description.length > 120
+          ? `${description.slice(0, 120).trim()}...`
+          : description;
       const imageUrl = getImageUrlFromMedia(b.media);
       return {
         id: b.id,
@@ -476,14 +539,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   tabButton: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 0,
-    marginRight: 32,
+    marginRight: 28,
     position: "relative",
   },
   tabText: {
     ...TypographyStyles.body,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "400",
     color: "#8e8e8e",
     lineHeight: 20,
@@ -558,8 +621,9 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   blogTitle: {
-    ...TypographyStyles.h2,
-    fontSize: 22,
+    fontFamily: "Inter-Regular",
+    fontWeight: "800",
+    fontSize: 20,
     color: "#000",
     lineHeight: 24,
     marginBottom: 8,

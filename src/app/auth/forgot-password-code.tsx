@@ -1,17 +1,26 @@
-import AuthButton from '@/src/components/auth/AuthButton';
-import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
-import AuthLayout from '@/src/components/auth/AuthLayout';
-import { useResendVerification, useResetPassword } from '@/src/services/authApi';
-import { TypographyStyles } from '@/src/theme/theme';
-import { AppRoutes } from '@/src/utils/enums';
-import { toast } from '@/src/utils/toast';
-import { yupResolver } from '@hookform/resolvers/yup';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Stack, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import * as yup from 'yup';
+import AuthButton from "@/src/components/auth/AuthButton";
+import AuthCodeInput from "@/src/components/auth/AuthCodeInput";
+import AuthLayout from "@/src/components/auth/AuthLayout";
+import {
+    useResendVerification,
+    useResetPassword,
+} from "@/src/services/authApi";
+import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes } from "@/src/utils/enums";
+import { toast } from "@/src/utils/toast";
+import { yupResolver } from "@hookform/resolvers/yup";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Stack, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import * as yup from "yup";
 
 // Type definition for stored forgot password data
 interface ForgotPasswordData {
@@ -21,14 +30,17 @@ interface ForgotPasswordData {
 }
 
 // Storage utility for forgot password data
-const FORGOT_PASSWORD_STORAGE_KEY = '@forgot_password_data';
+const FORGOT_PASSWORD_STORAGE_KEY = "@forgot_password_data";
 
 const forgotPasswordStorage = {
   store: async (data: ForgotPasswordData) => {
     try {
-      await AsyncStorage.setItem(FORGOT_PASSWORD_STORAGE_KEY, JSON.stringify(data));
+      await AsyncStorage.setItem(
+        FORGOT_PASSWORD_STORAGE_KEY,
+        JSON.stringify(data),
+      );
     } catch (error) {
-      console.error('Error storing forgot password data:', error);
+      console.error("Error storing forgot password data:", error);
       throw error;
     }
   },
@@ -37,7 +49,7 @@ const forgotPasswordStorage = {
       const data = await AsyncStorage.getItem(FORGOT_PASSWORD_STORAGE_KEY);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Error retrieving forgot password data:', error);
+      console.error("Error retrieving forgot password data:", error);
       return null;
     }
   },
@@ -45,7 +57,7 @@ const forgotPasswordStorage = {
     try {
       await AsyncStorage.removeItem(FORGOT_PASSWORD_STORAGE_KEY);
     } catch (error) {
-      console.error('Error clearing forgot password data:', error);
+      console.error("Error clearing forgot password data:", error);
     }
   },
 };
@@ -54,12 +66,14 @@ const forgotPasswordStorage = {
 const forgotPasswordCodeSchema = yup.object().shape({
   code: yup
     .string()
-    .required('Please enter the verification code')
-    .length(6, 'The verification code must be exactly 6 digits')
-    .matches(/^\d+$/, 'The verification code must contain only numbers'),
+    .required("Please enter the verification code")
+    .length(6, "The verification code must be exactly 6 digits")
+    .matches(/^\d+$/, "The verification code must contain only numbers"),
 });
 
-type ForgotPasswordCodeFormData = yup.InferType<typeof forgotPasswordCodeSchema>;
+type ForgotPasswordCodeFormData = yup.InferType<
+  typeof forgotPasswordCodeSchema
+>;
 
 export default function ForgotPasswordCodeScreen() {
   const router = useRouter();
@@ -67,9 +81,10 @@ export default function ForgotPasswordCodeScreen() {
   const [canResend, setCanResend] = useState(false);
   const [storedData, setStoredData] = useState<ForgotPasswordData | null>(null);
   const [codeError, setCodeError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
-  const { mutate: resendCode, isPending: resendLoading } = useResendVerification();
+  const { mutate: resendCode, isPending: resendLoading } =
+    useResendVerification();
   const { mutate: resetPassword, isPending: resetLoading } = useResetPassword();
 
   const {
@@ -81,24 +96,30 @@ export default function ForgotPasswordCodeScreen() {
   } = useForm<ForgotPasswordCodeFormData>({
     resolver: yupResolver(forgotPasswordCodeSchema),
     defaultValues: {
-      code: '',
+      code: "",
     },
-    mode: 'onChange',
+    mode: "onChange",
   });
 
-  const codeValue = watch('code');
+  const codeValue = watch("code");
 
   // Clear error when user starts typing
   React.useEffect(() => {
     if (codeValue && codeError) {
       setCodeError(false);
-      setErrorMessage('');
+      setErrorMessage("");
     }
   }, [codeValue, codeError]);
 
   // Auto-submit when all digits are entered
   React.useEffect(() => {
-    if (codeValue && codeValue.length === 6 && !resetLoading && !codeError && storedData) {
+    if (
+      codeValue &&
+      codeValue.length === 6 &&
+      !resetLoading &&
+      !codeError &&
+      storedData
+    ) {
       // Small delay to ensure the last digit is properly set
       const timer = setTimeout(() => {
         handleSubmit(onSubmit)();
@@ -112,7 +133,7 @@ export default function ForgotPasswordCodeScreen() {
     const loadStoredData = async () => {
       const data = await forgotPasswordStorage.retrieve();
       if (!data) {
-        toast.error('Session expired. Please start over.');
+        toast.error("Session expired. Please start over.");
         router.replace(AppRoutes.AUTH_FORGOT_PASSWORD);
         return;
       }
@@ -137,12 +158,12 @@ export default function ForgotPasswordCodeScreen() {
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   const onSubmit = async (data: ForgotPasswordCodeFormData) => {
     if (!storedData) {
-      toast.error('Session expired. Please start over.');
+      toast.error("Session expired. Please start over.");
       router.replace(AppRoutes.AUTH_FORGOT_PASSWORD);
       return;
     }
@@ -163,7 +184,7 @@ export default function ForgotPasswordCodeScreen() {
           await forgotPasswordStorage.clear();
 
           // Show success toast
-          toast.success(response.message || 'Password reset successfully!');
+          toast.success(response.message || "Password reset successfully!");
 
           // Redirect to login screen
           router.replace(AppRoutes.AUTH_SIGN_IN_EMAIL);
@@ -172,36 +193,44 @@ export default function ForgotPasswordCodeScreen() {
       onError: (error: any) => {
         // Set error state to show red borders
         setCodeError(true);
-        setErrorMessage('The verification code you entered is incorrect. Please check and try again.');
+        setErrorMessage(
+          "The verification code you entered is incorrect. Please check and try again.",
+        );
         // Clear the code input
-        setValue('code', '');
+        setValue("code", "");
       },
     });
   };
 
   const handleResendCode = () => {
     if (!storedData) {
-      toast.error('Session expired. Please start over.');
+      toast.error("Session expired. Please start over.");
       router.replace(AppRoutes.AUTH_FORGOT_PASSWORD);
       return;
     }
 
-    resendCode({
-      email: storedData.email
-    }, {
-      onSuccess: (data: any) => {
-        if (data.status === 200) {
-          toast.success(data.message);
-          // Restart countdown
-          setCountdown(300);
-          setCanResend(false);
-        }
+    resendCode(
+      {
+        email: storedData.email,
       },
-      onError: (error: any) => {
-        const errorMessage = error?.response?.data?.message || error?.message || 'Failed to resend verification code';
-        toast.error(errorMessage);
-      }
-    });
+      {
+        onSuccess: (data: any) => {
+          if (data.status === 200) {
+            toast.success(data.message);
+            // Restart countdown
+            setCountdown(300);
+            setCanResend(false);
+          }
+        },
+        onError: (error: any) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            "Failed to resend verification code";
+          toast.error(errorMessage);
+        },
+      },
+    );
   };
 
   return (
@@ -219,7 +248,9 @@ export default function ForgotPasswordCodeScreen() {
             <View style={styles.headerSection}>
               <Text style={styles.title}>Verify Your Email</Text>
               <Text style={styles.subtitle}>
-                We've sent a 6-digit verification code to {storedData?.email || 'your email address'}. Please enter the code below to reset your password.
+                We've sent a 6-digit verification code to{" "}
+                {storedData?.email || "your email address"}. Please enter the
+                code below to reset your password.
               </Text>
             </View>
 
@@ -237,15 +268,11 @@ export default function ForgotPasswordCodeScreen() {
                     />
                   )}
                 />
-                {(isSubmitted && errors.code) && (
-                  <Text style={styles.errorText}>
-                    {errors.code.message}
-                  </Text>
+                {isSubmitted && errors.code && (
+                  <Text style={styles.errorText}>{errors.code.message}</Text>
                 )}
                 {codeError && errorMessage && (
-                  <Text style={styles.errorText}>
-                    {errorMessage}
-                  </Text>
+                  <Text style={styles.errorText}>{errorMessage}</Text>
                 )}
               </View>
 
@@ -261,7 +288,7 @@ export default function ForgotPasswordCodeScreen() {
 
               <View style={styles.resendContainer}>
                 <Text style={styles.resendText}>
-                  Didn't receive the code?{' '}
+                  Didn't receive the code?{" "}
                   {!canResend ? (
                     <Text style={styles.timerText}>
                       Resend in {formatTime(countdown)}
@@ -271,8 +298,13 @@ export default function ForgotPasswordCodeScreen() {
                       onPress={resendLoading ? undefined : handleResendCode}
                       disabled={resendLoading}
                     >
-                      <Text style={[styles.resendLink, resendLoading && styles.resendDisabled]}>
-                        {resendLoading ? 'Sending...' : 'Resend code'}
+                      <Text
+                        style={[
+                          styles.resendLink,
+                          resendLoading && styles.resendDisabled,
+                        ]}
+                      >
+                        {resendLoading ? "Sending..." : "Resend code"}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -298,24 +330,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 40,
     paddingBottom: 40,
     // paddingHorizontal: 20,
   },
   title: {
     ...TypographyStyles.h3,
-    textAlign: 'center',
-    color: '#000',
+    textAlign: "center",
+    color: "#000",
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 20,
   },
@@ -324,7 +356,7 @@ const styles = StyleSheet.create({
     // paddingHorizontal: 20,
   },
   codeInputContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 16,
     paddingBottom: 16,
     marginBottom: 32,
@@ -334,34 +366,34 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   resendContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 24,
     paddingHorizontal: 20,
   },
   resendText: {
     ...TypographyStyles.body,
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 20,
   },
   timerText: {
     fontSize: 14,
-    color: '#00994C',
-    fontWeight: '600',
+    color: "#00994C",
+    fontWeight: "600",
   },
   resendLink: {
     fontSize: 14,
-    color: '#00994C',
-    fontWeight: '600',
+    color: "#00994C",
+    fontWeight: "600",
   },
   resendDisabled: {
     opacity: 0.5,
   },
   errorText: {
     fontSize: 12,
-    color: '#dc3545',
+    color: "#dc3545",
     marginTop: 16,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

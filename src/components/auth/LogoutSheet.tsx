@@ -1,14 +1,14 @@
-import { TypographyStyles } from '@/src/theme/theme';
-import React, { useEffect, useRef } from 'react';
+import { TypographyStyles } from "@/src/theme/theme";
+import React, { useEffect, useRef } from "react";
 import {
-  Animated,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+    Animated,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 
 interface LogoutSheetProps {
   visible: boolean;
@@ -124,28 +124,28 @@ export default function LogoutSheet({
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   backdropPressable: {
     flex: 1,
   },
   sheet: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 34,
-    maxHeight: '50%',
+    maxHeight: "50%",
   },
   dragIndicator: {
     width: 36,
     height: 5,
-    backgroundColor: '#D1D1D6',
+    backgroundColor: "#D1D1D6",
     borderRadius: 3,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginTop: 12,
     marginBottom: 8,
   },
@@ -156,15 +156,15 @@ const styles = StyleSheet.create({
   title: {
     ...TypographyStyles.h2,
     fontSize: 28,
-    color: '#000',
-    textAlign: 'center',
+    color: "#000",
+    textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     marginBottom: 32,
     lineHeight: 22,
   },
@@ -172,28 +172,27 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   logoutButton: {
-    backgroundColor: '#dc3545',
+    backgroundColor: "#dc3545",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoutButtonText: {
     ...TypographyStyles.bodySansBold,
     fontSize: 17,
-    color: '#fff',
+    color: "#fff",
   },
   cancelButton: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cancelButtonText: {
     ...TypographyStyles.bodySansBold,
     fontSize: 17,
-    color: '#000',
+    color: "#000",
   },
 });
-

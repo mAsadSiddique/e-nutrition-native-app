@@ -6,7 +6,15 @@ import { AppRoutes } from "@/src/utils/enums";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Dimensions, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+    Dimensions,
+    Image,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 export default function SignInEntry() {
@@ -15,7 +23,7 @@ export default function SignInEntry() {
   const { selectedCategories } = useCategoriesSelector();
 
   const handleSkip = () => {
-    console.log('here')
+    console.log("here");
     // If user already has selected categories, go directly to dashboard
     if (selectedCategories && selectedCategories.length >= 3) {
       router.replace(AppRoutes.TABS);

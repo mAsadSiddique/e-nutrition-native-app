@@ -8,14 +8,14 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as yup from "yup";
@@ -39,7 +39,7 @@ const changePasswordSchema = yup.object().shape({
       "New password must be different from current password",
       function (value) {
         return value !== this.parent.currentPassword;
-      }
+      },
     ),
   confirmPassword: yup
     .string()
@@ -113,7 +113,7 @@ export default function ChangePassword() {
             toast.error("Failed to change password. Please try again.");
           }
         },
-      }
+      },
     );
   };
 
@@ -131,160 +131,165 @@ export default function ChangePassword() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-        {/* Header Section */}
-        <View style={styles.headerSection}>
-
-          {/* <View style={styles.iconContainer}>
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            {/* <View style={styles.iconContainer}>
             <Ionicons name="lock-closed" size={32} color="#00994C" />
           </View> */}
-          <Text style={styles.title}>Change Password</Text>
-          <Text style={styles.subtitle}>
-            Update your password to keep your account secure
-          </Text>
-        </View>
-
-        {/* Form Section */}
-        <View style={styles.formSection}>
-          {/* Current Password */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Current Password</Text>
-            <View style={styles.passwordContainer}>
-              <Controller
-                control={control}
-                name="currentPassword"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={styles.passwordInput}
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    placeholder="Current password"
-                    secureTextEntry={!showCurrentPassword}
-                    autoCapitalize="none"
-                    textContentType="none"
-                    importantForAutofill="no"
-                    editable={!loading}
-                  />
-                )}
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowCurrentPassword(!showCurrentPassword)}
-                disabled={loading}
-              >
-                <Ionicons
-                  name={showCurrentPassword ? "eye" : "eye-off"}
-                  size={20}
-                  color="#666"
-                />
-              </TouchableOpacity>
-            </View>
-            {(isSubmitted || touchedFields.currentPassword) && errors.currentPassword && (
-              <Text style={[styles.validationText, styles.invalidText]}>
-                 {errors.currentPassword.message}
-              </Text>
-            )}
+            <Text style={styles.title}>Change Password</Text>
+            <Text style={styles.subtitle}>
+              Update your password to keep your account secure
+            </Text>
           </View>
 
-          {/* New Password */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>New Password</Text>
-            <View style={styles.passwordContainer}>
-              <Controller
-                control={control}
-                name="newPassword"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={styles.passwordInput}
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    placeholder="New password"
-                    secureTextEntry={!showNewPassword}
-                    autoCapitalize="none"
-                    textContentType="none"
-                    importantForAutofill="no"
-                    editable={!loading}
-                  />
-                )}
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowNewPassword(!showNewPassword)}
-                disabled={loading}
-              >
-                <Ionicons
-                  name={showNewPassword ? "eye" : "eye-off"}
-                  size={20}
-                  color="#666"
+          {/* Form Section */}
+          <View style={styles.formSection}>
+            {/* Current Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Current Password</Text>
+              <View style={styles.passwordContainer}>
+                <Controller
+                  control={control}
+                  name="currentPassword"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder="Current password"
+                      secureTextEntry={!showCurrentPassword}
+                      autoCapitalize="none"
+                      textContentType="none"
+                      importantForAutofill="no"
+                      editable={!loading}
+                    />
+                  )}
                 />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowCurrentPassword(!showCurrentPassword)}
+                  disabled={loading}
+                >
+                  <Ionicons
+                    name={showCurrentPassword ? "eye" : "eye-off"}
+                    size={20}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
+              {(isSubmitted || touchedFields.currentPassword) &&
+                errors.currentPassword && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    {errors.currentPassword.message}
+                  </Text>
+                )}
             </View>
 
-            {newPasswordValue && (
-              <Text style={styles.passwordHintText}>
-                Must be at least 8 characters, include an uppercase letter, a lowercase letter, a number and a special character.
-                {newPasswordValue && !passwordRules.isDifferent && " Must be different from current password."}
-              </Text>
-            )}
-            {(isSubmitted || touchedFields.newPassword) && errors.newPassword && (
-              <Text style={[styles.validationText, styles.invalidText]}>
-                 {errors.newPassword.message}
-              </Text>
-            )}
-          </View>
-
-          {/* Confirm New Password */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm New Password</Text>
-            <View style={styles.passwordContainer}>
-              <Controller
-                control={control}
-                name="confirmPassword"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <TextInput
-                    style={styles.passwordInput}
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    placeholder="Confirm new password"
-                    secureTextEntry={!showConfirmPassword}
-                    autoCapitalize="none"
-                    textContentType="none"
-                    importantForAutofill="no"
-                    editable={!loading}
-                  />
-                )}
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                disabled={loading}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? "eye" : "eye-off"}
-                  size={20}
-                  color="#666"
+            {/* New Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>New Password</Text>
+              <View style={styles.passwordContainer}>
+                <Controller
+                  control={control}
+                  name="newPassword"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder="New password"
+                      secureTextEntry={!showNewPassword}
+                      autoCapitalize="none"
+                      textContentType="none"
+                      importantForAutofill="no"
+                      editable={!loading}
+                    />
+                  )}
                 />
-              </TouchableOpacity>
-            </View>
-            {(isSubmitted || touchedFields.confirmPassword) && errors.confirmPassword && (
-              <Text style={[styles.validationText, styles.invalidText]}>
-                 {errors.confirmPassword.message}
-              </Text>
-            )}
-          </View>
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                  disabled={loading}
+                >
+                  <Ionicons
+                    name={showNewPassword ? "eye" : "eye-off"}
+                    size={20}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
 
-          <View style={styles.buttonContainer}>
-            <AuthButton
-              text="Change Password"
-              onPress={handleSubmit(onSubmit)}
-              variant="primary"
-              loading={loading}
-            />
+              {newPasswordValue && (
+                <Text style={styles.passwordHintText}>
+                  Must be at least 8 characters, include an uppercase letter, a
+                  lowercase letter, a number and a special character.
+                  {newPasswordValue &&
+                    !passwordRules.isDifferent &&
+                    " Must be different from current password."}
+                </Text>
+              )}
+              {(isSubmitted || touchedFields.newPassword) &&
+                errors.newPassword && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    {errors.newPassword.message}
+                  </Text>
+                )}
+            </View>
+
+            {/* Confirm New Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm New Password</Text>
+              <View style={styles.passwordContainer}>
+                <Controller
+                  control={control}
+                  name="confirmPassword"
+                  render={({ field: { onChange, onBlur, value } }) => (
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder="Confirm new password"
+                      secureTextEntry={!showConfirmPassword}
+                      autoCapitalize="none"
+                      textContentType="none"
+                      importantForAutofill="no"
+                      editable={!loading}
+                    />
+                  )}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={loading}
+                >
+                  <Ionicons
+                    name={showConfirmPassword ? "eye" : "eye-off"}
+                    size={20}
+                    color="#666"
+                  />
+                </TouchableOpacity>
+              </View>
+              {(isSubmitted || touchedFields.confirmPassword) &&
+                errors.confirmPassword && (
+                  <Text style={[styles.validationText, styles.invalidText]}>
+                    {errors.confirmPassword.message}
+                  </Text>
+                )}
+            </View>
+
+            <View style={styles.buttonContainer}>
+              <AuthButton
+                text="Change Password"
+                onPress={handleSubmit(onSubmit)}
+                variant="primary"
+                loading={loading}
+              />
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

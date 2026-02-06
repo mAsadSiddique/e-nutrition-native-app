@@ -5,7 +5,13 @@ import { AppRoutes } from "@/src/utils/enums";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AuthButton from "../components/auth/AuthButton";
 import { SkeletonCategoryPill } from "../components/ui/SkeletonLoader";
@@ -23,16 +29,12 @@ export default function CategorySelectionScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { selectedCategories } = useCategoriesSelector();
-  const { blogsWishlist } = useWishlistSelector()
+  const { blogsWishlist } = useWishlistSelector();
   const { onToggleCategory, onSetSelectedCategories } = useCategories();
-  const {
-    data: categoriesApiData,
-    isLoading: categoriesLoading,
-  } = useGetCategories();
-  const {
-    mutate: toggleWishlist,
-    isPending: wishlistLoading,
-  } = useWishlistToggle();
+  const { data: categoriesApiData, isLoading: categoriesLoading } =
+    useGetCategories();
+  const { mutate: toggleWishlist, isPending: wishlistLoading } =
+    useWishlistToggle();
 
   // Wishlist store updater
   const { setCategoriesWishlist, setWishlist } = useWishlistHandler();
@@ -41,20 +43,19 @@ export default function CategorySelectionScreen() {
     onToggleCategory(id);
   };
 
-
   const canContinue = selectedCategories.length >= MIN_SELECTION;
 
   // Check AsyncStorage on mount to see if there are previously saved categories
   useEffect(() => {
     const checkAsyncStorage = async () => {
       try {
-        const saved = await AsyncStorage.getItem('selected_categories');
+        const saved = await AsyncStorage.getItem("selected_categories");
         if (saved) {
           const parsed = JSON.parse(saved);
           onSetSelectedCategories(parsed);
         }
       } catch (err) {
-        console.error('[CategorySelection] Error reading AsyncStorage:', err);
+        console.error("[CategorySelection] Error reading AsyncStorage:", err);
       }
     };
     checkAsyncStorage();
@@ -64,11 +65,18 @@ export default function CategorySelectionScreen() {
   useEffect(() => {
     try {
       // store null when no selection, otherwise store a shallow copy of the array of IDs
-      const payload = selectedCategories.length > 0 ? [...selectedCategories] : null;
-      console.debug('[CategorySelection] Syncing wishlist store with selectedCategories:', payload);
+      const payload =
+        selectedCategories.length > 0 ? [...selectedCategories] : null;
+      console.debug(
+        "[CategorySelection] Syncing wishlist store with selectedCategories:",
+        payload,
+      );
       setCategoriesWishlist(payload);
     } catch (err) {
-      console.error('[CategorySelection] Failed to sync wishlist store on selection change:', err);
+      console.error(
+        "[CategorySelection] Failed to sync wishlist store on selection change:",
+        err,
+      );
     }
   }, [selectedCategories, setCategoriesWishlist]);
 
@@ -87,33 +95,31 @@ export default function CategorySelectionScreen() {
           contentContainerStyle={styles.pillsContainer}
           showsVerticalScrollIndicator={false}
         >
-          {categoriesLoading ? (
-            // Show skeleton pills while loading
-            Array.from({ length: 12 }).map((_, index) => (
-              <SkeletonCategoryPill key={`skeleton-${index}`} />
-            ))
-          ) : (
-            categoriesApiData?.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => toggle(item.id)}
-                style={[
-                  styles.pill,
-                  selectedCategories.includes(item.id) && styles.pillActive,
-                ]}
-              >
-                <Text
+          {categoriesLoading
+            ? // Show skeleton pills while loading
+              Array.from({ length: 12 }).map((_, index) => (
+                <SkeletonCategoryPill key={`skeleton-${index}`} />
+              ))
+            : categoriesApiData?.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => toggle(item.id)}
                   style={[
-                    styles.pillText,
-                    selectedCategories.includes(item.id) && styles.pillTextActive,
+                    styles.pill,
+                    selectedCategories.includes(item.id) && styles.pillActive,
                   ]}
                 >
-                  {item.name}
-                </Text>
-              </TouchableOpacity>
-            ))
-
-          )}
+                  <Text
+                    style={[
+                      styles.pillText,
+                      selectedCategories.includes(item.id) &&
+                        styles.pillTextActive,
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
         </ScrollView>
       </View>
 
@@ -126,7 +132,10 @@ export default function CategorySelectionScreen() {
             const deduped = Array.from(new Set(ids)) as number[];
             const payloadCopy = deduped.filter((id: number) => {
               if (!Number.isInteger(id)) return false;
-              if (Array.isArray(categoriesApiData) && categoriesApiData.length) {
+              if (
+                Array.isArray(categoriesApiData) &&
+                categoriesApiData.length
+              ) {
                 return categoriesApiData.some((c: any) => c.id === id);
               }
               return true;
@@ -137,39 +146,72 @@ export default function CategorySelectionScreen() {
 
             // Always save to AsyncStorage
             const jsonString = JSON.stringify(payloadCopy);
-            await AsyncStorage.setItem('selected_categories', jsonString);
+            await AsyncStorage.setItem("selected_categories", jsonString);
 
             // Update wishlist store with selected categories
             setCategoriesWishlist(payloadCopy);
 
             // If user is authenticated, sync with API
             if (isAuthenticated && payloadCopy.length > 0) {
-              console.log('[CategorySelection] User authenticated - Adding categories to wishlist via API:', payloadCopy);
+              console.log(
+                "[CategorySelection] User authenticated - Adding categories to wishlist via API:",
+                payloadCopy,
+              );
               toggleWishlist(
                 { ids: payloadCopy },
                 {
                   onSuccess: (data) => {
                     // Use server response if it contains the saved categories, otherwise fallback to local selection
                     try {
-                      const serverCategories = (data as any)?.data?.userWishlist?.categoriesWishlist ?? (data as any)?.userWishlist?.categoriesWishlist ?? (data as any)?.categoriesWishlist;
+                      const serverCategories =
+                        (data as any)?.data?.userWishlist?.categoriesWishlist ??
+                        (data as any)?.userWishlist?.categoriesWishlist ??
+                        (data as any)?.categoriesWishlist;
                       if (Array.isArray(serverCategories)) {
                         const copy = [...serverCategories];
 
                         // Persist the authoritative server-provided selection as the app's selected categories
                         try {
                           onSetSelectedCategories(copy);
-                          AsyncStorage.setItem('selected_categories', JSON.stringify(copy))
-                            .then(() => console.debug('[CategorySelection] Persisted server categories to AsyncStorage:', copy))
-                            .catch((e) => console.error('[CategorySelection] Failed to persist server categories to AsyncStorage:', e));
+                          AsyncStorage.setItem(
+                            "selected_categories",
+                            JSON.stringify(copy),
+                          )
+                            .then(() =>
+                              console.debug(
+                                "[CategorySelection] Persisted server categories to AsyncStorage:",
+                                copy,
+                              ),
+                            )
+                            .catch((e) =>
+                              console.error(
+                                "[CategorySelection] Failed to persist server categories to AsyncStorage:",
+                                e,
+                              ),
+                            );
                         } catch (err) {
-                          console.error('[CategorySelection] Failed to update selected categories from server response:', err);
+                          console.error(
+                            "[CategorySelection] Failed to update selected categories from server response:",
+                            err,
+                          );
                         }
 
                         // Update the whole wishlist from server to avoid mismatches
                         try {
-                          const serverBlogs = (data as any)?.data?.userWishlist?.blogsWishlist ?? (data as any)?.userWishlist?.blogsWishlist ?? (data as any)?.blogsWishlist ?? blogsWishlist ?? [];
-                          console.debug('[CategorySelection] Pre-set wishlist state:', store.getState().wishlist);
-                          setWishlist({ blogsWishlist: serverBlogs || [], categoriesWishlist: copy });
+                          const serverBlogs =
+                            (data as any)?.data?.userWishlist?.blogsWishlist ??
+                            (data as any)?.userWishlist?.blogsWishlist ??
+                            (data as any)?.blogsWishlist ??
+                            blogsWishlist ??
+                            [];
+                          console.debug(
+                            "[CategorySelection] Pre-set wishlist state:",
+                            store.getState().wishlist,
+                          );
+                          setWishlist({
+                            blogsWishlist: serverBlogs || [],
+                            categoriesWishlist: copy,
+                          });
 
                           // Redux Persist will automatically persist the changes
                         } catch (err) {
@@ -181,35 +223,51 @@ export default function CategorySelectionScreen() {
                         const copy = [...payloadCopy];
                         onSetSelectedCategories(copy);
                         setCategoriesWishlist(copy);
-                        console.log('[CategorySelection] ✅ Wishlist store updated from local selection:', copy);
+                        console.log(
+                          "[CategorySelection] ✅ Wishlist store updated from local selection:",
+                          copy,
+                        );
                       }
                     } catch (err) {
-                      console.error('[CategorySelection] Failed to update wishlist store from response:', err);
+                      console.error(
+                        "[CategorySelection] Failed to update wishlist store from response:",
+                        err,
+                      );
                     }
 
                     // Navigate after successful API call
                     router.replace(AppRoutes.TABS);
                   },
                   onError: (error: any) => {
-                    console.error('[CategorySelection] ❌ Failed to add categories to wishlist:', error);
+                    console.error(
+                      "[CategorySelection] ❌ Failed to add categories to wishlist:",
+                      error,
+                    );
                     // Still navigate even if API call fails
                     router.replace(AppRoutes.TABS);
                   },
-                }
+                },
               );
             } else {
               // User is not authenticated - just save locally and navigate
-              console.log('[CategorySelection] User not authenticated - Saving categories locally and navigating to main app');
+              console.log(
+                "[CategorySelection] User not authenticated - Saving categories locally and navigating to main app",
+              );
 
               // Redux Persist will automatically persist the changes
               // No need to manually flush as it happens automatically
-              console.log('[CategorySelection] ✅ Categories saved to store (will be persisted automatically)');
+              console.log(
+                "[CategorySelection] ✅ Categories saved to store (will be persisted automatically)",
+              );
 
               // Navigate to main application
               router.replace(AppRoutes.TABS);
             }
           } catch (err) {
-            console.error('[CategorySelection] ❌ Failed to save selected categories:', err);
+            console.error(
+              "[CategorySelection] ❌ Failed to save selected categories:",
+              err,
+            );
           }
         }}
         variant="primary"
@@ -284,7 +342,6 @@ const styles = StyleSheet.create({
     color: "#222",
     fontSize: 14,
     textAlign: "center",
-
   },
   pillTextActive: {
     ...TypographyStyles.body,

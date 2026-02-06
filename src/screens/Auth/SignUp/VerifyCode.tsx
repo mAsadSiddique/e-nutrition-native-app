@@ -1,25 +1,31 @@
-import AuthButton from '@/src/components/auth/AuthButton';
-import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
-import AuthLayout from '@/src/components/auth/AuthLayout';
-import { useResendVerification, useVerification } from '@/src/services/authApi';
-import { useAuth } from '@/src/store/auth/hook';
-import { TypographyStyles } from '@/src/theme/theme';
-import { AppRoutes } from '@/src/utils/enums';
-import { toast } from '@/src/utils/toast';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import * as yup from 'yup';
+import AuthButton from "@/src/components/auth/AuthButton";
+import AuthCodeInput from "@/src/components/auth/AuthCodeInput";
+import AuthLayout from "@/src/components/auth/AuthLayout";
+import { useResendVerification, useVerification } from "@/src/services/authApi";
+import { useAuth } from "@/src/store/auth/hook";
+import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes } from "@/src/utils/enums";
+import { toast } from "@/src/utils/toast";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import * as yup from "yup";
 
 // Validation schema
 const signUpCodeSchema = yup.object().shape({
   code: yup
     .string()
-    .required('Please enter the verification code')
-    .length(6, 'The verification code must be exactly 6 digits')
-    .matches(/^\d+$/, 'The verification code must contain only numbers'),
+    .required("Please enter the verification code")
+    .length(6, "The verification code must be exactly 6 digits")
+    .matches(/^\d+$/, "The verification code must contain only numbers"),
 });
 
 type SignUpCodeFormData = yup.InferType<typeof signUpCodeSchema>;
@@ -34,10 +40,11 @@ export default function VerifyCode() {
   const [isResendDisabled, setIsResendDisabled] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [codeError, setCodeError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const { mutate: verifyCode, isPending: verifyLoading } = useVerification();
-  const { mutate: resendCode, isPending: resendLoading } = useResendVerification();
+  const { mutate: resendCode, isPending: resendLoading } =
+    useResendVerification();
 
   const {
     control,
@@ -48,18 +55,18 @@ export default function VerifyCode() {
   } = useForm<SignUpCodeFormData>({
     resolver: yupResolver(signUpCodeSchema),
     defaultValues: {
-      code: '',
+      code: "",
     },
-    mode: 'onChange',
+    mode: "onChange",
   });
 
-  const codeValue = watch('code');
+  const codeValue = watch("code");
 
   // Clear error when user starts typing
   React.useEffect(() => {
     if (codeValue && codeError) {
       setCodeError(false);
-      setErrorMessage('');
+      setErrorMessage("");
     }
   }, [codeValue, codeError]);
 
@@ -78,7 +85,7 @@ export default function VerifyCode() {
   const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   // Start countdown timer
@@ -118,7 +125,7 @@ export default function VerifyCode() {
 
   const onSubmit = (data: SignUpCodeFormData) => {
     if (!email) {
-      toast.error('Email address is missing');
+      toast.error("Email address is missing");
       return;
     }
 
@@ -132,7 +139,8 @@ export default function VerifyCode() {
         onSuccess: async (response: any) => {
           if (response.status === 200) {
             toast.success(
-              response.message || 'Your account has been successfully verified!'
+              response.message ||
+                "Your account has been successfully verified!",
             );
             if (response.data && response.data.token) {
               await signIn(response.data.token);
@@ -142,16 +150,18 @@ export default function VerifyCode() {
         },
         onError: (error: any) => {
           setCodeError(true);
-          setErrorMessage('The verification code you entered is incorrect. Please check and try again.');
-          setValue('code', '');
+          setErrorMessage(
+            "The verification code you entered is incorrect. Please check and try again.",
+          );
+          setValue("code", "");
         },
-      }
+      },
     );
   };
 
   const handleResendCode = () => {
     if (!email) {
-      toast.error('Email address is missing');
+      toast.error("Email address is missing");
       return;
     }
 
@@ -160,29 +170,41 @@ export default function VerifyCode() {
     }
 
     // Call resend API
-    resendCode({
-      email
-    }, {
-      onSuccess: (data: any) => {
-        if (data.status === 200) {
-          toast.success(data.message || 'A new verification code has been sent to your email.');
-          // Restart timer
-          startTimer();
-        }
+    resendCode(
+      {
+        email,
       },
-      onError: (error: any) => {
-        const errorData = error?.response?.data;
+      {
+        onSuccess: (data: any) => {
+          if (data.status === 200) {
+            toast.success(
+              data.message ||
+                "A new verification code has been sent to your email.",
+            );
+            // Restart timer
+            startTimer();
+          }
+        },
+        onError: (error: any) => {
+          const errorData = error?.response?.data;
 
-        if (error?.response?.status === 429) {
-          // Handle rate limiting
-          toast.error(errorData?.message || 'Please wait before requesting another code.');
-          // Do NOT restart timer for 429 errors
-        } else {
-          const errorMessage = errorData?.message || error?.message || 'Failed to resend verification code';
-          toast.error(errorMessage);
-        }
-      }
-    });
+          if (error?.response?.status === 429) {
+            // Handle rate limiting
+            toast.error(
+              errorData?.message ||
+                "Please wait before requesting another code.",
+            );
+            // Do NOT restart timer for 429 errors
+          } else {
+            const errorMessage =
+              errorData?.message ||
+              error?.message ||
+              "Failed to resend verification code";
+            toast.error(errorMessage);
+          }
+        },
+      },
+    );
   };
 
   return (
@@ -200,7 +222,9 @@ export default function VerifyCode() {
             <View style={styles.headerSection}>
               <Text style={styles.title}>Verify Your Email</Text>
               <Text style={styles.subtitle}>
-                We've sent a 6-digit verification code to {email || 'your email address'}. Please enter the code below to complete your account setup.
+                We've sent a 6-digit verification code to{" "}
+                {email || "your email address"}. Please enter the code below to
+                complete your account setup.
               </Text>
             </View>
 
@@ -210,10 +234,15 @@ export default function VerifyCode() {
                   control={control}
                   name="code"
                   render={({ field: { onChange, value } }) => (
-                    <AuthCodeInput length={6} value={value} onChange={onChange} error={codeError} />
+                    <AuthCodeInput
+                      length={6}
+                      value={value}
+                      onChange={onChange}
+                      error={codeError}
+                    />
                   )}
                 />
-                {(isSubmitted && errors.code) && (
+                {isSubmitted && errors.code && (
                   <Text style={styles.errorText}>{errors.code.message}</Text>
                 )}
                 {codeError && errorMessage && (
@@ -232,7 +261,7 @@ export default function VerifyCode() {
 
               <View style={styles.resendContainer}>
                 <Text style={styles.resendText}>
-                  Didn't receive the code?{' '}
+                  Didn't receive the code?{" "}
                   {isResendDisabled ? (
                     <Text style={styles.timerText}>
                       Resend in {formatTime(timeLeft)}
@@ -242,8 +271,13 @@ export default function VerifyCode() {
                       onPress={resendLoading ? undefined : handleResendCode}
                       disabled={resendLoading}
                     >
-                      <Text style={[styles.resendLink, resendLoading && styles.resendDisabled]}>
-                        {resendLoading ? 'Sending...' : 'Resend code'}
+                      <Text
+                        style={[
+                          styles.resendLink,
+                          resendLoading && styles.resendDisabled,
+                        ]}
+                      >
+                        {resendLoading ? "Sending..." : "Resend code"}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -269,24 +303,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 40,
     paddingBottom: 40,
     // paddingHorizontal: 20,
   },
   title: {
     ...TypographyStyles.h3,
-    textAlign: 'center',
-    color: '#000',
+    textAlign: "center",
+    color: "#000",
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 20,
   },
@@ -295,7 +329,7 @@ const styles = StyleSheet.create({
     // paddingHorizontal: 20,
   },
   codeInputContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 16,
     paddingBottom: 16,
     marginBottom: 32,
@@ -305,34 +339,34 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   resendContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 24,
     paddingHorizontal: 20,
   },
   resendText: {
     ...TypographyStyles.body,
     fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 20,
   },
   timerText: {
     fontSize: 14,
-    color: '#00994C',
-    fontWeight: '600',
+    color: "#00994C",
+    fontWeight: "600",
   },
   resendLink: {
     fontSize: 14,
-    color: '#00994C',
-    fontWeight: '600',
+    color: "#00994C",
+    fontWeight: "600",
   },
   resendDisabled: {
     opacity: 0.5,
   },
   errorText: {
     fontSize: 12,
-    color: '#dc3545',
+    color: "#dc3545",
     marginTop: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
 });

@@ -11,14 +11,14 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import * as yup from "yup";
 
@@ -30,14 +30,17 @@ interface ForgotPasswordData {
 }
 
 // Storage utility for forgot password data
-const FORGOT_PASSWORD_STORAGE_KEY = '@forgot_password_data';
+const FORGOT_PASSWORD_STORAGE_KEY = "@forgot_password_data";
 
 const forgotPasswordStorage = {
   store: async (data: ForgotPasswordData) => {
     try {
-      await AsyncStorage.setItem(FORGOT_PASSWORD_STORAGE_KEY, JSON.stringify(data));
+      await AsyncStorage.setItem(
+        FORGOT_PASSWORD_STORAGE_KEY,
+        JSON.stringify(data),
+      );
     } catch (error) {
-      console.error('Error storing forgot password data:', error);
+      console.error("Error storing forgot password data:", error);
       throw error;
     }
   },
@@ -46,7 +49,7 @@ const forgotPasswordStorage = {
       const data = await AsyncStorage.getItem(FORGOT_PASSWORD_STORAGE_KEY);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error('Error retrieving forgot password data:', error);
+      console.error("Error retrieving forgot password data:", error);
       return null;
     }
   },
@@ -54,7 +57,7 @@ const forgotPasswordStorage = {
     try {
       await AsyncStorage.removeItem(FORGOT_PASSWORD_STORAGE_KEY);
     } catch (error) {
-      console.error('Error clearing forgot password data:', error);
+      console.error("Error clearing forgot password data:", error);
     }
   },
 };
@@ -135,7 +138,7 @@ export default function ForgotPasswordScreen() {
               "Failed to send reset code";
             toast.error(errorMessage);
           },
-        }
+        },
       );
     } catch (error) {
       toast.error("Failed to store password data");
@@ -223,14 +226,16 @@ export default function ForgotPasswordScreen() {
                 </View>
                 {newPasswordValue && (
                   <Text style={styles.passwordHintText}>
-                    Must be at least 8 characters, include an uppercase letter, a lowercase letter, a number and a special character.
+                    Must be at least 8 characters, include an uppercase letter,
+                    a lowercase letter, a number and a special character.
                   </Text>
                 )}
-                {(isSubmitted || touchedFields.newPassword) && errors.newPassword && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    {errors.newPassword.message}
-                  </Text>
-                )}
+                {(isSubmitted || touchedFields.newPassword) &&
+                  errors.newPassword && (
+                    <Text style={[styles.validationText, styles.invalidText]}>
+                      {errors.newPassword.message}
+                    </Text>
+                  )}
               </View>
 
               {/* CONFIRM PASSWORD */}
@@ -264,11 +269,12 @@ export default function ForgotPasswordScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-                {(isSubmitted || touchedFields.confirmPassword) && errors.confirmPassword && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    {errors.confirmPassword.message}
-                  </Text>
-                )}
+                {(isSubmitted || touchedFields.confirmPassword) &&
+                  errors.confirmPassword && (
+                    <Text style={[styles.validationText, styles.invalidText]}>
+                      {errors.confirmPassword.message}
+                    </Text>
+                  )}
               </View>
 
               <View style={styles.buttonContainer}>
@@ -282,10 +288,10 @@ export default function ForgotPasswordScreen() {
 
               {/* Footer - Back to Login Link */}
               <View style={styles.footer}>
-                <TouchableOpacity onPress={() => router.push(AppRoutes.AUTH_SIGN_IN_EMAIL)}>
-                  <Text style={styles.footerText}>
-                    Back to login
-                  </Text>
+                <TouchableOpacity
+                  onPress={() => router.push(AppRoutes.AUTH_SIGN_IN_EMAIL)}
+                >
+                  <Text style={styles.footerText}>Back to login</Text>
                 </TouchableOpacity>
               </View>
             </View>

@@ -8,16 +8,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState, type FC } from "react";
 import {
-  Alert,
-  Image,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Image,
+    Linking,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -64,7 +64,7 @@ export default function ProfileTab() {
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
 
   const { updateUserProfile, signOut } = useAuth();
-  const { setBlogsWishlist } = useWishlistHandler()
+  const { setBlogsWishlist } = useWishlistHandler();
 
   // Require authentication - automatically redirects to login if not authenticated
   const { isLoggedIn, userName, profileUrl, email } = useCurrentProfile();
@@ -73,7 +73,6 @@ export default function ProfileTab() {
   const handleLinkedIn = () => Linking.openURL(ExternalUrls.LINKEDIN);
   const handleFacebookEnutrition = () => Linking.openURL(ExternalUrls.FACEBOOK);
   const handleYouTube = () => Linking.openURL(ExternalUrls.YOUTUBE);
-
 
   const handleImagePicker = useCallback(async () => {
     Alert.alert(
@@ -89,7 +88,7 @@ export default function ProfileTab() {
             });
           },
         },
-      ]
+      ],
     );
   }, [updateUserProfile]);
 
@@ -108,7 +107,7 @@ export default function ProfileTab() {
     Linking.openURL(
       Platform.OS === "android"
         ? ExternalUrls.PLAY_STORE
-        : ExternalUrls.APP_STORE
+        : ExternalUrls.APP_STORE,
     );
   };
 
@@ -127,7 +126,7 @@ export default function ProfileTab() {
   const handleLogoutConfirm = useCallback(async () => {
     setShowLogoutSheet(false);
     await signOut();
-    setBlogsWishlist([])
+    setBlogsWishlist([]);
     router.replace(AppRoutes.AUTH_SIGN_IN);
   }, [signOut, router, setBlogsWishlist]);
 
@@ -163,15 +162,24 @@ export default function ProfileTab() {
                 {(() => {
                   if (profileUrl) {
                     return (
-                      <Pressable onPress={handleImagePicker} style={styles.imageContainer}>
-                        <Image source={{ uri: profileUrl }} style={styles.profileImageStack} />
+                      <Pressable
+                        onPress={handleImagePicker}
+                        style={styles.imageContainer}
+                      >
+                        <Image
+                          source={{ uri: profileUrl }}
+                          style={styles.profileImageStack}
+                        />
                       </Pressable>
                     );
                   } else {
                     // Show username initial in a circle
                     const initial = userName.charAt(0).toUpperCase();
                     return (
-                      <Pressable onPress={handleImagePicker} style={styles.imageContainer}>
+                      <Pressable
+                        onPress={handleImagePicker}
+                        style={styles.imageContainer}
+                      >
                         <View style={styles.usernameInitial}>
                           <Text style={styles.initialText}>{initial}</Text>
                         </View>

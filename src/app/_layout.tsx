@@ -33,6 +33,7 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     "Georgia-Regular": require("../assets/fonts/Georgia-Regular.ttf"),
     "Georgia-Bold": require("../assets/fonts/Georgia-Bold.ttf"),
+    "Inter-Regular": require("../assets/fonts/Inter-Regular.ttf"),
   });
 
   useEffect(() => {

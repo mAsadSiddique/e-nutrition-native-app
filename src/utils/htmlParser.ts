@@ -106,42 +106,42 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
     });
   }
   
+  const inlineFormattingTagNames = ['strong', 'b', 'em', 'i', 'u', 'code'];
+
   while (i < html.length && iterations < maxIterations) {
     iterations++;
     // Check for opening tags
     if (html[i] === '<') {
-      // Save any accumulated text and check for YouTube URLs
-      if (currentText.trim()) {
-        const textWithYouTube = processTextForYouTube(currentText.trim());
-        elements.push(...textWithYouTube);
-        currentText = '';
-      }
-      
       const tagEnd = html.indexOf('>', i);
       if (tagEnd === -1) {
         currentText += html[i];
         i++;
         continue;
       }
-      
       const tagContent = html.substring(i + 1, tagEnd);
       const tagMatch = tagContent.match(/^(\/?)(\w+)/);
-      
+      const isClosing = tagMatch?.[1] === '/';
+      const tagName = tagMatch?.[2]?.toLowerCase();
+
+      // Closing inline tag: add to currentText and do NOT flush, so "<u>quarter</u>" stays in one node
+      if (tagMatch && isClosing && tagName && inlineFormattingTagNames.includes(tagName)) {
+        currentText += html.substring(i, tagEnd + 1);
+        i = tagEnd + 1;
+        continue;
+      }
+
+      // Flush accumulated text before handling any other tag
+      if (currentText.trim()) {
+        const textWithYouTube = processTextForYouTube(currentText.trim());
+        elements.push(...textWithYouTube);
+        currentText = '';
+      }
+
       if (tagMatch) {
-        const isClosing = tagMatch[1] === '/';
-        const tagName = tagMatch[2].toLowerCase();
-        
         if (isClosing) {
-          // Handle closing tags
-          if (['p', 'div', 'br'].includes(tagName)) {
+          // Handle other closing tags (p, div, br)
+          if (['p', 'div', 'br'].includes(tagName || '')) {
             // Paragraph or div closing - add newline context
-          }
-          // Preserve closing inline formatting tags in text
-          const inlineFormattingTags = ['strong', 'b', 'em', 'i', 'u', 'code'];
-          if (inlineFormattingTags.includes(tagName)) {
-            currentText += html.substring(i, tagEnd + 1);
-            i = tagEnd + 1;
-            continue;
           }
           i = tagEnd + 1;
           continue;
@@ -224,11 +224,15 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
                 }
               }
               
-              // Regular link
+              // Regular link - parse inline formatting (e.g. <u>, <strong>) in link text so tags are not shown
+              const linkContent = linkText || href;
+              const linkSegments = parseInlineFormatting(linkContent);
+              const strippedContent = linkSegments.map((s) => s.text).join('');
               elements.push({
                 type: 'link',
-                content: decodeHtmlEntities(linkText || href),
+                content: decodeHtmlEntities(strippedContent),
                 href,
+                ...(linkSegments.length > 0 ? { segments: linkSegments } : undefined),
               });
               i = closingIndex + closingTag.length;
               continue;
@@ -345,10 +349,8 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
           }
         }
         
-        // Handle inline formatting tags - preserve them in text for later parsing
-        const inlineFormattingTags = ['strong', 'b', 'em', 'i', 'u', 'code'];
-        if (inlineFormattingTags.includes(tagName)) {
-          // Add the tag to currentText so it's preserved for inline formatting parsing
+        // Handle opening inline formatting tags - preserve in text for later parsing
+        if (tagName && inlineFormattingTagNames.includes(tagName)) {
           currentText += html.substring(i, tagEnd + 1);
           i = tagEnd + 1;
           continue;
@@ -370,11 +372,12 @@ export function parseHtmlContent(html: string, media?: any): ParsedElement[] {
     elements.push(...textWithYouTube);
   }
   
-  // Process all text elements to parse inline formatting
+  // Process all text elements to parse inline formatting (strips tags like </strong> from display)
   return elements.map(element => {
     if (element.type === 'text' || element.type === 'heading') {
       const segments = parseInlineFormatting(element.content);
-      if (segments.some(s => s.styles && Object.keys(s.styles).length > 0)) {
+      // Always use segments so that any raw HTML tags in content are stripped and never shown
+      if (segments.length > 0) {
         return {
           ...element,
           type: element.type === 'text' ? 'formattedText' : element.type,
@@ -460,10 +463,11 @@ function parseInlineFormatting(text: string): TextSegment[] {
     });
   }
   
-  // If no formatting was found, return single segment
+  // If no formatting was found, return single segment (strip any raw tags so they never show)
   if (segments.length === 0) {
+    const decoded = decodeHtmlEntities(text).replace(/<[^>]*>/g, '');
     segments.push({
-      text: decodeHtmlEntities(text),
+      text: decoded,
     });
   }
   

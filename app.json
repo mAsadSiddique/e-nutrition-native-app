@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Energy Healing",
-    "slug": "energy-healing-app",
+    "slug": "nutrilife-app",
     "version": "1.0.0",
     "assetBundlePatterns": [
       "**/*"

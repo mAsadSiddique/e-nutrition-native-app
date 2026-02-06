@@ -1,41 +1,53 @@
-import AuthButton from '@/src/components/auth/AuthButton';
-import AuthCodeInput from '@/src/components/auth/AuthCodeInput';
-import AuthLayout from '@/src/components/auth/AuthLayout';
-import { useResetPassword } from '@/src/services/authApi';
-import { TypographyStyles } from '@/src/theme/theme';
-import { AppRoutes } from '@/src/utils/enums';
-import { toast } from '@/src/utils/toast';
-import { Ionicons } from '@expo/vector-icons';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import * as yup from 'yup';
+import AuthButton from "@/src/components/auth/AuthButton";
+import AuthCodeInput from "@/src/components/auth/AuthCodeInput";
+import AuthLayout from "@/src/components/auth/AuthLayout";
+import { useResetPassword } from "@/src/services/authApi";
+import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes } from "@/src/utils/enums";
+import { toast } from "@/src/utils/toast";
+import { Ionicons } from "@expo/vector-icons";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import {
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import * as yup from "yup";
 
 // Validation schema
 const resetPasswordSchema = yup.object().shape({
   phoneNumber: yup
     .string()
-    .required('Phone number is required')
-    .matches(/^\+?[1-9]\d{1,14}$/, 'Please enter a valid phone number with country code'),
+    .required("Phone number is required")
+    .matches(
+      /^\+?[1-9]\d{1,14}$/,
+      "Please enter a valid phone number with country code",
+    ),
   code: yup
     .string()
-    .required('Please enter the verification code')
-    .length(6, 'Verification code must be 6 digits')
-    .matches(/^\d+$/, 'Verification code must contain only numbers'),
+    .required("Please enter the verification code")
+    .length(6, "Verification code must be 6 digits")
+    .matches(/^\d+$/, "Verification code must contain only numbers"),
   password: yup
     .string()
-    .required('Password is required')
-    .min(8, 'Minimum 8 characters')
-    .matches(/[A-Z]/, 'One uppercase letter')
-    .matches(/[a-z]/, 'One lowercase letter')
-    .matches(/[0-9]/, 'One number')
-    .matches(/[^A-Za-z0-9]/, 'One special character'),
+    .required("Password is required")
+    .min(8, "Minimum 8 characters")
+    .matches(/[A-Z]/, "One uppercase letter")
+    .matches(/[a-z]/, "One lowercase letter")
+    .matches(/[0-9]/, "One number")
+    .matches(/[^A-Za-z0-9]/, "One special character"),
   confirmPassword: yup
     .string()
-    .required('Please confirm your password')
-    .oneOf([yup.ref('password')], 'Passwords do not match'),
+    .required("Please confirm your password")
+    .oneOf([yup.ref("password")], "Passwords do not match"),
 });
 
 type ResetPasswordFormData = yup.InferType<typeof resetPasswordSchema>;
@@ -56,19 +68,19 @@ export default function ResetPasswordScreen() {
   } = useForm<ResetPasswordFormData>({
     resolver: yupResolver(resetPasswordSchema),
     defaultValues: {
-      phoneNumber: '',
-      code: '',
-      password: '',
-      confirmPassword: '',
+      phoneNumber: "",
+      code: "",
+      password: "",
+      confirmPassword: "",
     },
-    mode: 'onChange',
+    mode: "onChange",
   });
 
-  const passwordValue = watch('password');
+  const passwordValue = watch("password");
 
   const onSubmit = (data: ResetPasswordFormData) => {
     if (!email) {
-      toast.error('Email address is missing');
+      toast.error("Email address is missing");
       return;
     }
 
@@ -83,7 +95,7 @@ export default function ResetPasswordScreen() {
       {
         onSuccess: (response: any) => {
           if (response.success || response.status === 200) {
-            toast.success('Password reset successfully!');
+            toast.success("Password reset successfully!");
             router.replace(AppRoutes.AUTH_SIGN_IN_EMAIL);
           }
         },
@@ -96,10 +108,10 @@ export default function ResetPasswordScreen() {
               toast.error(errorData.message);
             }
           } else {
-            toast.error('Failed to reset password. Please try again.');
+            toast.error("Failed to reset password. Please try again.");
           }
         },
-      }
+      },
     );
   };
 
@@ -107,8 +119,8 @@ export default function ResetPasswordScreen() {
     <AuthLayout>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
           style={styles.scrollView}
@@ -121,10 +133,9 @@ export default function ResetPasswordScreen() {
             <View style={styles.headerSection}>
               <Text style={styles.title}>Reset Password</Text>
               <Text style={styles.subtitle}>
-                {email 
+                {email
                   ? `Enter your phone number, the verification code sent to ${email}, and your new password.`
-                  : 'Enter your phone number, verification code, and your new password to reset your account.'
-                }
+                  : "Enter your phone number, verification code, and your new password to reset your account."}
               </Text>
             </View>
 
@@ -147,11 +158,12 @@ export default function ResetPasswordScreen() {
                     />
                   )}
                 />
-                {(isSubmitted || touchedFields.phoneNumber) && errors.phoneNumber && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    {errors.phoneNumber.message}
-                  </Text>
-                )}
+                {(isSubmitted || touchedFields.phoneNumber) &&
+                  errors.phoneNumber && (
+                    <Text style={[styles.validationText, styles.invalidText]}>
+                      {errors.phoneNumber.message}
+                    </Text>
+                  )}
               </View>
 
               <View style={styles.inputGroup}>
@@ -202,7 +214,7 @@ export default function ResetPasswordScreen() {
                     disabled={loading}
                   >
                     <Ionicons
-                      name={showPassword ? 'eye' : 'eye-off'}
+                      name={showPassword ? "eye" : "eye-off"}
                       size={20}
                       color="#666"
                     />
@@ -210,7 +222,8 @@ export default function ResetPasswordScreen() {
                 </View>
                 {passwordValue && (
                   <Text style={styles.passwordHintText}>
-                    Must be at least 8 characters, include an uppercase letter, a lowercase letter, a number and a special character.
+                    Must be at least 8 characters, include an uppercase letter,
+                    a lowercase letter, a number and a special character.
                   </Text>
                 )}
                 {(isSubmitted || touchedFields.password) && errors.password && (
@@ -248,17 +261,18 @@ export default function ResetPasswordScreen() {
                     disabled={loading}
                   >
                     <Ionicons
-                      name={showConfirmPassword ? 'eye' : 'eye-off'}
+                      name={showConfirmPassword ? "eye" : "eye-off"}
                       size={20}
                       color="#666"
                     />
                   </TouchableOpacity>
                 </View>
-                {(isSubmitted || touchedFields.confirmPassword) && errors.confirmPassword && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    {errors.confirmPassword.message}
-                  </Text>
-                )}
+                {(isSubmitted || touchedFields.confirmPassword) &&
+                  errors.confirmPassword && (
+                    <Text style={[styles.validationText, styles.invalidText]}>
+                      {errors.confirmPassword.message}
+                    </Text>
+                  )}
               </View>
 
               <View style={styles.buttonContainer}>
@@ -292,24 +306,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 40,
     paddingBottom: 32,
     // paddingHorizontal: 20,
   },
   title: {
     ...TypographyStyles.h3,
-    textAlign: 'center',
-    color: '#000',
+    textAlign: "center",
+    color: "#000",
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 20,
   },
@@ -322,43 +336,43 @@ const styles = StyleSheet.create({
   },
   label: {
     ...TypographyStyles.body,
-    color: '#222',
+    color: "#222",
     marginBottom: 8,
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   input: {
     ...TypographyStyles.body,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     fontSize: 16,
-    color: '#222',
+    color: "#222",
   },
   passwordContainer: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
   },
   passwordInput: {
     ...TypographyStyles.body,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     paddingRight: 48,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     fontSize: 16,
-    color: '#222',
+    color: "#222",
     flex: 1,
   },
   eyeButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     top: 12,
     padding: 4,
@@ -369,14 +383,14 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   invalidText: {
-    color: '#dc3545',
+    color: "#dc3545",
   },
   passwordHintText: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#6c757d',
+    color: "#6c757d",
     marginTop: 8,
-    fontStyle: 'normal',
+    fontStyle: "normal",
   },
   buttonContainer: {
     marginTop: 8,

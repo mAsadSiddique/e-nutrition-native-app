@@ -1,37 +1,49 @@
-import AuthButton from '@/src/components/auth/AuthButton';
-import AuthLayout from '@/src/components/auth/AuthLayout';
-import { useSetPassword } from '@/src/services/authApi';
-import { TypographyStyles } from '@/src/theme/theme';
-import { toast } from '@/src/utils/toast';
-import { Ionicons } from '@expo/vector-icons';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import * as yup from 'yup';
+import AuthButton from "@/src/components/auth/AuthButton";
+import AuthLayout from "@/src/components/auth/AuthLayout";
+import { useSetPassword } from "@/src/services/authApi";
+import { TypographyStyles } from "@/src/theme/theme";
+import { toast } from "@/src/utils/toast";
+import { Ionicons } from "@expo/vector-icons";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import {
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import * as yup from "yup";
 
 // Validation schema
 const setPasswordSchema = yup.object().shape({
   password: yup
     .string()
-    .required('Password is required')
-    .min(8, 'Minimum 8 characters')
-    .matches(/[A-Z]/, 'One uppercase letter')
-    .matches(/[a-z]/, 'One lowercase letter')
-    .matches(/[0-9]/, 'One number')
-    .matches(/[^A-Za-z0-9]/, 'One special character'),
+    .required("Password is required")
+    .min(8, "Minimum 8 characters")
+    .matches(/[A-Z]/, "One uppercase letter")
+    .matches(/[a-z]/, "One lowercase letter")
+    .matches(/[0-9]/, "One number")
+    .matches(/[^A-Za-z0-9]/, "One special character"),
   confirmPassword: yup
     .string()
-    .required('Please confirm your password')
-    .oneOf([yup.ref('password')], 'Passwords do not match'),
+    .required("Please confirm your password")
+    .oneOf([yup.ref("password")], "Passwords do not match"),
 });
 
 type SetPasswordFormData = yup.InferType<typeof setPasswordSchema>;
 
 export default function SetPasswordScreen() {
   const router = useRouter();
-  const { email, code } = useLocalSearchParams<{ email: string; code: string }>();
+  const { email, code } = useLocalSearchParams<{
+    email: string;
+    code: string;
+  }>();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -45,13 +57,13 @@ export default function SetPasswordScreen() {
   } = useForm<SetPasswordFormData>({
     resolver: yupResolver(setPasswordSchema),
     defaultValues: {
-      password: '',
-      confirmPassword: '',
+      password: "",
+      confirmPassword: "",
     },
-    mode: 'onChange',
+    mode: "onChange",
   });
 
-  const passwordValue = watch('password');
+  const passwordValue = watch("password");
 
   const onSubmit = (data: SetPasswordFormData) => {
     // Call the set password API
@@ -63,20 +75,22 @@ export default function SetPasswordScreen() {
       {
         onSuccess: (response: any) => {
           if (response.status === 200) {
-            toast.success('Password reset successful!');
+            toast.success("Password reset successful!");
             // Navigate to sign-in with email pre-filled
             router.replace({
-              pathname: '/auth/sign-in/email',
+              pathname: "/auth/sign-in/email",
               params: { email },
             });
           }
         },
         onError: (error: any) => {
           const errorMessage =
-            error?.response?.data?.message || error?.message || 'Password reset failed';
+            error?.response?.data?.message ||
+            error?.message ||
+            "Password reset failed";
           toast.error(errorMessage);
         },
-      }
+      },
     );
   };
 
@@ -84,8 +98,8 @@ export default function SetPasswordScreen() {
     <AuthLayout>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScrollView
           style={styles.scrollView}
@@ -131,7 +145,7 @@ export default function SetPasswordScreen() {
                     disabled={loading}
                   >
                     <Ionicons
-                      name={showPassword ? 'eye' : 'eye-off'}
+                      name={showPassword ? "eye" : "eye-off"}
                       size={20}
                       color="#666"
                     />
@@ -139,7 +153,8 @@ export default function SetPasswordScreen() {
                 </View>
                 {passwordValue && (
                   <Text style={styles.passwordHintText}>
-                    Must be at least 8 characters, include an uppercase letter, a lowercase letter, a number and a special character.
+                    Must be at least 8 characters, include an uppercase letter,
+                    a lowercase letter, a number and a special character.
                   </Text>
                 )}
                 {(isSubmitted || touchedFields.password) && errors.password && (
@@ -177,17 +192,18 @@ export default function SetPasswordScreen() {
                     disabled={loading}
                   >
                     <Ionicons
-                      name={showConfirmPassword ? 'eye' : 'eye-off'}
+                      name={showConfirmPassword ? "eye" : "eye-off"}
                       size={20}
                       color="#666"
                     />
                   </TouchableOpacity>
                 </View>
-                {(isSubmitted || touchedFields.confirmPassword) && errors.confirmPassword && (
-                  <Text style={[styles.validationText, styles.invalidText]}>
-                    {errors.confirmPassword.message}
-                  </Text>
-                )}
+                {(isSubmitted || touchedFields.confirmPassword) &&
+                  errors.confirmPassword && (
+                    <Text style={[styles.validationText, styles.invalidText]}>
+                      {errors.confirmPassword.message}
+                    </Text>
+                  )}
               </View>
 
               <View style={styles.buttonContainer}>
@@ -221,24 +237,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 40,
     paddingBottom: 32,
     // paddingHorizontal: 20,
   },
   title: {
     ...TypographyStyles.h3,
-    textAlign: 'center',
-    color: '#000',
+    textAlign: "center",
+    color: "#000",
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 8,
   },
   subtitle: {
     ...TypographyStyles.body,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 20,
   },
@@ -251,32 +267,32 @@ const styles = StyleSheet.create({
   },
   label: {
     ...TypographyStyles.body,
-    color: '#222',
+    color: "#222",
     marginBottom: 8,
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   passwordContainer: {
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
   },
   passwordInput: {
     ...TypographyStyles.body,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     paddingRight: 48,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     fontSize: 16,
-    color: '#222',
+    color: "#222",
     flex: 1,
   },
   eyeButton: {
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     top: 12,
     padding: 4,
@@ -287,14 +303,14 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   invalidText: {
-    color: '#dc3545',
+    color: "#dc3545",
   },
   passwordHintText: {
     fontSize: 12,
     lineHeight: 18,
-    color: '#6c757d',
+    color: "#6c757d",
     marginTop: 8,
-    fontStyle: 'normal',
+    fontStyle: "normal",
   },
   buttonContainer: {
     marginTop: 8,

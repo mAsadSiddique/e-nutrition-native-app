@@ -86,7 +86,8 @@ export default function SignInScreen() {
 
           // Handle wishlist data from login response
           if (response?.data?.userWishlist) {
-            const { blogsWishlist, categoriesWishlist } = response?.data?.userWishlist;
+            const { blogsWishlist, categoriesWishlist } =
+              response?.data?.userWishlist;
             setWishlist({
               blogsWishlist: blogsWishlist || [],
               categoriesWishlist: categoriesWishlist || null,
@@ -99,8 +100,11 @@ export default function SignInScreen() {
           }
 
           toast.success(response.message || "Login successful");
-          router.replace(response?.data?.userWishlist ? AppRoutes.HOME_INDEX : AppRoutes.CATEGORY_SELECTION);
-
+          router.replace(
+            response?.data?.userWishlist
+              ? AppRoutes.HOME_INDEX
+              : AppRoutes.CATEGORY_SELECTION,
+          );
         },
         onError: (error: any) => {
           const apiMessage = error?.response?.data?.message;
@@ -111,7 +115,7 @@ export default function SignInScreen() {
             toast.error("Login failed, please try again");
           }
         },
-      }
+      },
     );
   };
 

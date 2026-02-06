@@ -1,5 +1,14 @@
-import React, { useMemo } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import React, { useMemo } from "react";
+import {
+    Image,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
+} from "react-native";
 
 export interface RecommendedItem {
   id: number;
@@ -17,7 +26,14 @@ interface Props {
   visible?: number; // how many cards visible at once (default 2)
 }
 
-export default function RecommendedRow({ items, onPress, title = 'Recommended Blogs', padding = 16, gap = 12, visible = 2 }: Props) {
+export default function RecommendedRow({
+  items,
+  onPress,
+  title = "Recommended Blogs",
+  padding = 16,
+  gap = 12,
+  visible = 2,
+}: Props) {
   const { width: windowWidth } = useWindowDimensions();
 
   if (!Array.isArray(items) || items.length === 0) return null;
@@ -26,7 +42,10 @@ export default function RecommendedRow({ items, onPress, title = 'Recommended Bl
   const containerWidth = Math.min(windowWidth, 1100);
   const cardWidth = useMemo(() => {
     // Compute available width and split it into `visible` cards with `gap` spacing
-    const available = Math.max(containerWidth - padding * 2 - gap * (visible - 1), 320);
+    const available = Math.max(
+      containerWidth - padding * 2 - gap * (visible - 1),
+      320,
+    );
     const w = Math.floor(available / visible);
     // Keep card sizes within reasonable bounds for responsiveness
     return Math.max(220, Math.min(420, w));
@@ -45,8 +64,11 @@ export default function RecommendedRow({ items, onPress, title = 'Recommended Bl
         snapToInterval={snapInterval}
         snapToAlignment="start"
         decelerationRate="fast"
-        contentContainerStyle={[styles.scrollContainer, { paddingLeft: padding, paddingRight: padding + gap }]}
-        style={{ width: '100%' }}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          { paddingLeft: padding, paddingRight: padding + gap },
+        ]}
+        style={{ width: "100%" }}
         scrollEventThrottle={16}
       >
         {items.map((it, idx) => (
@@ -54,21 +76,41 @@ export default function RecommendedRow({ items, onPress, title = 'Recommended Bl
             key={it.id}
             activeOpacity={0.8}
             onPress={() => onPress?.(it)}
-            style={[styles.card, { width: cardWidth, marginRight: idx === items.length - 1 ? 0 : gap }]}
+            style={[
+              styles.card,
+              {
+                width: cardWidth,
+                marginRight: idx === items.length - 1 ? 0 : gap,
+              },
+            ]}
           >
             <View style={styles.imageWrapper}>
               {it.image ? (
-                <Image source={typeof it.image === 'string' ? { uri: it.image } : it.image} style={styles.image} resizeMode="cover" />
+                <Image
+                  source={
+                    typeof it.image === "string" ? { uri: it.image } : it.image
+                  }
+                  style={styles.image}
+                  resizeMode="cover"
+                />
               ) : (
                 <View style={[styles.image, styles.imagePlaceholder]} />
               )}
             </View>
             <View style={styles.cardText}>
-              <Text style={styles.cardTitle} numberOfLines={2} ellipsizeMode="tail">
+              <Text
+                style={styles.cardTitle}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
                 {it.title}
               </Text>
               {it.description ? (
-                <Text style={styles.cardDesc} numberOfLines={3} ellipsizeMode="tail">
+                <Text
+                  style={styles.cardDesc}
+                  numberOfLines={3}
+                  ellipsizeMode="tail"
+                >
                   {it.description}
                 </Text>
               ) : null}
@@ -87,51 +129,61 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: 12,
-    color: '#000',
+    color: "#000",
   },
   scrollContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
 
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: "#f0f0f0",
     // elevation / shadow for visual separation
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
       android: { elevation: 3 },
-      default: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      default: {
+        shadowColor: "#000",
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+      },
     }),
   },
   imageWrapper: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 16 / 10,
-    backgroundColor: '#f3f3f3',
+    backgroundColor: "#f3f3f3",
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   imagePlaceholder: {
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
   },
   cardText: {
     padding: 12,
   },
   cardTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#111',
+    fontWeight: "700",
+    color: "#111",
     marginBottom: 6,
   },
   cardDesc: {
     fontSize: 13,
-    color: '#666',
+    color: "#666",
     lineHeight: 18,
   },
 });

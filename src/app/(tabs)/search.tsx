@@ -1,34 +1,49 @@
-
-import { useBlogsListing, useBlogWishlistToggle } from '@/src/services';
-import { useAuth } from '@/src/store/auth/hook';
-import { useWishlistHandler } from '@/src/store/wishlist/hook';
-import { useWishlistSelector } from '@/src/store/wishlist/selector';
-import { TypographyStyles } from '@/src/theme/theme';
-import { AppRoutes, buildRoute } from '@/src/utils/enums';
-import { toast } from '@/src/utils/toast';
-import type { TBlogsListing } from '@/src/utils/types/blogs';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, FlatList, Image, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBlogsListing, useBlogWishlistToggle } from "@/src/services";
+import { useAuth } from "@/src/store/auth/hook";
+import { useWishlistHandler } from "@/src/store/wishlist/hook";
+import { useWishlistSelector } from "@/src/store/wishlist/selector";
+import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes, buildRoute } from "@/src/utils/enums";
+import { toast } from "@/src/utils/toast";
+import type { TBlogsListing } from "@/src/utils/types/blogs";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Animated,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SearchTab() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const [tabsAction, setTabsAction] = useState('');
+  const [tabsAction, setTabsAction] = useState("");
 
   // Tabs state (moved up so effect can use it)
-  const [selectedTab, setSelectedTab] = useState<'Latest' | 'Tags' | 'Blogs'>('Latest');
+  const [selectedTab, setSelectedTab] = useState<"Latest" | "Tags" | "Blogs">(
+    "Latest",
+  );
 
-  // Store measured tab widths and positions
-  const [latestTabWidth, setLatestTabWidth] = useState(0);
-  const [tagsTabWidth, setTagsTabWidth] = useState(0);
-  const [blogsTabWidth, setBlogsTabWidth] = useState(0);
-  const [latestTabX, setLatestTabX] = useState(0);
-  const [tagsTabX, setTagsTabX] = useState(0);
-  const [blogsTabX, setBlogsTabX] = useState(0);
+  // Container width for equal tab spacing (each tab = 1/3 width)
   const [containerWidth, setContainerWidth] = useState(0);
+  // Measured text widths so underline matches text (not full tab)
+  const [latestTextWidth, setLatestTextWidth] = useState(0);
+  const [tagsTextWidth, setTagsTextWidth] = useState(0);
+  const [blogsTextWidth, setBlogsTextWidth] = useState(0);
 
   // Animation values for tab transitions
   const underlinePosition = useRef(new Animated.Value(0)).current;
@@ -36,27 +51,26 @@ export default function SearchTab() {
   const latestOpacity = useRef(new Animated.Value(1)).current;
   const tagsOpacity = useRef(new Animated.Value(0)).current;
   const blogsOpacity = useRef(new Animated.Value(0)).current;
-  const isInitialized = useRef(false);
+  const isUnderlineInitialized = useRef(false);
 
   const isSlugLike = /^[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(tabsAction);
 
   // Only fetch blogs when user has entered a search query
-  const shouldFetchBlogs = tabsAction.trim() !== '';
-  
+  const shouldFetchBlogs = tabsAction.trim() !== "";
+
   const { data: blogsListing, isLoading } = useBlogsListing({
     ...(isSlugLike && { slug: tabsAction }),
-    ...(selectedTab === 'Latest' && tabsAction.trim() && { search: tabsAction }),
-    ...(selectedTab === 'Blogs' && tabsAction.trim() && { search: tabsAction }),
-    ...(selectedTab === 'Tags' && tabsAction.trim() && { tags: tabsAction }),
+    ...(selectedTab === "Latest" &&
+      tabsAction.trim() && { search: tabsAction }),
+    ...(selectedTab === "Blogs" && tabsAction.trim() && { search: tabsAction }),
+    ...(selectedTab === "Tags" && tabsAction.trim() && { tags: tabsAction }),
     enabled: shouldFetchBlogs,
-  })
+  });
 
-  const { blogsWishlist } = useWishlistSelector()
+  const { blogsWishlist } = useWishlistSelector();
   const { toggleBlogWishlist: toggleWishlistInStore } = useWishlistHandler();
-  const {
-    mutate: toggleBlogWishlist,
-    isPending: wishlistLoading,
-  } = useBlogWishlistToggle();
+  const { mutate: toggleBlogWishlist, isPending: wishlistLoading } =
+    useBlogWishlistToggle();
 
   // Helper function to strip HTML tags
   const stripHtml = (html: string) => {
@@ -94,7 +108,7 @@ export default function SearchTab() {
   };
 
   // Helper function to extract image URL from media object
-  const getImageUrlFromMedia = (media: TBlogsListing['media']): string => {
+  const getImageUrlFromMedia = (media: TBlogsListing["media"]): string => {
     if (!media || !media.images || typeof media.images !== "object") {
       return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
     }
@@ -104,7 +118,10 @@ export default function SearchTab() {
     }
     const firstKey = imageKeys[0];
     const imageUrl = media.images[firstKey];
-    return imageUrl || "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
+    return (
+      imageUrl ||
+      "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop"
+    );
   };
 
   // Transform blogs listing data for display
@@ -112,10 +129,11 @@ export default function SearchTab() {
     if (!blogsListing || !Array.isArray(blogsListing)) return [];
     return blogsListing.map((b: TBlogsListing) => {
       // Use excerpt if available, otherwise strip HTML from content as fallback
-      const description = b.excerpt
-        ? b.excerpt
-        : stripHtml(b.content || "");
-      const preview = description.length > 120 ? `${description.slice(0, 120).trim()}...` : description;
+      const description = b.excerpt ? b.excerpt : stripHtml(b.content || "");
+      const preview =
+        description.length > 120
+          ? `${description.slice(0, 120).trim()}...`
+          : description;
       const imageUrl = getImageUrlFromMedia(b.media);
       return {
         id: b.id,
@@ -129,53 +147,36 @@ export default function SearchTab() {
     });
   }, [blogsListing]);
 
-  // Recalculate X positions when containerWidth or text widths change
+  // Animate tab transitions: underline under text only (centered in each 1/3)
   useEffect(() => {
-    if (containerWidth === 0 || latestTabWidth === 0 || tagsTabWidth === 0 || blogsTabWidth === 0) return;
+    if (containerWidth <= 0) return;
 
-    const buttonWidth = containerWidth / 3;
+    const paddingHorizontal = 20;
+    const contentWidth = containerWidth - paddingHorizontal * 2;
+    const third = contentWidth / 3;
+    const isLatest = selectedTab === "Latest";
+    const isTags = selectedTab === "Tags";
+    const isBlogs = selectedTab === "Blogs";
 
-    // Calculate positions for each tab
-    const latestX = (buttonWidth / 2) - (latestTabWidth / 2);
-    const tagsX = buttonWidth + (buttonWidth / 2) - (tagsTabWidth / 2);
-    const blogsX = (buttonWidth * 2) + (buttonWidth / 2) - (blogsTabWidth / 2);
+    const textWidth = isLatest
+      ? latestTextWidth
+      : isTags
+        ? tagsTextWidth
+        : blogsTextWidth;
+    if (textWidth <= 0) return;
 
-    setLatestTabX(latestX);
-    setTagsTabX(tagsX);
-    setBlogsTabX(blogsX);
+    // Center underline under the text (account for tabContent paddingHorizontal: 20)
+    const targetX = isLatest
+      ? paddingHorizontal + (third - latestTextWidth) / 2
+      : isTags
+        ? paddingHorizontal + third + (third - tagsTextWidth) / 2
+        : paddingHorizontal + 2 * third + (third - blogsTextWidth) / 2;
+    const targetWidth = textWidth;
 
-    // Initialize if not already done
-    if (!isInitialized.current && selectedTab === 'Latest') {
-      underlinePosition.setValue(latestX);
-      underlineWidth.setValue(latestTabWidth);
-      isInitialized.current = true;
-    }
-  }, [containerWidth, latestTabWidth, tagsTabWidth, blogsTabWidth, selectedTab]);
-
-  // Animate tab transitions
-  useEffect(() => {
-    if (latestTabWidth === 0 || tagsTabWidth === 0 || blogsTabWidth === 0 || containerWidth === 0) return; // Wait for measurements
-
-    let targetX = 0;
-    let targetWidth = 0;
-    let isLatest = false;
-    let isTags = false;
-    let isBlogs = false;
-
-    const buttonWidth = containerWidth / 3;
-
-    if (selectedTab === 'Latest') {
-      targetX = (buttonWidth / 2) - (latestTabWidth / 2);
-      targetWidth = latestTabWidth;
-      isLatest = true;
-    } else if (selectedTab === 'Tags') {
-      targetX = buttonWidth + (buttonWidth / 2) - (tagsTabWidth / 2);
-      targetWidth = tagsTabWidth;
-      isTags = true;
-    } else if (selectedTab === 'Blogs') {
-      targetX = (buttonWidth * 2) + (buttonWidth / 2) - (blogsTabWidth / 2);
-      targetWidth = blogsTabWidth;
-      isBlogs = true;
+    if (!isUnderlineInitialized.current) {
+      underlinePosition.setValue(targetX);
+      underlineWidth.setValue(targetWidth);
+      isUnderlineInitialized.current = true;
     }
 
     Animated.parallel([
@@ -210,7 +211,18 @@ export default function SearchTab() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [selectedTab, latestTabWidth, tagsTabWidth, blogsTabWidth, containerWidth]);
+  }, [
+    selectedTab,
+    containerWidth,
+    latestTextWidth,
+    tagsTextWidth,
+    blogsTextWidth,
+    underlinePosition,
+    underlineWidth,
+    latestOpacity,
+    tagsOpacity,
+    blogsOpacity,
+  ]);
 
   const handleBlogPress = useCallback(
     (item: any) => {
@@ -218,24 +230,31 @@ export default function SearchTab() {
       const slug = item?.slug;
 
       if (!blogId || !slug) {
-        console.warn('[SearchTab] Missing required blogId or slug:', { blogId, slug });
+        console.warn("[SearchTab] Missing required blogId or slug:", {
+          blogId,
+          slug,
+        });
         return;
       }
 
       // Get the first categoryId from the blog's categories array
-      const categoryId = Array.isArray(item?.categories) && item.categories.length > 0
-        ? item.categories[0]
-        : undefined;
+      const categoryId =
+        Array.isArray(item?.categories) && item.categories.length > 0
+          ? item.categories[0]
+          : undefined;
 
       if (!categoryId) {
-        console.warn('[SearchTab] Missing categoryId for blog:', { blogId, slug });
+        console.warn("[SearchTab] Missing categoryId for blog:", {
+          blogId,
+          slug,
+        });
         return;
       }
 
       // Navigate to blog detail with required format: /blogs/{blogId}/{categoryId}/{slug}
       router.push(buildRoute.blogDetail(blogId, categoryId, slug) as any);
     },
-    [router]
+    [router],
   );
 
   const handleToggleWishlist = useCallback(
@@ -259,23 +278,35 @@ export default function SearchTab() {
           onSuccess: (data) => {
             // Show success toast based on action
             if (isCurrentlyInWishlist) {
-              toast.success('Removed from saved articles', 'Removed');
+              toast.success("Removed from saved articles", "Removed");
             } else {
-              toast.success('Added to saved articles', 'Saved');
+              toast.success("Added to saved articles", "Saved");
             }
           },
           onError: (error: any) => {
-            console.error('[SearchTab] ❌ Failed to toggle blog wishlist:', error);
+            console.error(
+              "[SearchTab] ❌ Failed to toggle blog wishlist:",
+              error,
+            );
             // Revert local state on error
             toggleWishlistInStore(blogId);
             // Show error toast
-            const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update wishlist';
-            toast.error(errorMessage, 'Error');
+            const errorMessage =
+              error?.response?.data?.message ||
+              error?.message ||
+              "Failed to update wishlist";
+            toast.error(errorMessage, "Error");
           },
-        }
+        },
       );
     },
-    [isAuthenticated, router, toggleWishlistInStore, toggleBlogWishlist, blogsWishlist]
+    [
+      isAuthenticated,
+      router,
+      toggleWishlistInStore,
+      toggleBlogWishlist,
+      blogsWishlist,
+    ],
   );
 
   const renderBlogItem = useCallback(
@@ -324,22 +355,31 @@ export default function SearchTab() {
         <View style={styles.divider} />
       </Pressable>
     ),
-    [handleBlogPress, handleToggleWishlist, blogsWishlist, wishlistLoading]
+    [handleBlogPress, handleToggleWishlist, blogsWishlist, wishlistLoading],
   );
 
   // Determine which data to display based on selected tab
   const displayData = useMemo(() => {
     // All tabs (Latest, Tags, Blogs) display blogs when there's data
-    if (selectedTab === 'Tags' || selectedTab === 'Latest' || selectedTab === 'Blogs') {
+    if (
+      selectedTab === "Tags" ||
+      selectedTab === "Latest" ||
+      selectedTab === "Blogs"
+    ) {
       return transformedBlogs;
     }
     return [];
   }, [selectedTab, transformedBlogs]);
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
       <View style={styles.searchBar}>
         <View style={styles.searchInput}>
-          <Ionicons name="search" size={18} color="#666" style={styles.searchIcon} />
+          <Ionicons
+            name="search"
+            size={18}
+            color="#666"
+            style={styles.searchIcon}
+          />
           <TextInput
             placeholder="Search nutrition articles, recipes"
             placeholderTextColor="#666"
@@ -351,113 +391,108 @@ export default function SearchTab() {
           />
         </View>
       </View>
-      {/* tabs selection... */}
-      <View
-        style={styles.tabsContainer}
-        onLayout={(event) => {
-          const { width } = event.nativeEvent.layout;
-          setContainerWidth(width);
-        }}
-      >
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => setSelectedTab('Latest')}
-          activeOpacity={0.8}
+      {/* tabs: full width, equal space */}
+      <View style={styles.tabContainer}>
+        <View
+          style={styles.tabContent}
+          onLayout={(event) =>
+            setContainerWidth(event.nativeEvent.layout.width)
+          }
         >
-          <View
-            onLayout={(event) => {
-              const { width: textWidth } = event.nativeEvent.layout;
-              setLatestTabWidth(textWidth);
-            }}
+          <Pressable
+            style={styles.tabButton}
+            onPress={() => setSelectedTab("Latest")}
           >
-            <Animated.Text
-              style={[
-                styles.tabText,
-                {
-                  color: latestOpacity.interpolate({
-                    inputRange: [0.5, 1],
-                    outputRange: ['#8e8e8e', '#1A8917'],
-                  }),
-                },
-                selectedTab === 'Latest' && { fontWeight: '500' },
-              ]}
+            <View
+              onLayout={(e) => setLatestTextWidth(e.nativeEvent.layout.width)}
+              style={styles.tabLabelWrap}
             >
-              Latest
-            </Animated.Text>
-          </View>
-        </TouchableOpacity>
+              <Animated.Text
+                style={[
+                  styles.tabText,
+                  {
+                    color: latestOpacity.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
+                      extrapolate: "clamp",
+                    }),
+                  },
+                  selectedTab === "Latest" && { fontWeight: "500" },
+                ]}
+              >
+                Latest
+              </Animated.Text>
+            </View>
+          </Pressable>
 
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => setSelectedTab('Tags')}
-          activeOpacity={0.8}
-        >
-          <View
-            onLayout={(event) => {
-              const { width: textWidth } = event.nativeEvent.layout;
-              setTagsTabWidth(textWidth);
-            }}
+          <Pressable
+            style={styles.tabButton}
+            onPress={() => setSelectedTab("Tags")}
           >
-            <Animated.Text
-              style={[
-                styles.tabText,
-                {
-                  color: tagsOpacity.interpolate({
-                    inputRange: [0.5, 1],
-                    outputRange: ['#8e8e8e', '#1A8917'],
-                  }),
-                },
-                selectedTab === 'Tags' && { fontWeight: '500' },
-              ]}
+            <View
+              onLayout={(e) => setTagsTextWidth(e.nativeEvent.layout.width)}
+              style={styles.tabLabelWrap}
             >
-              Tags
-            </Animated.Text>
-          </View>
-        </TouchableOpacity>
+              <Animated.Text
+                style={[
+                  styles.tabText,
+                  {
+                    color: tagsOpacity.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
+                      extrapolate: "clamp",
+                    }),
+                  },
+                  selectedTab === "Tags" && { fontWeight: "500" },
+                ]}
+              >
+                Tags
+              </Animated.Text>
+            </View>
+          </Pressable>
 
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => setSelectedTab('Blogs')}
-          activeOpacity={0.8}
-        >
-          <View
-            onLayout={(event) => {
-              const { width: textWidth } = event.nativeEvent.layout;
-              setBlogsTabWidth(textWidth);
-            }}
+          <Pressable
+            style={styles.tabButton}
+            onPress={() => setSelectedTab("Blogs")}
           >
-            <Animated.Text
-              style={[
-                styles.tabText,
-                {
-                  color: blogsOpacity.interpolate({
-                    inputRange: [0.5, 1],
-                    outputRange: ['#8e8e8e', '#1A8917'],
-                  }),
-                },
-                selectedTab === 'Blogs' && { fontWeight: '500' },
-              ]}
+            <View
+              onLayout={(e) => setBlogsTextWidth(e.nativeEvent.layout.width)}
+              style={styles.tabLabelWrap}
             >
-              Blogs
-            </Animated.Text>
-          </View>
-        </TouchableOpacity>
+              <Animated.Text
+                style={[
+                  styles.tabText,
+                  {
+                    color: blogsOpacity.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
+                      extrapolate: "clamp",
+                    }),
+                  },
+                  selectedTab === "Blogs" && { fontWeight: "500" },
+                ]}
+              >
+                Blogs
+              </Animated.Text>
+            </View>
+          </Pressable>
 
-        {/* Animated Underline */}
-        <Animated.View
-          style={[
-            styles.tabUnderline,
-            {
-              left: underlinePosition,
-              width: underlineWidth,
-            },
-          ]}
-        />
+          {/* Animated Underline */}
+          <Animated.View
+            style={[
+              styles.tabUnderline,
+              {
+                left: underlinePosition,
+                width: underlineWidth,
+              },
+            ]}
+          />
+        </View>
       </View>
-      {tabsAction.trim() === '' ? (
+      {tabsAction.trim() === "" ? (
         <View style={styles.emptyContainer}>
           <Image
-            source={require('@/src/assets/images/partial-react-logo.jpg')}
+            source={require("@/src/assets/images/partial-react-logo.jpg")}
             style={styles.emptyImage}
             resizeMode="contain"
           />
@@ -475,7 +510,7 @@ export default function SearchTab() {
               contentContainerStyle={styles.listContent}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
               ListEmptyComponent={
-                (shouldFetchBlogs && displayData.length === 0) ? (
+                shouldFetchBlogs && displayData.length === 0 ? (
                   <View style={styles.emptyContainer}>
                     <Text style={styles.emptyTitle}>No blogs found</Text>
                   </View>
@@ -497,35 +532,98 @@ const styles = StyleSheet.create({
   searchBar: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   input: {
     ...TypographyStyles.body,
-    backgroundColor: '#f2f2f2',
+    backgroundColor: "#f2f2f2",
     paddingVertical: 12,
     fontSize: 15,
     paddingHorizontal: 14,
     borderRadius: 10,
   },
-  searchInput: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: '#e6e6e6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 30 },
+  searchInput: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e6e6e6",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 30,
+  },
   searchIcon: { marginRight: 10, fontSize: 18 },
-  inputExpanded: { ...TypographyStyles.bodySans, flex: 1, paddingVertical: 6, paddingHorizontal: 0, backgroundColor: 'transparent', fontSize: 15 },
-
-  tabsContainer: { flexDirection: 'row', paddingHorizontal: 0, paddingTop: 8, paddingBottom: 8, position: 'relative', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  tabButton: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, position: 'relative' },
-  tabInner: { alignItems: 'center', paddingBottom: 8 },
-  tabText: { ...TypographyStyles.bodySmallSans, fontSize: 16, fontWeight: '400', color: '#8e8e8e', lineHeight: 20 },
-  tabTextActive: { color: '#1A8917', fontWeight: '500' },
-  tabUnderline: {
-    position: 'absolute',
-    bottom: 2,
-    left: 0,
-    height: 2,
-    backgroundColor: '#1A8917',
+  inputExpanded: {
+    ...TypographyStyles.bodySans,
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 0,
+    backgroundColor: "transparent",
+    fontSize: 15,
   },
 
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  emptyTitle: { ...TypographyStyles.h4, color: '#111', marginBottom: 20 },
+  tabContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    backgroundColor: "#fff",
+    width: "100%",
+  },
+  tabContent: {
+    ...TypographyStyles.body,
+    flexDirection: "row",
+    position: "relative",
+    paddingHorizontal: 20,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 0,
+    position: "relative",
+  },
+  tabLabelWrap: {
+    alignSelf: "center",
+  },
+  tabText: {
+    ...TypographyStyles.body,
+    fontSize: 14,
+    fontWeight: "400",
+    color: "#8e8e8e",
+    lineHeight: 20,
+  },
+  tabTextActive: { color: "#1A8917", fontWeight: "500" },
+  tabUnderline: {
+    position: "absolute",
+    bottom: -1,
+    left: 0,
+    width: 80,
+    height: 2,
+    backgroundColor: "#1A8917",
+  },
+
+  emptyContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  emptyTitle: { ...TypographyStyles.h4, color: "#111", marginBottom: 20 },
   emptyImage: { width: 220, height: 180, opacity: 0.95 },
 
-  tagCardGrid: { flex: 1, marginHorizontal: 6, paddingVertical: 16, paddingHorizontal: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#f0f0f0', borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  tagTextGrid: { ...TypographyStyles.bodySmallSans, color: '#111', textAlign: 'center' },
+  tagCardGrid: {
+    flex: 1,
+    marginHorizontal: 6,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tagTextGrid: {
+    ...TypographyStyles.bodySmallSans,
+    color: "#111",
+    textAlign: "center",
+  },
 
   // Blog card styles (matching main blogs page)
   listContent: {
@@ -537,24 +635,25 @@ const styles = StyleSheet.create({
   blogCard: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   blogCardPressed: {
-    backgroundColor: '#fafafa',
+    backgroundColor: "#fafafa",
   },
   blogContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   blogTextContent: {
     flex: 1,
     paddingRight: 16,
-    justifyContent: 'flex-start',
+    justifyContent: "flex-start",
   },
   blogTitle: {
-    ...TypographyStyles.h2,
-    fontSize: 22,
-    color: '#000',
+    ...TypographyStyles.body,
+    fontSize: 20,
+    fontWeight: '800',
+    color: "#000",
     lineHeight: 24,
     marginBottom: 8,
     letterSpacing: -0,
@@ -562,47 +661,45 @@ const styles = StyleSheet.create({
   blogDescription: {
     ...TypographyStyles.body,
     fontSize: 14,
-    color: '#6b6b6b',
+    color: "#6b6b6b",
     lineHeight: 20,
     marginBottom: 12,
-    fontWeight: '400',
+    fontWeight: "400",
   },
   blogMeta: {
     fontSize: 13,
-    color: '#6b6b6b',
-    fontWeight: '400',
+    color: "#6b6b6b",
+    fontWeight: "400",
   },
   blogImage: {
     width: 112,
     height: 112,
     borderRadius: 4,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
   },
   rightColumn: {
     width: 112,
     marginLeft: 8,
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
+    alignItems: "flex-end",
+    justifyContent: "flex-start",
   },
   metaRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 6,
     paddingRight: 0,
   },
   saveButton: {
     width: 36,
     height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   divider: {
     height: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     marginTop: 4,
   },
 });
-
-

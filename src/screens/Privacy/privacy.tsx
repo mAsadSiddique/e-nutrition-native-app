@@ -1,7 +1,13 @@
 import { ThemedText } from "@/src/components/themed-text";
 import { TypographyStyles } from "@/src/theme/theme";
 import React from "react";
-import { Dimensions, Linking, ScrollView, StyleSheet, View } from "react-native";
+import {
+    Dimensions,
+    Linking,
+    ScrollView,
+    StyleSheet,
+    View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -213,6 +219,5 @@ const styles = StyleSheet.create({
     color: "#00994C",
     fontSize: Math.max(18, Math.min(17, SCREEN_WIDTH * 0.043)),
     textDecorationLine: "underline",
-
   },
 });

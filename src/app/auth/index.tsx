@@ -1,10 +1,10 @@
-import AuthButton from '@/src/components/auth/AuthButton';
-import AuthLayout from '@/src/components/auth/AuthLayout';
-import { TypographyStyles } from '@/src/theme/theme';
-import { AppRoutes } from '@/src/utils/enums';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import AuthButton from "@/src/components/auth/AuthButton";
+import AuthLayout from "@/src/components/auth/AuthLayout";
+import { TypographyStyles } from "@/src/theme/theme";
+import { AppRoutes } from "@/src/utils/enums";
+import { useRouter } from "expo-router";
+import React from "react";
+import { StyleSheet, View } from "react-native";
 
 export default function AuthChoiceScreen() {
   const router = useRouter();
@@ -31,43 +31,43 @@ export default function AuthChoiceScreen() {
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    justifyContent: 'center',
-    width: '100%', 
+    justifyContent: "center",
+    width: "100%",
   },
   header: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical:20,
-     width: '100%', 
+    paddingVertical: 20,
+    width: "100%",
   },
   logo: {
     ...TypographyStyles.h2,
     marginBottom: 48,
-    color: '#222',
+    color: "#222",
   },
   title: {
     // ...TypographyStyles.h1,
     fontSize: 48,
     lineHeight: 56,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 16,
-    color: '#222',
-    width: '100%',
+    color: "#222",
+    width: "100%",
     paddingHorizontal: 10,
   },
   subtitle: {
     ...TypographyStyles.body,
     fontSize: 18,
     lineHeight: 24,
-    textAlign: 'center',
-    color: '#000000',
+    textAlign: "center",
+    color: "#000000",
     maxWidth: 350,
   },
   buttons: {
     paddingBottom: 40,
     paddingTop: 20,
-    width: '100%',
+    width: "100%",
   },
 });

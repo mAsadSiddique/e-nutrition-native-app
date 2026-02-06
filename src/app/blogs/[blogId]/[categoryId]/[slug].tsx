@@ -1,19 +1,18 @@
-import HtmlContentRenderer from '@/src/components/blog/HtmlContentRenderer';
-import RecommendedRow from '@/src/components/blog/RecommendedRow';
-import { SkeletonBlogDetail } from '@/src/components/ui/SkeletonLoader';
-import { useBlogsListing } from '@/src/services/blogApi';
-import { TypographyStyles } from '@/src/theme/theme';
-import { extractTags } from '@/src/utils/htmlParser';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import HtmlContentRenderer from "@/src/components/blog/HtmlContentRenderer";
+import RecommendedRow from "@/src/components/blog/RecommendedRow";
+import { SkeletonBlogDetail } from "@/src/components/ui/SkeletonLoader";
+import { useBlogsListing } from "@/src/services/blogApi";
+import { TypographyStyles } from "@/src/theme/theme";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
+import { Dimensions, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // note: no local dummy blogs used; fetching from API
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CONTAINER_PADDING = 16;
 const CARD_GAP = 12;
-const AVAILABLE_WIDTH = SCREEN_WIDTH - (CONTAINER_PADDING * 2);
+const AVAILABLE_WIDTH = SCREEN_WIDTH - CONTAINER_PADDING * 2;
 const CARD_WIDTH = Math.floor((AVAILABLE_WIDTH - CARD_GAP) / 2);
 
 export default function BlogDetailScreen() {
@@ -42,35 +41,25 @@ export default function BlogDetailScreen() {
 
   // Extract the blog from the array (useBlogsListing returns an array)
   const blog = useMemo(() => {
-    if (!specificBlogData || !Array.isArray(specificBlogData) || specificBlogData.length === 0) {
+    if (
+      !specificBlogData ||
+      !Array.isArray(specificBlogData) ||
+      specificBlogData.length === 0
+    ) {
       return null;
     }
     return specificBlogData[0];
   }, [specificBlogData]);
 
-  // Extract all tags from content and combine with API tags
+  // Use only API response tags (e.g. "nutrition", "health") — do not include HTML tag names from content
   const allTags = useMemo(() => {
     const apiTags = blog?.tags || [];
-    const contentTags = blog?.content ? extractTags(blog.content) : [];
-    
-    // Combine and deduplicate tags
     const combinedTags = new Set<string>();
-    
-    // Add API tags (these are usually topic tags like "nutrition", "health", etc.)
-    apiTags.forEach(tag => {
-      if (tag && typeof tag === 'string') {
+    apiTags.forEach((tag) => {
+      if (tag && typeof tag === "string") {
         combinedTags.add(tag.toLowerCase());
       }
     });
-    
-    // Add all content HTML tags (including "code", "p", "h1", etc.)
-    // The extractTags function already excludes structural tags like 'html', 'head', 'body', 'script', 'style'
-    contentTags.forEach(tag => {
-      if (tag && typeof tag === 'string') {
-        combinedTags.add(tag.toLowerCase());
-      }
-    });
-    
     return Array.from(combinedTags).sort();
   }, [blog]);
 
@@ -79,25 +68,29 @@ export default function BlogDetailScreen() {
     if (recommendedBlogsData && Array.isArray(recommendedBlogsData) && blog) {
       try {
         // Exclude the current blog id
-        const currentBlogId = typeof blog?.id === 'number' ? blog.id : Number(blog?.id);
+        const currentBlogId =
+          typeof blog?.id === "number" ? blog.id : Number(blog?.id);
         const filtered = recommendedBlogsData.filter((b: any) => {
-          const bId = typeof b?.id === 'number' ? b.id : Number(b?.id);
+          const bId = typeof b?.id === "number" ? b.id : Number(b?.id);
           return bId !== currentBlogId;
         });
 
         // Map to compact display shape (title, description, image)
         // Include blogId, categoryId, and slug so we can pass it when navigating
         const mapped = filtered.map((b: any) => {
-          const plain = (b.content || '').replace(/<[^>]*>/g, '');
-          const preview = plain.length > 120 ? `${plain.slice(0, 120).trim()}...` : plain;
-          const imageUrl = (b.media && b.media.images && typeof b.media.images === 'object')
-            ? b.media.images[Object.keys(b.media.images)[0]]
-            : 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop';
+          const plain = (b.content || "").replace(/<[^>]*>/g, "");
+          const preview =
+            plain.length > 120 ? `${plain.slice(0, 120).trim()}...` : plain;
+          const imageUrl =
+            b.media && b.media.images && typeof b.media.images === "object"
+              ? b.media.images[Object.keys(b.media.images)[0]]
+              : "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
 
           // Get first categoryId from blog's categories array
-          const blogCategoryId = Array.isArray(b?.categories) && b.categories.length > 0
-            ? b.categories[0]
-            : undefined;
+          const blogCategoryId =
+            Array.isArray(b?.categories) && b.categories.length > 0
+              ? b.categories[0]
+              : undefined;
 
           return {
             id: b.id,
@@ -111,7 +104,7 @@ export default function BlogDetailScreen() {
 
         setRecosState(mapped);
       } catch (err) {
-        console.error('[BlogDetail] Failed to process recommended blogs:', err);
+        console.error("[BlogDetail] Failed to process recommended blogs:", err);
         setRecosState([]);
       }
     } else {
@@ -151,7 +144,7 @@ export default function BlogDetailScreen() {
       >
         <Text style={styles.title}>{blog.title}</Text>
 
-        <HtmlContentRenderer html={blog.content || ''} media={blog.media} />
+        <HtmlContentRenderer html={blog.content || ""} media={blog.media} />
 
         {allTags && allTags.length > 0 && (
           <View style={styles.tagsContainer}>
@@ -186,39 +179,40 @@ export default function BlogDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   scrollContent: {
     padding: CONTAINER_PADDING,
     paddingBottom: 40, // Add space from bottom of screen to ensure cards are fully visible
   },
   title: {
-    ...TypographyStyles.h1,
-    fontSize: Math.max(22, Math.min(28, SCREEN_WIDTH * 0.07)),
+    ...TypographyStyles.body,
+    fontSize: Math.max(18, Math.min(24, SCREEN_WIDTH * 0.07)),
     marginBottom: 8,
     lineHeight: Math.max(30, Math.min(36, SCREEN_WIDTH * 0.09)),
-    color: '#000',
+    color: "#000",
+    fontWeight: '800'
   },
   meta: {
     ...TypographyStyles.bodySmall,
-    color: '#666',
+    color: "#666",
     marginBottom: 16,
     fontSize: Math.max(13, Math.min(15, SCREEN_WIDTH * 0.037)),
   },
   headerImage: {
-    width: '100%',
+    width: "100%",
     height: Math.max(200, Math.min(250, SCREEN_WIDTH * 0.6)),
     borderRadius: 12,
     marginBottom: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
   },
   paragraph: {
     ...TypographyStyles.body,
-    color: '#333',
+    color: "#333",
     marginBottom: 16,
     fontSize: Math.max(15, Math.min(17, SCREEN_WIDTH * 0.042)),
     lineHeight: Math.max(22, Math.min(26, SCREEN_WIDTH * 0.065)),
@@ -226,7 +220,7 @@ const styles = StyleSheet.create({
   contentHeading: {
     ...TypographyStyles.h1,
     fontSize: Math.max(20, Math.min(24, SCREEN_WIDTH * 0.055)),
-    color: '#000',
+    color: "#000",
     marginTop: 12,
     marginBottom: 6,
     lineHeight: Math.max(28, Math.min(32, SCREEN_WIDTH * 0.07)),
@@ -236,7 +230,7 @@ const styles = StyleSheet.create({
   },
   contentParagraph: {
     ...TypographyStyles.body,
-    color: '#333',
+    color: "#333",
     marginBottom: 6,
     fontSize: Math.max(15, Math.min(17, SCREEN_WIDTH * 0.042)),
     lineHeight: Math.max(22, Math.min(26, SCREEN_WIDTH * 0.065)),
@@ -249,7 +243,7 @@ const styles = StyleSheet.create({
     ...TypographyStyles.h2,
     fontSize: Math.max(20, Math.min(24, SCREEN_WIDTH * 0.06)),
     marginBottom: 16,
-    color: '#000',
+    color: "#000",
   },
   recommendedScrollView: {
     marginLeft: -CONTAINER_PADDING,
@@ -266,51 +260,51 @@ const styles = StyleSheet.create({
   hCard: {
     width: CARD_WIDTH,
     marginRight: CARD_GAP,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 12,
     marginBottom: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    overflow: "hidden",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   hCardContent: {
-    width: '100%',
+    width: "100%",
   },
   hImage: {
-    width: '100%',
+    width: "100%",
     height: Math.max(130, Math.min(170, CARD_WIDTH * 0.8)),
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
   },
   hCardTextContainer: {
     paddingHorizontal: 12,
     paddingVertical: 12,
     paddingTop: 10,
     paddingBottom: 12,
-    justifyContent: 'flex-start',
+    justifyContent: "flex-start",
   },
   hTitle: {
     ...TypographyStyles.h2,
     fontSize: Math.max(14, Math.min(16, Math.floor(CARD_WIDTH * 0.085))),
     lineHeight: Math.max(20, Math.min(22, Math.floor(CARD_WIDTH * 0.12))),
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
     marginBottom: 6,
   },
   hDescription: {
     ...TypographyStyles.bodySmall,
     fontSize: Math.max(12, Math.min(13, Math.floor(CARD_WIDTH * 0.075))),
-    lineHeight: Math.max(16, Math.min(18, Math.floor(CARD_WIDTH * 0.10))),
-    color: '#666',
+    lineHeight: Math.max(16, Math.min(18, Math.floor(CARD_WIDTH * 0.1))),
+    color: "#666",
     marginTop: 4,
   },
   center: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff'
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
   tagsContainer: {
     marginBottom: 16,
@@ -318,45 +312,45 @@ const styles = StyleSheet.create({
   tagsLabel: {
     ...TypographyStyles.bodySmall,
     fontSize: Math.max(13, Math.min(15, SCREEN_WIDTH * 0.037)),
-    color: '#666',
+    color: "#666",
     marginBottom: 8,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   tagsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginTop: 8,
   },
   tag: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
     marginRight: 8,
     marginBottom: 8,
   },
   tagText: {
     ...TypographyStyles.bodySmall,
     fontSize: Math.max(12, Math.min(13, SCREEN_WIDTH * 0.035)),
-    color: '#333',
-    textTransform: 'uppercase',
+    color: "#333",
+    textTransform: "uppercase",
   },
   linksContainer: {
     marginBottom: 16,
     padding: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: "#e0e0e0",
   },
   linksLabel: {
     ...TypographyStyles.bodySmall,
     fontSize: Math.max(13, Math.min(15, SCREEN_WIDTH * 0.037)),
-    color: '#666',
+    color: "#666",
     marginBottom: 8,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   linkItem: {
     marginBottom: 6,
@@ -364,15 +358,14 @@ const styles = StyleSheet.create({
   linkText: {
     ...TypographyStyles.bodySmall,
     fontSize: Math.max(13, Math.min(14, SCREEN_WIDTH * 0.037)),
-    color: '#0066cc',
-    textDecorationLine: 'underline',
+    color: "#0066cc",
+    textDecorationLine: "underline",
   },
   moreLinksText: {
     ...TypographyStyles.bodySmall,
     fontSize: Math.max(12, Math.min(13, SCREEN_WIDTH * 0.035)),
-    color: '#999',
-    fontStyle: 'italic',
+    color: "#999",
+    fontStyle: "italic",
     marginTop: 4,
   },
 });
-
