@@ -8,16 +8,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState, type FC } from "react";
 import {
-    Alert,
-    Image,
-    Linking,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -133,7 +133,7 @@ export default function ProfileTab() {
   // Redirect to sign-in if not authenticated (useEffect to avoid render-time navigation)
   useEffect(() => {
     if (!isLoggedIn) {
-      router.replace(AppRoutes.AUTH_SIGN_IN);
+      router.push(AppRoutes.AUTH_SIGN_IN);
     }
   }, [isLoggedIn, router]);
 

@@ -13,7 +13,7 @@ export default function BookmarksTab() {
   // Redirect to sign-in if not authenticated (useEffect to avoid render-time navigation)
   useEffect(() => {
     if (!isLoggedIn) {
-      router.replace(AppRoutes.AUTH_SIGN_IN);
+      router.push(AppRoutes.AUTH_SIGN_IN);
     }
   }, [isLoggedIn, router]);
 
