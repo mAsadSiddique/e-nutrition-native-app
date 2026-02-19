@@ -1,26 +1,24 @@
 import { SkeletonBlogCard } from "@/src/components/ui/SkeletonLoader";
+import { COLORS } from "@/src/constant/app-constants";
 import { useBlogsListing, useBlogWishlistToggle } from "@/src/services/blogApi";
 import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { useWishlistSelector } from "@/src/store/wishlist/selector";
 import { TypographyStyles } from "@/src/theme/theme";
 import { stripHtml } from "@/src/utils/blogs-helper";
-import { AppRoutes, buildRoute, UserAction } from "@/src/utils/enums";
+import { AppRoutes, buildRoute } from "@/src/utils/enums";
 import { formatDate } from "@/src/utils/format-date";
 import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
 import React, {
   useCallback,
-  useEffect,
   useMemo,
-  useRef,
-  useState,
 } from "react";
 
 import { useCurrentProfile } from "@/src/hooks";
+import { useGetCategories } from "@/src/services/categoryApi";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  Animated,
   FlatList,
   Image,
   Pressable,
@@ -34,24 +32,22 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function BlogListScreen() {
   const router = useRouter();
   const { isLoggedIn } = useCurrentProfile();
-  const { blogsWishlist, categoriesWishlist } = useWishlistSelector();
-
-  const [activeTab, setActiveTab] = useState<UserAction>(UserAction.For_YOU);
-
-  // Store measured tab widths
-  const [forYouTabWidth, setForYouTabWidth] = useState(0);
-  const [featuredTabWidth, setFeaturedTabWidth] = useState(0);
-  const [forYouTabX, setForYouTabX] = useState(0);
-  const [featuredTabX, setFeaturedTabX] = useState(0);
-
-  // Track if underline has been initialized
-  const isUnderlineInitialized = useRef(false);
-
-  // Animation values for tab transitions
-  const underlinePosition = useRef(new Animated.Value(0)).current;
-  const underlineWidth = useRef(new Animated.Value(0)).current;
-  const forYouOpacity = useRef(new Animated.Value(1)).current;
-  const featuredOpacity = useRef(new Animated.Value(0)).current;
+  const { blogsWishlist } = useWishlistSelector();
+  
+  // Get categoryId from query params
+  const { categoryId: categoryIdParam } = useLocalSearchParams<{
+    categoryId?: string;
+  }>();
+  
+  const categoryId = categoryIdParam ? Number(categoryIdParam) : undefined;
+  const { data: categoriesData } = useGetCategories();
+  
+  // Get category name for header
+  const categoryName = useMemo(() => {
+    if (!categoryId || !categoriesData) return null;
+    const category = categoriesData.find((cat) => cat.id === categoryId);
+    return category?.name || null;
+  }, [categoryId, categoriesData]);
 
   const {
     data: blogsListing,
@@ -59,65 +55,16 @@ export default function BlogListScreen() {
     refetch: refetchBlogsListing,
     error: blogsError,
   } = useBlogsListing({
-    ...(activeTab === UserAction.For_YOU && {
-      categoryIds: categoriesWishlist as number[],
-    }),
+    ...(categoryId && { categoryIds: [categoryId] }),
   });
 
   const { toggleBlogWishlist: toggleWishlistInStore } = useWishlistHandler();
   const { mutate: toggleBlogWishlist, isPending: wishlistLoading } =
     useBlogWishlistToggle();
 
-  // Animate tab transitions
-  useEffect(() => {
-    if (forYouTabWidth === 0 || featuredTabWidth === 0) return; // Wait for measurements
-
-    const isForYou = activeTab === UserAction.For_YOU;
-    const targetX = isForYou ? forYouTabX : featuredTabX;
-    const targetWidth = isForYou ? forYouTabWidth : featuredTabWidth;
-
-    Animated.parallel([
-      // Animate underline position with spring effect
-      Animated.spring(underlinePosition, {
-        toValue: targetX,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: false, // We need to animate layout properties
-      }),
-      // Animate underline width
-      Animated.spring(underlineWidth, {
-        toValue: targetWidth,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: false,
-      }),
-      // Animate text opacity for smooth color transition
-      Animated.timing(forYouOpacity, {
-        toValue: isForYou ? 1 : 0.5,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(featuredOpacity, {
-        toValue: isForYou ? 0.5 : 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [
-    activeTab,
-    forYouTabWidth,
-    featuredTabWidth,
-    forYouTabX,
-    featuredTabX,
-    underlinePosition,
-    underlineWidth,
-    forYouOpacity,
-    featuredOpacity,
-  ]);
-
-  const handleTabPress = useCallback((tab: UserAction) => {
-    setActiveTab(tab);
-  }, []);
+  const handleBackPress = useCallback(() => {
+    router.back();
+  }, [router]);
 
   const handleBlogPress = useCallback(
     (item: any) => {
@@ -241,7 +188,7 @@ export default function BlogListScreen() {
                   : "bookmark-outline"
               }
               size={18}
-              color={blogsWishlist.includes(item.id) ? "#1A8917" : "#666"}
+              color={blogsWishlist.includes(item.id) ? COLORS.PRIMARY_GREEN : COLORS.TEXT_SECONDARY}
             />
           </TouchableOpacity>
         </View>
@@ -249,9 +196,7 @@ export default function BlogListScreen() {
       </Pressable>
     ),
     [
-      activeTab,
       handleBlogPress,
-      handleAuthorPress,
       blogsWishlist,
       handleToggleWishlist,
       wishlistLoading,
@@ -259,116 +204,20 @@ export default function BlogListScreen() {
   );
 
   const renderHeader = useCallback(() => {
-    const forYouTextColor = forYouOpacity.interpolate({
-      inputRange: [0, 0.5, 1],
-      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
-      extrapolate: "clamp",
-    });
-
-    const featuredTextColor = featuredOpacity.interpolate({
-      inputRange: [0, 0.5, 1],
-      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
-      extrapolate: "clamp",
-    });
-
+    const title = categoryName || "Blogs";
     return (
-      <>
         <View style={styles.headerContainer}>
-          <View style={styles.logoWrapper}>
-            <Text style={styles.logoText}>Energy Healing</Text>
-            {/* <Image
-                source={require("../../assets/logo.png")}
-                style={styles.mediumTitle}
-                resizeMode="contain"
-              /> */}
-          </View>
+        <TouchableOpacity
+          onPress={handleBackPress}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={COLORS.TEXT_PRIMARY} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{title}</Text>
+        <View style={styles.backButton} /> {/* Spacer for centering */}
         </View>
-        <View style={styles.tabContainer}>
-          <View style={styles.tabContent}>
-            <Pressable
-              style={styles.tabButton}
-              onPress={() => handleTabPress(UserAction.For_YOU)}
-              onLayout={(event) => {
-                const { width, x } = event.nativeEvent.layout;
-                setForYouTabWidth(width);
-                setForYouTabX(x);
-                // Initialize underline position and width on first measurement
-                if (
-                  activeTab === UserAction.For_YOU &&
-                  !isUnderlineInitialized.current
-                ) {
-                  underlinePosition.setValue(x);
-                  underlineWidth.setValue(width);
-                  isUnderlineInitialized.current = true;
-                }
-              }}
-            >
-              <Animated.Text
-                style={[
-                  styles.tabText,
-                  {
-                    color: forYouTextColor,
-                  },
-                  activeTab === UserAction.For_YOU && { fontWeight: "500" },
-                ]}
-              >
-                For you
-              </Animated.Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.tabButton}
-              onPress={() => handleTabPress(UserAction.FEATURED)}
-              onLayout={(event) => {
-                const { width, x } = event.nativeEvent.layout;
-                setFeaturedTabWidth(width);
-                setFeaturedTabX(x);
-                // Initialize underline position and width on first measurement
-                if (
-                  activeTab === UserAction.FEATURED &&
-                  !isUnderlineInitialized.current
-                ) {
-                  underlinePosition.setValue(x);
-                  underlineWidth.setValue(width);
-                  isUnderlineInitialized.current = true;
-                }
-              }}
-            >
-              <Animated.Text
-                style={[
-                  styles.tabText,
-                  {
-                    color: featuredTextColor,
-                  },
-                  activeTab === UserAction.FEATURED && { fontWeight: "500" },
-                ]}
-              >
-                Featured
-              </Animated.Text>
-            </Pressable>
-
-            {/* Animated Underline */}
-            <Animated.View
-              style={[
-                styles.tabUnderline,
-                {
-                  left: underlinePosition,
-                  width: underlineWidth,
-                },
-              ]}
-            />
-          </View>
-        </View>
-      </>
     );
-  }, [
-    activeTab,
-    handleTabPress,
-    underlinePosition,
-    underlineWidth,
-    forYouOpacity,
-    featuredOpacity,
-  ]);
+  }, [handleBackPress, categoryName]);
 
   // Helper function to extract image URL from media object
   const getImageUrlFromMedia = (media: TBlogsListing["media"]): string => {
@@ -415,7 +264,7 @@ export default function BlogListScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         {renderHeader()}
         <FlatList
           data={Array.from({ length: 5 })}
@@ -432,7 +281,7 @@ export default function BlogListScreen() {
 
   if (blogsError) {
     return (
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         {renderHeader()}
         <View style={styles.loadingContainer}>
           <Text style={styles.errorMessage}>
@@ -450,7 +299,7 @@ export default function BlogListScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <FlatList
         data={displayData}
         keyExtractor={(item) => `${item.id}`}
@@ -468,10 +317,9 @@ export default function BlogListScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Container styles
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.BACKGROUND_WHITE,
   },
   loadingContainer: {
     flex: 1,
@@ -480,99 +328,58 @@ const styles = StyleSheet.create({
     paddingTop: 40,
   },
   errorMessage: {
-    color: "#666",
+    color: COLORS.TEXT_SECONDARY,
     fontSize: 16,
     textAlign: "center",
     marginBottom: 12,
   },
   authTestButton: {
-    backgroundColor: "#1A8917",
+    backgroundColor: COLORS.PRIMARY_GREEN,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
   },
   authTestButtonText: {
-    color: "#fff",
+    color: COLORS.TAG_TEXT,
     fontWeight: "600",
   },
-
   listContent: {
     paddingBottom: 20,
   },
   separator: {
     height: 4,
   },
-  logoWrapper: {
-    width: "100%",
-    alignItems: "flex-start",
-  },
-  logoText: {
-    ...TypographyStyles.h2,
-    fontSize: 26,
-    fontWeight: "600",
-    letterSpacing: -0.5,
-  },
   headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: "#fff",
-    alignItems: "flex-start",
-  },
-  mediumTitle: {
-    width: 210, // logo visually bara
-    height: 130, // 🔥 real visible height (not screen height)
-    marginBottom: -20,
-    marginLeft: -70,
-  },
-
-  tabContainer: {
+    backgroundColor: COLORS.BACKGROUND_WHITE,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    backgroundColor: "#fff",
-    width: "100%",
+    borderBottomColor: COLORS.BORDER_LIGHT,
   },
-  tabContent: {
-    ...TypographyStyles.body,
-    flexDirection: "row",
-    position: "relative",
-    paddingHorizontal: 20,
+  backButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  tabButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 0,
-    marginRight: 28,
-    position: "relative",
-  },
-  tabText: {
-    ...TypographyStyles.body,
-    fontSize: 14,
-    fontWeight: "400",
-    color: "#8e8e8e",
-    lineHeight: 20,
-  },
-  tabTextActive: {
-    color: "#1A8917",
-    fontWeight: "500",
-  },
-  tabUnderline: {
-    position: "absolute",
-    bottom: -1,
-    left: 0,
-    width: 80, // Approximate width of tab button
-    height: 2,
-    backgroundColor: "#1A8917",
+  headerTitle: {
+    fontSize: 20,
+    marginLeft: 18,
+    fontWeight: "700",
+    color: COLORS.TEXT_PRIMARY,
+    letterSpacing: -0.5,
   },
 
-  // Blog card styles
   blogCard: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    // paddingBottom: 16,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.BACKGROUND_WHITE,
   },
   blogCardPressed: {
-    backgroundColor: "#fafafa",
+    backgroundColor: COLORS.PRESSED_BG,
   },
   blogHeader: {
     flexDirection: "row",
@@ -624,7 +431,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter-Regular",
     fontWeight: "800",
     fontSize: 20,
-    color: "#000",
+    color: COLORS.TEXT_PRIMARY,
     lineHeight: 24,
     marginBottom: 8,
     letterSpacing: -0,
@@ -632,14 +439,14 @@ const styles = StyleSheet.create({
   blogDescription: {
     ...TypographyStyles.body,
     fontSize: 14,
-    color: "#6b6b6b",
+    color: COLORS.TEXT_SECONDARY,
     lineHeight: 20,
     marginBottom: 12,
     fontWeight: "400",
   },
   blogMeta: {
     fontSize: 13,
-    color: "#6b6b6b",
+    color: COLORS.TEXT_SECONDARY,
     fontWeight: "400",
   },
   blogImage: {
@@ -664,7 +471,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: COLORS.BORDER_LIGHT,
     marginTop: 4,
   },
 });

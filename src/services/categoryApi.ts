@@ -5,12 +5,24 @@ import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 export interface SimpleCategory {
   id: number;
   name: string;
+  icon?: string;
+  image?: string;
+  subtitle?: string;
+  description?: string;
+  backgroundColor?: string;
+  [key: string]: any; // Allow other fields from API
 }
 
 export interface Category {
   id: number;
   name: string;
+  icon?: string;
+  image?: string;
+  subtitle?: string;
+  description?: string;
+  backgroundColor?: string;
   children?: Category[];
+  [key: string]: any; // Allow other fields from API
 }
 
 export const useGetCategories = (opts?: Partial<UseQueryOptions<SimpleCategory[], Error>>) => {
@@ -20,8 +32,17 @@ export const useGetCategories = (opts?: Partial<UseQueryOptions<SimpleCategory[]
       const response: any = await axios.get(SERVER_END_POINTS.CATEGORIES);
       // API may respond with { data: [...] } or directly with an array
       const list = response?.data?.data ?? response?.data ?? response ?? [];
-      // Only map top-level entries (ignore any nested 'children')
-      return (Array.isArray(list) ? list : []).map((item: any) => ({ id: item.id, name: item.name }));
+      // Map all available fields from API
+      return (Array.isArray(list) ? list : []).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        icon: item.icon,
+        image: item.image,
+        subtitle: item.subtitle,
+        description: item.description,
+        backgroundColor: item.backgroundColor,
+        ...item, // Include any other fields from API
+      }));
     },
     staleTime: 1000 * 60 * 5, // cache for 5 minutes
     refetchOnWindowFocus: false,
@@ -39,13 +60,19 @@ export const useGetCategoriesWithChildren = (opts?: Partial<UseQueryOptions<Cate
       const response: any = await axios.get(SERVER_END_POINTS.CATEGORIES);
       // API may respond with { data: [...] } or directly with an array
       const list = response?.data?.data ?? response?.data ?? response ?? [];
-      // Map categories including nested children
+      // Map categories including nested children and all fields
       const mapCategory = (item: any): Category => ({
         id: item.id,
         name: item.name,
+        icon: item.icon,
+        image: item.image,
+        subtitle: item.subtitle,
+        description: item.description,
+        backgroundColor: item.backgroundColor,
         children: Array.isArray(item.children) && item.children.length > 0
           ? item.children.map(mapCategory)
           : undefined,
+        ...item, // Include any other fields from API
       });
       return (Array.isArray(list) ? list : []).map(mapCategory);
     },

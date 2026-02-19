@@ -20,12 +20,9 @@ export default function EntryScreen() {
   useEffect(() => {
     if (!isReady || isLoading || hasNavigated) return;
     setHasNavigated(true);
-    if (isAuthenticated) {
-      router.replace(AppRoutes.TABS);
-    } else {
-      router.replace(AppRoutes.AUTH_SIGN_UP);
-    }
-  }, [isAuthenticated, isLoading, isReady, hasNavigated, router]);
+    // Always go to home screen, skip login
+    router.replace(AppRoutes.TABS);
+  }, [isReady, isLoading, hasNavigated, router]);
 
   return (
     <View style={styles.container}>
