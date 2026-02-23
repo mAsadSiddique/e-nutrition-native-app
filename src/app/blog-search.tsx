@@ -4,7 +4,7 @@ import { useBlogsListing, useBlogWishlistToggle } from "@/src/services";
 import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { useWishlistSelector } from "@/src/store/wishlist/selector";
 import { TypographyStyles } from "@/src/theme/theme";
-import { stripHtml } from "@/src/utils/blogs-helper";
+import { stripHtml } from "@/src/utils/blog-helpers";
 import { AppRoutes, buildRoute } from "@/src/utils/enums";
 import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
@@ -16,6 +16,7 @@ import {
   FlatList,
   Image,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
@@ -36,11 +37,24 @@ export default function SearchScreen() {
   const {
     data: blogsListing,
     isLoading,
+    refetch: refetchBlogs,
     error: blogsError,
   } = useBlogsListing({
     ...(shouldFetchBlogs && { search: trimmedQuery }),
     enabled: shouldFetchBlogs,
   });
+  
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const onRefresh = useCallback(async () => {
+    if (!shouldFetchBlogs) return;
+    setRefreshing(true);
+    try {
+      await refetchBlogs();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchBlogs, shouldFetchBlogs]);
 
   const { blogsWishlist } = useWishlistSelector();
   const { toggleBlogWishlist: toggleWishlistInStore } = useWishlistHandler();
@@ -331,6 +345,9 @@ export default function SearchScreen() {
           maxToRenderPerBatch={10}
           windowSize={10}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         />
       )}
     </SafeAreaView>

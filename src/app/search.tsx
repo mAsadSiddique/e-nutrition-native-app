@@ -4,7 +4,7 @@ import { useBlogsListing, useBlogWishlistToggle } from "@/src/services";
 import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { useWishlistSelector } from "@/src/store/wishlist/selector";
 import { TypographyStyles } from "@/src/theme/theme";
-import { stripHtml } from "@/src/utils/blogs-helper";
+import { stripHtml } from "@/src/utils/blog-helpers";
 import { AppRoutes, buildRoute } from "@/src/utils/enums";
 import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
@@ -12,14 +12,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-    FlatList,
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 

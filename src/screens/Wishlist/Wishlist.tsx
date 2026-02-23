@@ -3,21 +3,22 @@ import { useBlogsListing, useBlogWishlistToggle } from "@/src/services";
 import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { useWishlistSelector } from "@/src/store/wishlist/selector";
 import { TypographyStyles } from "@/src/theme/theme";
-import { stripHtml } from "@/src/utils/blogs-helper";
+import { stripHtml } from "@/src/utils/blog-helpers";
 import { formatDate } from "@/src/utils/format-date";
 import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
-    FlatList,
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  Image,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -46,6 +47,18 @@ export const Wishlist = () => {
     ids: shouldCallEndpoint ? validBlogIds : undefined,
     enabled: shouldCallEndpoint,
   });
+  
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const onRefresh = useCallback(async () => {
+    if (!shouldCallEndpoint) return;
+    setRefreshing(true);
+    try {
+      await refetchBlogsListing();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchBlogsListing, shouldCallEndpoint]);
 
   const { toggleBlogWishlist: toggleWishlistInStore } = useWishlistHandler();
   const { mutate: toggleBlogWishlist, isPending: wishlistLoading } =
@@ -275,6 +288,9 @@ export const Wishlist = () => {
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
         windowSize={10}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
     </SafeAreaView>
   );

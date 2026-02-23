@@ -1,24 +1,25 @@
 import {
   CATEGORIES_GRID_LIMIT,
   COLORS,
-  DEFAULT_IMAGE_URL,
-  DESCRIPTION_PREVIEW_LENGTH,
-  RECOMMENDED_BLOGS_LIMIT,
   getCategoryBackgroundColor,
   getCategoryIcon,
+  RECOMMENDED_BLOGS_LIMIT,
 } from "@/src/constant/app-constants";
 import { useCurrentProfile } from "@/src/hooks";
+import { useWishlistToggle } from "@/src/hooks/useWishlistToggle";
 import { useBlogsListing } from "@/src/services/blogApi";
-import { useGetCategories } from "@/src/services/categoryApi";
-import { stripHtml } from "@/src/utils/blogs-helper";
-import { AppRoutes, buildRoute } from "@/src/utils/enums";
-import type { TBlogsListing } from "@/src/utils/types/blogs";
+import { useGetCategories, useGetCategoriesWithChildren } from "@/src/services/categoryApi";
+import { transformBlogs } from "@/src/utils/blog-helpers";
+import { getCategoryNameById } from "@/src/utils/category-helpers";
+import { AppRoutes } from "@/src/utils/enums";
+import { handleBlogPress, handleCategoryPress } from "@/src/utils/navigation-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,60 +31,39 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function HomeIndex() {
   const router = useRouter();
   const { userName } = useCurrentProfile();
-  const { data: categoriesData, isLoading: categoriesLoading } = useGetCategories();
-
+  const { handleToggleWishlist, wishlistLoading, blogsWishlist } = useWishlistToggle();
+  
   // Fetch recommended blogs
-  const { data: blogsListing, isLoading: blogsLoading } = useBlogsListing({});
-
-  // Helper function to extract image URL from media object
-  const getImageUrlFromMedia = useCallback((media: TBlogsListing["media"]): string => {
-    if (!media?.images || typeof media.images !== "object") {
-      return DEFAULT_IMAGE_URL;
+  const { data: blogsListing, isLoading: blogsLoading, refetch: refetchBlogs } = useBlogsListing({});
+  const { data: categoriesData, isLoading: categoriesLoading, refetch: refetchCategories } = useGetCategories();
+  const { data: categoriesWithChildren } = useGetCategoriesWithChildren();
+  
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchBlogs(), refetchCategories()]);
+    } finally {
+      setRefreshing(false);
     }
-    const imageKeys = Object.keys(media.images);
-    if (imageKeys.length === 0) {
-      return DEFAULT_IMAGE_URL;
-    }
-    return media.images[imageKeys[0]] || DEFAULT_IMAGE_URL;
-  }, []);
+  }, [refetchBlogs, refetchCategories]);
 
   // Helper to get category name by ID
-  const getCategoryNameById = useCallback((categoryId: number): string => {
+  const getCategoryNameByIdCallback = useCallback((categoryId: number): string => {
     if (!categoriesData) return "";
-    const category = categoriesData.find((cat) => cat.id === categoryId);
-    return category?.name || "";
+    return getCategoryNameById(categoriesData, categoryId);
   }, [categoriesData]);
 
   // Transform blogs for recommended section
   const recommendedBlogs = useMemo(() => {
     if (!blogsListing || !Array.isArray(blogsListing)) return [];
-    return blogsListing
-      .slice(0, RECOMMENDED_BLOGS_LIMIT)
-      .map((b: TBlogsListing) => {
-        const description = b.excerpt || stripHtml(b.content || "");
-        const preview =
-          description.length > DESCRIPTION_PREVIEW_LENGTH
-            ? `${description.slice(0, DESCRIPTION_PREVIEW_LENGTH).trim()}...`
-            : description;
-        const imageUrl = getImageUrlFromMedia(b.media);
-        const categoryIds = Array.isArray(b.categories) ? b.categories : [];
-        const firstCategoryId = categoryIds[0];
-        const categoryName = firstCategoryId
-          ? getCategoryNameById(firstCategoryId)
-          : "";
-
-        return {
-          id: b.id,
-          title: b.title,
-          description: preview,
-          image: { uri: imageUrl },
-          categories: categoryIds,
-          categoryName,
-          slug: b.slug,
-          tag: b.tags && b.tags.length > 0 ? "TRENDING" : "NEW",
-        };
-      });
-  }, [blogsListing, getImageUrlFromMedia, getCategoryNameById]);
+    const blogs = blogsListing.slice(0, RECOMMENDED_BLOGS_LIMIT);
+    return transformBlogs(blogs, {
+      includeCategoryName: true,
+      getCategoryName: getCategoryNameByIdCallback,
+    });
+  }, [blogsListing, getCategoryNameByIdCallback]);
 
   // Transform API categories for display
   const displayCategories = useMemo(() => {
@@ -98,10 +78,6 @@ export default function HomeIndex() {
     return categoriesData.slice(0, CATEGORIES_GRID_LIMIT).map((category, index) => ({
       id: category.id,
       name: category.name,
-      subtitle:
-        category.subtitle ||
-        category.description?.toUpperCase() ||
-        category.name.toUpperCase(),
       icon: category.icon || getCategoryIcon(category.name),
       image: category.image,
       backgroundColor:
@@ -109,34 +85,18 @@ export default function HomeIndex() {
     }));
   }, [categoriesData]);
 
-  const handleBlogPress = useCallback(
+  const onBlogPress = useCallback(
     (item: any) => {
-      const blogId = item?.id;
-      const slug = item?.slug;
-      const categoryId =
-        Array.isArray(item?.categories) && item.categories.length > 0
-          ? item.categories[0]
-          : undefined;
-
-      if (!blogId || !slug || !categoryId) {
-        console.warn("[Home] Missing required blog data:", {
-          blogId,
-          slug,
-          categoryId,
-        });
-        return;
-      }
-
-      router.push(buildRoute.blogDetail(blogId, categoryId, slug) as any);
+      handleBlogPress(router, item);
     },
     [router]
   );
 
-  const handleCategoryPress = useCallback(
+  const onCategoryPress = useCallback(
     (categoryId: number) => {
-      router.push(`${AppRoutes.BLOGS}?categoryId=${categoryId}` as any);
+      handleCategoryPress(router, categoryId, categoriesWithChildren);
     },
-    [router]
+    [router, categoriesWithChildren]
   );
 
   const handleSearchPress = useCallback(() => {
@@ -157,6 +117,9 @@ export default function HomeIndex() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* Header Section */}
         <View style={styles.header}>
@@ -196,7 +159,7 @@ export default function HomeIndex() {
                 <Pressable
                   key={item.id}
                   style={styles.recommendedCard}
-                  onPress={() => handleBlogPress(item)}
+                  onPress={() => onBlogPress(item)}
                 >
                   <View style={styles.recommendedImageContainer}>
                     <Image
@@ -214,10 +177,50 @@ export default function HomeIndex() {
                     {item.title}
                   </Text>
                   {item.categoryName ? (
-                    <Text style={styles.recommendedMetaText} numberOfLines={1}>
-                      {item.categoryName}
-                    </Text>
-                  ) : null}
+                    <View style={styles.recommendedMetaRow}>
+                      <Text style={styles.recommendedMetaText} numberOfLines={1}>
+                        {item.categoryName}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={() => handleToggleWishlist(item.id)}
+                        accessibilityLabel="Save article"
+                        disabled={wishlistLoading}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={
+                            blogsWishlist.includes(item.id)
+                              ? "bookmark"
+                              : "bookmark-outline"
+                          }
+                          size={20}
+                          color={blogsWishlist.includes(item.id) ? COLORS.PRIMARY_GREEN : COLORS.TEXT_SECONDARY}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.recommendedMetaRow}>
+                      <View style={{ flex: 1 }} />
+                      <TouchableOpacity
+                        style={styles.saveButton}
+                        onPress={() => handleToggleWishlist(item.id)}
+                        accessibilityLabel="Save article"
+                        disabled={wishlistLoading}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={
+                            blogsWishlist.includes(item.id)
+                              ? "bookmark"
+                              : "bookmark-outline"
+                          }
+                          size={20}
+                          color={blogsWishlist.includes(item.id) ? COLORS.PRIMARY_GREEN : COLORS.TEXT_SECONDARY}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </Pressable>
               ))
             ) : (
@@ -245,7 +248,7 @@ export default function HomeIndex() {
                     styles.categoryCard,
                     { backgroundColor: category.backgroundColor },
                   ]}
-                  onPress={() => handleCategoryPress(category.id)}
+                  onPress={() => onCategoryPress(category.id)}
                   activeOpacity={0.7}
                 >
                   {category.image ? (
@@ -257,13 +260,18 @@ export default function HomeIndex() {
                   ) : (
                     <Ionicons
                       name={category.icon as any}
-                      size={32}
+                      size={22}
                       color={COLORS.PRIMARY_GREEN}
                       style={styles.categoryIcon}
                     />
                   )}
-                  <Text style={styles.categoryName}>{category.name}</Text>
-                  <Text style={styles.categorySubtitle}>{category.subtitle}</Text>
+                  <Text 
+                    style={styles.categoryName} 
+                    numberOfLines={2}
+                    ellipsizeMode="tail"
+                  >
+                    {category.name}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -379,12 +387,23 @@ const styles = StyleSheet.create({
     color: COLORS.TAG_TEXT,
     textTransform: "uppercase",
   },
+  saveButton: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   recommendedTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: COLORS.TEXT_PRIMARY,
     marginBottom: 8,
     lineHeight: 20,
+  },
+  recommendedMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   recommendedMeta: {
     flexDirection: "row",
@@ -394,6 +413,8 @@ const styles = StyleSheet.create({
   recommendedMetaText: {
     fontSize: 13,
     color: COLORS.TEXT_SECONDARY,
+    flex: 1,
+    marginRight: 8,
   },
   categoriesGrid: {
     flexDirection: "row",
@@ -401,35 +422,27 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   categoryCard: {
-    width: "47%",
+    width: "30.5%",
     aspectRatio: 1.1,
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     justifyContent: "center",
     alignItems: "center",
   },
   categoryIcon: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   categoryImage: {
-    width: 40,
-    height: 40,
-    marginBottom: 12,
+    width: 24,
+    height: 24,
+    marginBottom: 10,
   },
   categoryName: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "700",
     color: COLORS.TEXT_PRIMARY,
-    marginBottom: 4,
     textAlign: "center",
-  },
-  categorySubtitle: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: COLORS.TEXT_SECONDARY,
-    textTransform: "uppercase",
-    textAlign: "center",
-    letterSpacing: 0.5,
+    lineHeight: 18,
   },
   loadingText: {
     fontSize: 14,

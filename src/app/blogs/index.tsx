@@ -1,27 +1,27 @@
 import { SkeletonBlogCard } from "@/src/components/ui/SkeletonLoader";
 import { COLORS } from "@/src/constant/app-constants";
-import { useBlogsListing, useBlogWishlistToggle } from "@/src/services/blogApi";
-import { useWishlistHandler } from "@/src/store/wishlist/hook";
+import { useBlogsListing } from "@/src/services/blogApi";
 import { useWishlistSelector } from "@/src/store/wishlist/selector";
 import { TypographyStyles } from "@/src/theme/theme";
-import { stripHtml } from "@/src/utils/blogs-helper";
-import { AppRoutes, buildRoute } from "@/src/utils/enums";
-import { formatDate } from "@/src/utils/format-date";
-import { toast } from "@/src/utils/toast";
-import type { TBlogsListing } from "@/src/utils/types/blogs";
+import { buildRoute } from "@/src/utils/enums";
 import React, {
   useCallback,
   useMemo,
+  useState,
 } from "react";
 
-import { useCurrentProfile } from "@/src/hooks";
-import { useGetCategories } from "@/src/services/categoryApi";
+import { useWishlistToggle } from "@/src/hooks/useWishlistToggle";
+import { useGetCategoriesWithChildren } from "@/src/services/categoryApi";
+import { transformBlogs } from "@/src/utils/blog-helpers";
+import { findCategoryById } from "@/src/utils/category-helpers";
+import { handleBlogPress } from "@/src/utils/navigation-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   FlatList,
   Image,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -31,8 +31,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BlogListScreen() {
   const router = useRouter();
-  const { isLoggedIn } = useCurrentProfile();
   const { blogsWishlist } = useWishlistSelector();
+  const { handleToggleWishlist, wishlistLoading } = useWishlistToggle();
   
   // Get categoryId from query params
   const { categoryId: categoryIdParam } = useLocalSearchParams<{
@@ -40,14 +40,14 @@ export default function BlogListScreen() {
   }>();
   
   const categoryId = categoryIdParam ? Number(categoryIdParam) : undefined;
-  const { data: categoriesData } = useGetCategories();
+  const { data: categoriesWithChildren } = useGetCategoriesWithChildren();
   
-  // Get category name for header
+  // Get category name for header (handles nested categories)
   const categoryName = useMemo(() => {
-    if (!categoryId || !categoriesData) return null;
-    const category = categoriesData.find((cat) => cat.id === categoryId);
+    if (!categoryId || !categoriesWithChildren) return null;
+    const category = findCategoryById(categoriesWithChildren, categoryId);
     return category?.name || null;
-  }, [categoryId, categoriesData]);
+  }, [categoryId, categoriesWithChildren]);
 
   const {
     data: blogsListing,
@@ -57,44 +57,25 @@ export default function BlogListScreen() {
   } = useBlogsListing({
     ...(categoryId && { categoryIds: [categoryId] }),
   });
-
-  const { toggleBlogWishlist: toggleWishlistInStore } = useWishlistHandler();
-  const { mutate: toggleBlogWishlist, isPending: wishlistLoading } =
-    useBlogWishlistToggle();
+  
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchBlogsListing();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchBlogsListing]);
 
   const handleBackPress = useCallback(() => {
     router.back();
   }, [router]);
 
-  const handleBlogPress = useCallback(
+  const onBlogPress = useCallback(
     (item: any) => {
-      const blogId = item?.id;
-      const slug = item?.slug;
-
-      if (!blogId || !slug) {
-        console.warn("[BlogList] Missing required blogId or slug:", {
-          blogId,
-          slug,
-        });
-        return;
-      }
-
-      // Get the first categoryId from the blog's categories array
-      const categoryId =
-        Array.isArray(item?.categories) && item.categories.length > 0
-          ? item.categories[0]
-          : undefined;
-
-      if (!categoryId) {
-        console.warn("[BlogList] Missing categoryId for blog:", {
-          blogId,
-          slug,
-        });
-        return;
-      }
-
-      // Navigate to blog detail with required format: /blogs/{blogId}/{categoryId}/{slug}
-      router.push(buildRoute.blogDetail(blogId, categoryId, slug) as any);
+      handleBlogPress(router, item);
     },
     [router],
   );
@@ -106,48 +87,6 @@ export default function BlogListScreen() {
     [router],
   );
 
-  const handleToggleWishlist = useCallback(
-    (blogId: number) => {
-      // Check if user is authenticated before allowing save
-      if (!isLoggedIn) {
-        router.replace(AppRoutes.AUTH_SIGN_IN);
-        return;
-      }
-
-      // Check if blog is currently in wishlist to determine action
-      const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
-
-      // Call API to toggle wishlist
-      toggleBlogWishlist(
-        { id: blogId },
-        {
-          onSuccess: (data) => {
-            if (isCurrentlyInWishlist) {
-              toast.success("Removed from saved articles", "Removed");
-            } else {
-              toast.success("Added to saved articles", "Saved");
-            }
-          },
-          onError: (error: any) => {
-            // Show error toast
-            const errorMessage =
-              error?.response?.data?.message ||
-              error?.message ||
-              "Failed to update wishlist";
-            toast.error(errorMessage, "Error");
-          },
-        },
-      );
-      toggleWishlistInStore(blogId);
-    },
-    [
-      isLoggedIn,
-      router,
-      toggleWishlistInStore,
-      toggleBlogWishlist,
-      blogsWishlist,
-    ],
-  );
 
   const renderBlogItem = useCallback(
     ({ item }: { item: any }) => (
@@ -156,7 +95,7 @@ export default function BlogListScreen() {
           styles.blogCard,
           pressed && styles.blogCardPressed,
         ]}
-        onPress={() => handleBlogPress(item)}
+        onPress={() => onBlogPress(item)}
       >
         <View style={styles.blogContent}>
           <View style={styles.blogTextContent}>
@@ -168,7 +107,7 @@ export default function BlogListScreen() {
             </Text>
           </View>
           <View style={styles.rightColumn}>
-            <Pressable onPress={() => handleBlogPress(item)}>
+            <Pressable onPress={() => onBlogPress(item)}>
               <Image source={item.image} style={styles.blogImage} />
             </Pressable>
           </View>
@@ -196,7 +135,7 @@ export default function BlogListScreen() {
       </Pressable>
     ),
     [
-      handleBlogPress,
+      onBlogPress,
       blogsWishlist,
       handleToggleWishlist,
       wishlistLoading,
@@ -219,44 +158,13 @@ export default function BlogListScreen() {
     );
   }, [handleBackPress, categoryName]);
 
-  // Helper function to extract image URL from media object
-  const getImageUrlFromMedia = (media: TBlogsListing["media"]): string => {
-    if (!media || !media.images || typeof media.images !== "object") {
-      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
-    }
-    const imageKeys = Object.keys(media.images);
-    if (imageKeys.length === 0) {
-      return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
-    }
-    const firstKey = imageKeys[0];
-    const imageUrl = media.images[firstKey];
-    return (
-      imageUrl ||
-      "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop"
-    );
-  };
-
   // Transform blogs listing data for display
   // IMPORTANT: This hook must be called before any conditional returns
   const transformedBlogs = useMemo(() => {
     if (!blogsListing || !Array.isArray(blogsListing)) return [];
-    return blogsListing.map((b: TBlogsListing) => {
-      // Use excerpt if available, otherwise strip HTML from content as fallback
-      const description = b.excerpt ? b.excerpt : stripHtml(b.content || "");
-      const preview =
-        description.length > 120
-          ? `${description.slice(0, 120).trim()}...`
-          : description;
-      const imageUrl = getImageUrlFromMedia(b.media);
-      return {
-        id: b.id,
-        title: b.title,
-        description: preview,
-        date: formatDate(b.publishedAt),
-        image: { uri: imageUrl },
-        categories: b.categories || [],
-        slug: b.slug,
-      };
+    return transformBlogs(blogsListing, {
+      includeDate: true,
+      previewLength: 120,
     });
   }, [blogsListing]);
 
@@ -311,6 +219,9 @@ export default function BlogListScreen() {
         removeClippedSubviews={true}
         maxToRenderPerBatch={10}
         windowSize={10}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       />
     </SafeAreaView>
   );

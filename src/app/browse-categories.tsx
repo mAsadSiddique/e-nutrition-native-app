@@ -3,13 +3,14 @@ import {
   getCategoryBackgroundColor,
   getCategoryIcon,
 } from "@/src/constant/app-constants";
-import { useGetCategories } from "@/src/services/categoryApi";
-import { AppRoutes } from "@/src/utils/enums";
+import { useGetCategories, useGetCategoriesWithChildren } from "@/src/services/categoryApi";
+import { handleCategoryPress } from "@/src/utils/navigation-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,9 +28,20 @@ const GAP = 12;
 
 export default function BrowseCategoriesScreen() {
   const router = useRouter();
-  const { data: categoriesData, isLoading } = useGetCategories();
+  const { data: categoriesData, isLoading, refetch: refetchCategories } = useGetCategories();
+  const { data: categoriesWithChildren } = useGetCategoriesWithChildren();
   const { setCategoriesWishlist } = useWishlistHandler();
   const [searchQuery, setSearchQuery] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchCategories();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchCategories]);
 
   const filteredCategories = useMemo(() => {
     if (!categoriesData) return [];
@@ -53,12 +65,12 @@ export default function BrowseCategoriesScreen() {
     }));
   }, [filteredCategories]);
 
-  const handleCategoryPress = useCallback(
+  const onCategoryPress = useCallback(
     (categoryId: number) => {
       setCategoriesWishlist([categoryId]);
-      router.push(`${AppRoutes.BLOGS}?categoryId=${categoryId}` as any);
+      handleCategoryPress(router, categoryId, categoriesWithChildren);
     },
-    [setCategoriesWishlist, router]
+    [setCategoriesWishlist, router, categoriesWithChildren]
   );
 
   const handleBackPress = useCallback(() => {
@@ -107,6 +119,9 @@ export default function BrowseCategoriesScreen() {
           contentContainerStyle={styles.categoriesGrid}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         >
           {isLoading ? (
             <View style={styles.skeletonGrid}>
@@ -118,7 +133,7 @@ export default function BrowseCategoriesScreen() {
             displayCategories.map((category) => (
               <TouchableOpacity
                 key={category.id}
-                onPress={() => handleCategoryPress(category.id)}
+                onPress={() => onCategoryPress(category.id)}
                 style={[
                   styles.categoryCard,
                   { backgroundColor: category.backgroundColor },
@@ -134,13 +149,18 @@ export default function BrowseCategoriesScreen() {
                 ) : (
                   <Ionicons
                     name={category.icon as any}
-                    size={32}
+                    size={22}
                     color={COLORS.PRIMARY_GREEN}
                     style={styles.categoryIcon}
                   />
                 )}
-                <Text style={styles.categoryName}>{category.name}</Text>
-                <Text style={styles.categorySubtitle}>{category.subtitle}</Text>
+                <Text 
+                  style={styles.categoryName} 
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {category.name}
+                </Text>
               </TouchableOpacity>
             ))
           ) : (
@@ -227,41 +247,33 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   skeletonCard: {
-    width: "47%",
+    width: "30.5%",
     aspectRatio: 1.1,
     borderRadius: 16,
     backgroundColor: COLORS.SEARCH_BG,
   },
   categoryCard: {
-    width: "47%",
+    width: "30.5%",
     aspectRatio: 1.1,
     borderRadius: 16,
-    padding: 20,
+    padding: 12,
     justifyContent: "center",
     alignItems: "center",
   },
   categoryIcon: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   categoryImage: {
-    width: 40,
-    height: 40,
-    marginBottom: 12,
+    width: 24,
+    height: 24,
+    marginBottom: 10,
   },
   categoryName: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "700",
     color: COLORS.TEXT_PRIMARY,
-    marginBottom: 4,
     textAlign: "center",
-  },
-  categorySubtitle: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: COLORS.TEXT_SECONDARY,
-    textTransform: "uppercase",
-    textAlign: "center",
-    letterSpacing: 0.5,
+    lineHeight: 18,
   },
   emptyState: {
     width: "100%",

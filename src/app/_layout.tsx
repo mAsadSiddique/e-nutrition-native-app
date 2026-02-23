@@ -104,6 +104,7 @@ export default function RootLayout() {
                 <Stack.Screen name="category-selection" options={{ headerShown: false }} />
                 <Stack.Screen name="blog-search" options={{ headerShown: false }} />
                 <Stack.Screen name="browse-categories" options={{ headerShown: false }} />
+                <Stack.Screen name="category-detail" options={{ headerShown: false }} />
                 <Stack.Screen name="blogs" options={{ headerShown: false }} />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen name="auth" options={{ headerShown: false }} />
