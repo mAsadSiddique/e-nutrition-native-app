@@ -8,7 +8,7 @@ export const DEFAULT_IMAGE_URL = "https://images.unsplash.com/photo-149064593596
 
 // Limits
 export const RECOMMENDED_BLOGS_LIMIT = 5;
-export const CATEGORIES_GRID_LIMIT = 4;
+export const CATEGORIES_GRID_LIMIT = 6;
 export const DESCRIPTION_PREVIEW_LENGTH = 100;
 
 // Colors

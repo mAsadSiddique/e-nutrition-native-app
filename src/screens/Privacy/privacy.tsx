@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function PrivacyPolicy() {
-  const lastUpdated = new Date().toLocaleDateString();
+  const lastUpdated = "February 27, 2025";
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -64,6 +64,20 @@ export default function PrivacyPolicy() {
             Analytics tools may be used to measure engagement with our food,
             nutrition, and farming content. Data is aggregated and not used to
             personally identify you.
+          </ThemedText>
+
+          <ThemedText style={styles.label}>
+            Camera and photo library (profile picture)
+          </ThemedText>
+          <ThemedText style={styles.paragraph}>
+            When you set or update your profile picture, we may request access to
+            your device’s camera and/or photo library. Camera access is used
+            only so you can take a new photo for your profile. Photo library
+            access is used only so you can choose an existing image. Photos are
+            used solely as your profile picture within the app; they may be
+            cropped, uploaded to our servers, and displayed on your account.
+            Providing a profile picture is optional. You can revoke camera or
+            photo library access at any time in your device settings.
           </ThemedText>
         </View>
 
