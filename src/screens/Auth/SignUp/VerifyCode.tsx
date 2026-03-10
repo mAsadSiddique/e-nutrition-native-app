@@ -33,7 +33,7 @@ type SignUpCodeFormData = yup.InferType<typeof signUpCodeSchema>;
 export default function VerifyCode() {
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
-  const { signIn } = useAuth();
+  const { signIn, onSetProfile } = useAuth();
 
   // Timer state
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
@@ -129,7 +129,6 @@ export default function VerifyCode() {
       return;
     }
 
-    // Call the verification API
     verifyCode(
       {
         email,
@@ -137,15 +136,26 @@ export default function VerifyCode() {
       },
       {
         onSuccess: async (response: any) => {
-          if (response.status === 200) {
+          // Expecting shape:
+          // { message, data: { jwt, user }, status }
+          const jwt = response?.data?.jwt;
+          const user = response?.data?.user;
+
+          if (jwt) {
+            await signIn(jwt, user);
+            if (user) {
+              onSetProfile(user);
+            }
             toast.success(
-              response.message ||
+              response?.message ||
                 "Your account has been successfully verified!",
             );
-            if (response.data && response.data.token) {
-              await signIn(response.data.token);
-            }
-            router.replace(AppRoutes.AUTH_SIGN_IN_EMAIL);
+            // Go directly to main dashboard after verification
+            router.replace(AppRoutes.TABS_HOME);
+          } else {
+            toast.error(
+              "Verification succeeded but no login token was returned.",
+            );
           }
         },
         onError: (error: any) => {

@@ -163,15 +163,13 @@ export default function BrowseCategoriesScreen() {
                 </Text>
               </TouchableOpacity>
             ))
-          ) : (
-            searchQuery.trim() && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  No categories found for "{searchQuery}"
-                </Text>
-              </View>
-            )
-          )}
+          ) : searchQuery.trim() ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                No categories found for "{searchQuery}"
+              </Text>
+            </View>
+          ) : null}
         </ScrollView>
       </View>
     </SafeAreaView>

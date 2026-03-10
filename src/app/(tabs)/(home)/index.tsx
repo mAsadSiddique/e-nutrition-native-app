@@ -8,11 +8,17 @@ import {
 import { useCurrentProfile } from "@/src/hooks";
 import { useWishlistToggle } from "@/src/hooks/useWishlistToggle";
 import { useBlogsListing } from "@/src/services/blogApi";
-import { useGetCategories, useGetCategoriesWithChildren } from "@/src/services/categoryApi";
+import {
+  useGetCategories,
+  useGetCategoriesWithChildren,
+} from "@/src/services/categoryApi";
 import { transformBlogs } from "@/src/utils/blog-helpers";
 import { getCategoryNameById } from "@/src/utils/category-helpers";
 import { AppRoutes } from "@/src/utils/enums";
-import { handleBlogPress, handleCategoryPress } from "@/src/utils/navigation-helpers";
+import {
+  handleBlogPress,
+  handleCategoryPress,
+} from "@/src/utils/navigation-helpers";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -31,15 +37,24 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function HomeIndex() {
   const router = useRouter();
   const { userName } = useCurrentProfile();
-  const { handleToggleWishlist, wishlistLoading, blogsWishlist } = useWishlistToggle();
-  
+  const { handleToggleWishlist, wishlistLoading, blogsWishlist } =
+    useWishlistToggle();
+
   // Fetch recommended blogs
-  const { data: blogsListing, isLoading: blogsLoading, refetch: refetchBlogs } = useBlogsListing({});
-  const { data: categoriesData, isLoading: categoriesLoading, refetch: refetchCategories } = useGetCategories();
+  const {
+    data: blogsListing,
+    isLoading: blogsLoading,
+    refetch: refetchBlogs,
+  } = useBlogsListing({});
+  const {
+    data: categoriesData,
+    isLoading: categoriesLoading,
+    refetch: refetchCategories,
+  } = useGetCategories();
   const { data: categoriesWithChildren } = useGetCategoriesWithChildren();
-  
+
   const [refreshing, setRefreshing] = useState(false);
-  
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -50,10 +65,13 @@ export default function HomeIndex() {
   }, [refetchBlogs, refetchCategories]);
 
   // Helper to get category name by ID
-  const getCategoryNameByIdCallback = useCallback((categoryId: number): string => {
-    if (!categoriesData) return "";
-    return getCategoryNameById(categoriesData, categoryId);
-  }, [categoriesData]);
+  const getCategoryNameByIdCallback = useCallback(
+    (categoryId: number): string => {
+      if (!categoriesData) return "";
+      return getCategoryNameById(categoriesData, categoryId);
+    },
+    [categoriesData],
+  );
 
   // Transform blogs for recommended section
   const recommendedBlogs = useMemo(() => {
@@ -75,28 +93,30 @@ export default function HomeIndex() {
       return [];
     }
 
-    return categoriesData.slice(0, CATEGORIES_GRID_LIMIT).map((category, index) => ({
-      id: category.id,
-      name: category.name,
-      icon: category.icon || getCategoryIcon(category.name),
-      image: category.image,
-      backgroundColor:
-        category.backgroundColor || getCategoryBackgroundColor(index),
-    }));
+    return categoriesData
+      .slice(0, CATEGORIES_GRID_LIMIT)
+      .map((category, index) => ({
+        id: category.id,
+        name: category.name,
+        icon: category.icon || getCategoryIcon(category.name),
+        image: category.image,
+        backgroundColor:
+          category.backgroundColor || getCategoryBackgroundColor(index),
+      }));
   }, [categoriesData]);
 
   const onBlogPress = useCallback(
     (item: any) => {
       handleBlogPress(router, item);
     },
-    [router]
+    [router],
   );
 
   const onCategoryPress = useCallback(
     (categoryId: number) => {
       handleCategoryPress(router, categoryId, categoriesWithChildren);
     },
-    [router, categoriesWithChildren]
+    [router, categoriesWithChildren],
   );
 
   const handleSearchPress = useCallback(() => {
@@ -123,7 +143,9 @@ export default function HomeIndex() {
       >
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={styles.welcomeText}>Welcome back {userName ? `, ${userName}!` : '!'}</Text>
+          <Text style={styles.welcomeText}>
+            Welcome back {userName ? `, ${userName}!` : "!"}
+          </Text>
         </View>
 
         {/* Search Bar */}
@@ -153,7 +175,15 @@ export default function HomeIndex() {
             contentContainerStyle={styles.recommendedScroll}
           >
             {blogsLoading ? (
-              <Text style={styles.loadingText}>Loading...</Text>
+              <>
+                {[1, 2].map((skeletonId) => (
+                  <View key={skeletonId} style={styles.skeletonCard}>
+                    <View style={styles.skeletonImage} />
+                    <View style={styles.skeletonLineShort} />
+                    <View style={styles.skeletonLine} />
+                  </View>
+                ))}
+              </>
             ) : recommendedBlogs.length > 0 ? (
               recommendedBlogs.map((item) => (
                 <Pressable
@@ -178,7 +208,10 @@ export default function HomeIndex() {
                   </Text>
                   {item.categoryName ? (
                     <View style={styles.recommendedMetaRow}>
-                      <Text style={styles.recommendedMetaText} numberOfLines={1}>
+                      <Text
+                        style={styles.recommendedMetaText}
+                        numberOfLines={1}
+                      >
                         {item.categoryName}
                       </Text>
                       <TouchableOpacity
@@ -195,7 +228,11 @@ export default function HomeIndex() {
                               : "bookmark-outline"
                           }
                           size={20}
-                          color={blogsWishlist.includes(item.id) ? COLORS.PRIMARY_GREEN : COLORS.TEXT_SECONDARY}
+                          color={
+                            blogsWishlist.includes(item.id)
+                              ? COLORS.PRIMARY_GREEN
+                              : COLORS.TEXT_SECONDARY
+                          }
                         />
                       </TouchableOpacity>
                     </View>
@@ -216,7 +253,11 @@ export default function HomeIndex() {
                               : "bookmark-outline"
                           }
                           size={20}
-                          color={blogsWishlist.includes(item.id) ? COLORS.PRIMARY_GREEN : COLORS.TEXT_SECONDARY}
+                          color={
+                            blogsWishlist.includes(item.id)
+                              ? COLORS.PRIMARY_GREEN
+                              : COLORS.TEXT_SECONDARY
+                          }
                         />
                       </TouchableOpacity>
                     </View>
@@ -238,35 +279,45 @@ export default function HomeIndex() {
             </TouchableOpacity>
           </View>
           {categoriesLoading ? (
-            <Text style={styles.loadingText}>Loading categories...</Text>
+            <View style={styles.categoriesGrid}>
+              {[1, 2, 3, 4, 5, 6].map((skeletonId) => (
+                <View key={skeletonId} style={styles.categoryItem}>
+                  <View
+                    style={[styles.categoryCard, styles.skeletonCategoryCard]}
+                  >
+                    <View style={styles.skeletonCategoryIcon} />
+                  </View>
+                  <View style={styles.skeletonCategoryLine} />
+                </View>
+              ))}
+            </View>
           ) : displayCategories.length > 0 ? (
             <View style={styles.categoriesGrid}>
               {displayCategories.map((category) => (
                 <TouchableOpacity
                   key={category.id}
-                  style={[
-                    styles.categoryCard,
-                    { backgroundColor: category.backgroundColor },
-                  ]}
+                  style={styles.categoryItem}
                   onPress={() => onCategoryPress(category.id)}
                   activeOpacity={0.7}
                 >
-                  {category.image ? (
+                  <View
+                    style={[
+                      styles.categoryCard,
+                      { backgroundColor: category.backgroundColor },
+                    ]}
+                  >
                     <Image
-                      source={{ uri: category.image }}
+                      source={
+                        category.image
+                          ? { uri: category.image }
+                          : (OilFatImage as any)
+                      }
                       style={styles.categoryImage}
                       resizeMode="contain"
                     />
-                  ) : (
-                    <Ionicons
-                      name={category.icon as any}
-                      size={22}
-                      color={COLORS.PRIMARY_GREEN}
-                      style={styles.categoryIcon}
-                    />
-                  )}
-                  <Text 
-                    style={styles.categoryName} 
+                  </View>
+                  <Text
+                    style={styles.categoryName}
                     numberOfLines={2}
                     ellipsizeMode="tail"
                   >
@@ -421,21 +472,22 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 12,
   },
-  categoryCard: {
+  categoryItem: {
     width: "30.5%",
-    aspectRatio: 1.1,
-    borderRadius: 16,
-    padding: 12,
-    justifyContent: "center",
     alignItems: "center",
   },
-  categoryIcon: {
-    marginBottom: 10,
+  categoryCard: {
+    width: "100%",
+    aspectRatio: 1.1,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
   },
+  categoryIcon: {},
   categoryImage: {
-    width: 24,
-    height: 24,
-    marginBottom: 10,
+    width: 56,
+    height: 56,
   },
   categoryName: {
     fontSize: 13,
@@ -443,6 +495,31 @@ const styles = StyleSheet.create({
     color: COLORS.TEXT_PRIMARY,
     textAlign: "center",
     lineHeight: 18,
+    marginTop: 2,
+  },
+  skeletonCard: {
+    width: 280,
+    marginRight: 16,
+  },
+  skeletonImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: 12,
+    backgroundColor: "#EDEDED",
+    marginBottom: 12,
+  },
+  skeletonLineShort: {
+    width: "45%",
+    height: 10,
+    borderRadius: 8,
+    backgroundColor: "#EDEDED",
+    marginBottom: 8,
+  },
+  skeletonLine: {
+    width: "80%",
+    height: 10,
+    borderRadius: 8,
+    backgroundColor: "#EDEDED",
   },
   loadingText: {
     fontSize: 14,
@@ -455,5 +532,21 @@ const styles = StyleSheet.create({
     color: COLORS.TEXT_SECONDARY,
     textAlign: "center",
     padding: 20,
+  },
+  skeletonCategoryCard: {
+    backgroundColor: "#F2F2F2",
+  },
+  skeletonCategoryIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#E0E0E0",
+    marginBottom: 10,
+  },
+  skeletonCategoryLine: {
+    width: "70%",
+    height: 10,
+    borderRadius: 8,
+    backgroundColor: "#E0E0E0",
   },
 });

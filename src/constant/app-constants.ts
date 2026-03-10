@@ -13,8 +13,6 @@ export const DESCRIPTION_PREVIEW_LENGTH = 100;
 
 // Colors
 export const COLORS = {
-  FIRST_CATEGORY_BG: "#E0F2F1",
-  DEFAULT_CATEGORY_BG: "#F5F5F5",
   PRIMARY_GREEN: "#1A8917", // Primary green used across the app
   TEXT_PRIMARY: "#000",
   TEXT_SECONDARY: "#999",
@@ -25,6 +23,16 @@ export const COLORS = {
   BORDER_LIGHT: "#f0f0f0",
   PRESSED_BG: "#fafafa",
 } as const;
+
+// Soft pastel background colors for category cards
+const CATEGORY_CARD_BACKGROUNDS = [
+  "#FDEEEF", // soft pink
+  "#E8F6FF", // soft blue
+  "#E9F7F0", // soft green
+  "#FFF4E5", // soft orange
+  "#F3E8FF", // soft purple
+  "#F0F4FF", // soft indigo
+] as const;
 
 // Category Icon Mapping
 export const CATEGORY_ICON_MAP: Record<string, string> = {
@@ -53,8 +61,14 @@ export const getCategoryIcon = (categoryName: string): string => {
 };
 
 /**
- * Get category background color based on index
+ * Get category background color based on index.
+ * Cycles through a palette of soft pastel colors so each card
+ * gets a visually distinct background.
  */
 export const getCategoryBackgroundColor = (index: number): string => {
-  return index === 0 ? COLORS.FIRST_CATEGORY_BG : COLORS.DEFAULT_CATEGORY_BG;
+  const safeIndex =
+    Number.isFinite(index) && index >= 0 ? Math.floor(index) : 0;
+  return CATEGORY_CARD_BACKGROUNDS[
+    safeIndex % CATEGORY_CARD_BACKGROUNDS.length
+  ];
 };

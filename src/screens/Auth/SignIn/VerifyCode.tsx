@@ -33,7 +33,7 @@ type SignInCodeFormData = yup.InferType<typeof signInCodeSchema>;
 export default function VerifyCode() {
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
-  const { signIn } = useAuth();
+  const { signIn, onSetProfile } = useAuth();
   const [timeLeft, setTimeLeft] = useState(300);
   const [isResendDisabled, setIsResendDisabled] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -125,10 +125,24 @@ export default function VerifyCode() {
       },
       {
         onSuccess: async (response: any) => {
-          if (response.success && response.data) {
-            toast.success("Welcome! Redirecting to your dashboard...");
-            await signIn(response.data.token);
+          // Expecting shape:
+          // { message, data: { jwt, user }, status }
+          const jwt = response?.data?.jwt;
+          const user = response?.data?.user;
+
+          if (jwt) {
+            await signIn(jwt, user);
+            if (user) {
+              onSetProfile(user);
+            }
+            toast.success(
+              response?.message || "Welcome! Redirecting to your dashboard...",
+            );
             router.replace(AppRoutes.TABS_HOME);
+          } else {
+            toast.error(
+              "Verification succeeded but no login token was returned.",
+            );
           }
         },
         onError: (error: any) => {
