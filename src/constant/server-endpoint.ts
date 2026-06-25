@@ -3,6 +3,7 @@ export const SERVER_END_POINTS = {
   USER_VERIFICATION: "/user/account/verification",
   USER_RESEND_VERIFICATION: "/user/resend/account/verification",
   USER_LOGIN: "/user/login",
+  USER_GOOGLE: "/user/google",
   FORGET_PASSWORD: "/user/forgot/password",
   RESET_PASSWORD: "/user/reset/password",
   SET_PASSWORD: "/user/reset/password",

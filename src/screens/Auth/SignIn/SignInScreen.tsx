@@ -1,5 +1,6 @@
 import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
+import { useGoogleSignInFlow } from "@/src/hooks/useGoogleSignInFlow";
 import { useLoginProfile } from "@/src/services/authApi";
 import { useAuth } from "@/src/store/auth/hook";
 import { useWishlistHandler } from "@/src/store/wishlist/hook";
@@ -36,7 +37,15 @@ const signInEmailSchema = yup.object().shape({
 
 type SignInEmailFormData = yup.InferType<typeof signInEmailSchema>;
 
-export default function SignInScreen() {
+type SignInScreenProps = {
+  onGoogleSignIn?: () => void;
+  isGoogleLoading?: boolean;
+};
+
+export default function SignInScreen({
+  onGoogleSignIn: onGoogleSignInProp,
+  isGoogleLoading: isGoogleLoadingProp,
+}: SignInScreenProps = {}) {
   const router = useRouter();
 
   const { setWishlist } = useWishlistHandler();
@@ -45,6 +54,11 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
 
   const { mutate: login, isPending: loading } = useLoginProfile();
+  const { onGoogleSignIn: onGoogleSignInFlow, isGoogleLoading: isGoogleLoadingFlow } =
+    useGoogleSignInFlow();
+
+  const onGoogleSignIn = onGoogleSignInProp ?? onGoogleSignInFlow;
+  const isGoogleLoading = isGoogleLoadingProp ?? isGoogleLoadingFlow;
 
   const {
     control,
@@ -117,12 +131,6 @@ export default function SignInScreen() {
         },
       },
     );
-  };
-
-  const handleGoogleSignIn = () => {
-    // TODO: Implement Google sign in
-    console.log("Google sign in pressed");
-    // Google sign in implementation will be added here
   };
 
   return (
@@ -240,8 +248,10 @@ export default function SignInScreen() {
               <View style={styles.socialButtonContainer}>
                 <AuthButton
                   text="Sign in with Google"
-                  onPress={handleGoogleSignIn}
+                  onPress={onGoogleSignIn}
                   variant="outline"
+                  loading={isGoogleLoading}
+                  disabled={loading || isGoogleLoading}
                   leftIcon={
                     <Image
                       source={require("@/src/assets/images/google.png")}

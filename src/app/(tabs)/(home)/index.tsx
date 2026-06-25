@@ -1,3 +1,4 @@
+import OilFatImage from "@/src/assets/oil-fat.jpg";
 import {
   CATEGORIES_GRID_LIMIT,
   COLORS,

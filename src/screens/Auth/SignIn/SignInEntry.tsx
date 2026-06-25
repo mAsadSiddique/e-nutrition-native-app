@@ -1,5 +1,6 @@
 import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
+import { useGoogleSignInFlow } from "@/src/hooks/useGoogleSignInFlow";
 import { useCategoriesSelector } from "@/src/store/categories/selector";
 import { TypographyStyles } from "@/src/theme/theme";
 import { AppRoutes } from "@/src/utils/enums";
@@ -21,6 +22,7 @@ export default function SignInEntry() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { selectedCategories } = useCategoriesSelector();
+  const { onGoogleSignIn, isGoogleLoading } = useGoogleSignInFlow();
 
   const handleSkip = () => {
     console.log("here");
@@ -64,9 +66,9 @@ export default function SignInEntry() {
         <View style={styles.buttonsContainer}>
           <AuthButton
             text="Sign in with Google"
-            onPress={() => {
-              console.log("Google sign in pressed");
-            }}
+            onPress={onGoogleSignIn}
+            loading={isGoogleLoading}
+            disabled={isGoogleLoading}
             variant="outline"
             leftIcon={
               <Image

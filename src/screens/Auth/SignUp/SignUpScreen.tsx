@@ -1,5 +1,6 @@
 import AuthButton from "@/src/components/auth/AuthButton";
 import AuthLayout from "@/src/components/auth/AuthLayout";
+import { useGoogleSignInFlow } from "@/src/hooks/useGoogleSignInFlow";
 import { useSignup } from "@/src/services/authApi";
 import { TypographyStyles } from "@/src/theme/theme";
 import { AppRoutes } from "@/src/utils/enums";
@@ -50,6 +51,7 @@ export default function SignUpScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { mutate: signup, isPending: loading } = useSignup();
+  const { onGoogleSignIn, isGoogleLoading } = useGoogleSignInFlow();
 
   const {
     control,
@@ -69,8 +71,7 @@ export default function SignUpScreen() {
   const passwordValue = watch("password");
 
   const handleGoogleSignUp = () => {
-    // TODO: Implement Google sign up
-    // Google sign up implementation will be added here
+    onGoogleSignIn();
   };
 
   const onSubmit = (data: SignUpEmailFormData) => {
@@ -262,6 +263,8 @@ export default function SignUpScreen() {
                   text="Sign up with Google"
                   onPress={handleGoogleSignUp}
                   variant="outline"
+                  loading={isGoogleLoading}
+                  disabled={loading || isGoogleLoading}
                   leftIcon={
                     <Image
                       source={require("@/src/assets/images/google.png")}
