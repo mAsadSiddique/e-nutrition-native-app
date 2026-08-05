@@ -1,12 +1,10 @@
 import OilFatImage from "@/src/assets/oil-fat.jpg";
 import {
-  CATEGORIES_GRID_LIMIT,
   COLORS,
   getCategoryBackgroundColor,
   getCategoryIcon,
   RECOMMENDED_BLOGS_LIMIT,
 } from "@/src/constant/app-constants";
-import { useCurrentProfile } from "@/src/hooks";
 import { useWishlistToggle } from "@/src/hooks/useWishlistToggle";
 import { useBlogsListing } from "@/src/services/blogApi";
 import {
@@ -14,7 +12,7 @@ import {
   useGetCategoriesWithChildren,
 } from "@/src/services/categoryApi";
 import { transformBlogs } from "@/src/utils/blog-helpers";
-import { getCategoryNameById } from "@/src/utils/category-helpers";
+import { getCategoryNameById, sortCategoriesByDisplayOrder } from "@/src/utils/category-helpers";
 import { AppRoutes } from "@/src/utils/enums";
 import {
   handleBlogPress,
@@ -37,7 +35,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeIndex() {
   const router = useRouter();
-  const { userName } = useCurrentProfile();
   const { handleToggleWishlist, wishlistLoading, blogsWishlist } =
     useWishlistToggle();
 
@@ -94,16 +91,16 @@ export default function HomeIndex() {
       return [];
     }
 
-    return categoriesData
-      .slice(0, CATEGORIES_GRID_LIMIT)
-      .map((category, index) => ({
+    return sortCategoriesByDisplayOrder(categoriesData).map(
+      (category, index) => ({
         id: category.id,
         name: category.name,
         icon: category.icon || getCategoryIcon(category.name),
-        image: category.image,
+        image: category.iconUrl || category.image || null,
         backgroundColor:
           category.backgroundColor || getCategoryBackgroundColor(index),
-      }));
+      }),
+    );
   }, [categoriesData]);
 
   const onBlogPress = useCallback(
@@ -142,25 +139,49 @@ export default function HomeIndex() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header Section */}
-        <View style={styles.header}>
-          <Text style={styles.welcomeText}>
-            Welcome back {userName ? `, ${userName}!` : "!"}
-          </Text>
-        </View>
+        {/* Food Data Central header + search */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroTextBlock}>
+              <View style={styles.heroTitleRow}>
+                <Text style={styles.heroTitle}>Food Data Central</Text>
+                <Text style={styles.heroUrl}>www.enutrition.me</Text>
+              </View>
+              <Text style={styles.heroSubtitle}>
+                Your comprehensive information source of food nutrition and
+                phytonutrition
+              </Text>
+            </View>
+            <View style={styles.heroLogoWrap}>
+              <Image
+                source={require("@/src/assets/logo-mark.png")}
+                style={styles.heroLogo}
+                resizeMode="cover"
+                accessibilityLabel="Energy Healing logo"
+              />
+            </View>
+          </View>
 
-        {/* Search Bar */}
-        <Pressable onPress={handleSearchPress} style={styles.searchBar}>
-          <Ionicons
-            name="search"
-            size={20}
-            color={COLORS.TEXT_SECONDARY}
-            style={styles.searchIcon}
-          />
-          <Text style={styles.searchPlaceholder}>
-            Search articles, recipes, blogs...
-          </Text>
-        </Pressable>
+          <Pressable
+            onPress={handleSearchPress}
+            style={({ pressed }) => [
+              styles.searchBar,
+              pressed && styles.searchBarPressed,
+            ]}
+            accessibilityRole="search"
+            accessibilityLabel="Search your food"
+            accessibilityHint="Opens search to find articles, recipes, and blogs"
+          >
+            <View style={styles.searchIconButton}>
+              <Ionicons name="search" size={22} color="#FFFFFF" />
+            </View>
+            <View style={styles.searchInputArea}>
+              <Text style={styles.searchPlaceholder} numberOfLines={1}>
+                Search Your Food
+              </Text>
+            </View>
+          </Pressable>
+        </View>
 
         {/* Recommended for You Section */}
         <View style={styles.section}>
@@ -311,7 +332,7 @@ export default function HomeIndex() {
                       source={
                         category.image
                           ? { uri: category.image }
-                          : (OilFatImage as any)
+                          : OilFatImage
                       }
                       style={styles.categoryImage}
                       resizeMode="contain"
@@ -347,40 +368,91 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 20,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
+  heroCard: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 24,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 18,
+    backgroundColor: "#000000",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
-  welcomeText: {
-    fontSize: 14,
-    color: COLORS.TEXT_SECONDARY,
-    fontWeight: "400",
-    marginBottom: 4,
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 18,
   },
-  userName: {
-    fontSize: 24,
+  heroTextBlock: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  heroTitleRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    marginBottom: 8,
+    gap: 8,
+  },
+  heroTitle: {
+    fontSize: 22,
     fontWeight: "700",
-    color: COLORS.TEXT_PRIMARY,
-    letterSpacing: -0.5,
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+  },
+  heroUrl: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#E5D964",
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "400",
+    color: "#FFFFFF",
+  },
+  heroLogoWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroLogo: {
+    width: 58,
+    height: 58,
   },
   searchBar: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.SEARCH_BG,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 20,
-    marginBottom: 24,
+    alignItems: "stretch",
+    height: 48,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
   },
-  searchIcon: {
-    marginRight: 12,
+  searchBarPressed: {
+    opacity: 0.92,
+  },
+  searchIconButton: {
+    width: 58,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#C6E84C",
+  },
+  searchInputArea: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    backgroundColor: "#FFFFFF",
   },
   searchPlaceholder: {
-    fontSize: 14,
-    color: COLORS.TEXT_SECONDARY,
-    flex: 1,
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333333",
   },
   section: {
     marginBottom: 32,

@@ -6,6 +6,8 @@ export interface SimpleCategory {
   id: number;
   name: string;
   icon?: string;
+  iconKey?: string;
+  iconUrl?: string;
   image?: string;
   subtitle?: string;
   description?: string;
@@ -17,6 +19,8 @@ export interface Category {
   id: number;
   name: string;
   icon?: string;
+  iconKey?: string;
+  iconUrl?: string;
   image?: string;
   subtitle?: string;
   description?: string;
@@ -34,14 +38,15 @@ export const useGetCategories = (opts?: Partial<UseQueryOptions<SimpleCategory[]
       const list = response?.data?.data ?? response?.data ?? response ?? [];
       // Map all available fields from API
       return (Array.isArray(list) ? list : []).map((item: any) => ({
+        ...item,
         id: item.id,
         name: item.name,
-        icon: item.icon,
-        image: item.image,
+        iconKey: item.iconKey,
+        iconUrl: item.iconUrl,
+        image: item.iconUrl || item.image,
         subtitle: item.subtitle,
         description: item.description,
         backgroundColor: item.backgroundColor,
-        ...item, // Include any other fields from API
       }));
     },
     staleTime: 1000 * 60 * 5, // cache for 5 minutes
@@ -62,17 +67,18 @@ export const useGetCategoriesWithChildren = (opts?: Partial<UseQueryOptions<Cate
       const list = response?.data?.data ?? response?.data ?? response ?? [];
       // Map categories including nested children and all fields
       const mapCategory = (item: any): Category => ({
+        ...item,
         id: item.id,
         name: item.name,
-        icon: item.icon,
-        image: item.image,
+        iconKey: item.iconKey,
+        iconUrl: item.iconUrl,
+        image: item.iconUrl || item.image,
         subtitle: item.subtitle,
         description: item.description,
         backgroundColor: item.backgroundColor,
         children: Array.isArray(item.children) && item.children.length > 0
           ? item.children.map(mapCategory)
           : undefined,
-        ...item, // Include any other fields from API
       });
       return (Array.isArray(list) ? list : []).map(mapCategory);
     },

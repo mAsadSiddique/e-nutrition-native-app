@@ -11,6 +11,52 @@ export const RECOMMENDED_BLOGS_LIMIT = 5;
 export const CATEGORIES_GRID_LIMIT = 6;
 export const DESCRIPTION_PREVIEW_LENGTH = 100;
 
+/**
+ * Preferred display order for categories (home + browse).
+ * Derived from spreadsheet first-appearance order (duplicates ignored).
+ */
+export const CATEGORY_DISPLAY_ORDER = [
+  "fruit",
+  "beans and peas",
+  "beef",
+  "bread",
+  "vegetables",
+  "wheat",
+  "butter",
+  "buttermilk",
+  "vegetable",
+  "cheese",
+  "chicken",
+  "salt",
+  "sauce",
+  "sausage",
+  "seeds and nuts",
+  "cookies",
+  "juice",
+  "cream",
+  "egg",
+  "fish",
+  "flour",
+  "garlic",
+  "ham",
+  "hummus",
+  "ketchup",
+  "milk",
+  "grains",
+  "oil",
+  "olives",
+  "onion rings",
+  "plant-based butter",
+  "pickles",
+  "pork",
+  "plant-based milk",
+  "restaurant foods",
+  "rice",
+  "sugar",
+  "turkey",
+  "yogurt",
+] as const;
+
 // Colors
 export const COLORS = {
   PRIMARY_GREEN: "#1A8917", // Primary green used across the app

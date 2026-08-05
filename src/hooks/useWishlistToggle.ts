@@ -8,7 +8,7 @@ import { toast } from "@/src/utils/toast";
 import { useBlogWishlistToggle } from "@/src/services/blogApi";
 import { useWishlistHandler } from "@/src/store/wishlist/hook";
 import { useWishlistSelector } from "@/src/store/wishlist/selector";
-import { useCurrentProfile } from "./index";
+import { useCurrentProfile } from "./useCurrentProfile";
 import { useRouter } from "expo-router";
 import { useCallback } from "react";
 
