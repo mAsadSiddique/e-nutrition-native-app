@@ -8,15 +8,8 @@ import { toast } from "@/src/utils/toast";
 import type { TBlogsListing } from "@/src/utils/types/blogs";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
-  Animated,
   FlatList,
   Image,
   Pressable,
@@ -31,39 +24,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function SearchTab() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const [tabsAction, setTabsAction] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Tabs state (moved up so effect can use it)
-  const [selectedTab, setSelectedTab] = useState<"Latest" | "Tags" | "Blogs">(
-    "Latest",
-  );
-
-  // Container width for equal tab spacing (each tab = 1/3 width)
-  const [containerWidth, setContainerWidth] = useState(0);
-  // Measured text widths so underline matches text (not full tab)
-  const [latestTextWidth, setLatestTextWidth] = useState(0);
-  const [tagsTextWidth, setTagsTextWidth] = useState(0);
-  const [blogsTextWidth, setBlogsTextWidth] = useState(0);
-
-  // Animation values for tab transitions
-  const underlinePosition = useRef(new Animated.Value(0)).current;
-  const underlineWidth = useRef(new Animated.Value(0)).current;
-  const latestOpacity = useRef(new Animated.Value(1)).current;
-  const tagsOpacity = useRef(new Animated.Value(0)).current;
-  const blogsOpacity = useRef(new Animated.Value(0)).current;
-  const isUnderlineInitialized = useRef(false);
-
-  const isSlugLike = /^[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(tabsAction);
-
-  // Only fetch blogs when user has entered a search query
-  const shouldFetchBlogs = tabsAction.trim() !== "";
+  const isSlugLike = /^[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(searchQuery);
+  const shouldFetchBlogs = searchQuery.trim() !== "";
 
   const { data: blogsListing, isLoading } = useBlogsListing({
-    ...(isSlugLike && { slug: tabsAction }),
-    ...(selectedTab === "Latest" &&
-      tabsAction.trim() && { search: tabsAction }),
-    ...(selectedTab === "Blogs" && tabsAction.trim() && { search: tabsAction }),
-    ...(selectedTab === "Tags" && tabsAction.trim() && { tags: tabsAction }),
+    ...(isSlugLike && { slug: searchQuery }),
+    ...(!isSlugLike && searchQuery.trim() && { search: searchQuery }),
     enabled: shouldFetchBlogs,
   });
 
@@ -72,7 +40,6 @@ export default function SearchTab() {
   const { mutate: toggleBlogWishlist, isPending: wishlistLoading } =
     useBlogWishlistToggle();
 
-  // Helper function to strip HTML tags
   const stripHtml = (html: string) => {
     if (!html) return "";
     const text = html.replace(/<[^>]*>/g, "");
@@ -96,7 +63,6 @@ export default function SearchTab() {
     });
   };
 
-  // Helper function to format date
   const formatDate = (iso?: string) => {
     if (!iso) return "";
     const d = new Date(iso);
@@ -107,7 +73,6 @@ export default function SearchTab() {
     });
   };
 
-  // Helper function to extract image URL from media object
   const getImageUrlFromMedia = (media: TBlogsListing["media"]): string => {
     if (!media || !media.images || typeof media.images !== "object") {
       return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
@@ -117,141 +82,44 @@ export default function SearchTab() {
       return "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop";
     }
     const firstKey = imageKeys[0];
-    const imageUrl = media.images[firstKey];
     return (
-      imageUrl ||
+      media.images[firstKey] ||
       "https://images.unsplash.com/photo-1490645935967-10de6ba17061?q=80&w=1600&auto=format&fit=crop"
     );
   };
 
-  // Transform blogs listing data for display
   const transformedBlogs = useMemo(() => {
     if (!blogsListing || !Array.isArray(blogsListing)) return [];
     return blogsListing.map((b: TBlogsListing) => {
-      // Use excerpt if available, otherwise strip HTML from content as fallback
       const description = b.excerpt ? b.excerpt : stripHtml(b.content || "");
       const preview =
         description.length > 120
           ? `${description.slice(0, 120).trim()}...`
           : description;
-      const imageUrl = getImageUrlFromMedia(b.media);
       return {
         id: b.id,
         title: b.title,
         description: preview,
         date: formatDate(b.publishedAt),
-        image: { uri: imageUrl },
+        image: { uri: getImageUrlFromMedia(b.media) },
         categories: b.categories || [],
         slug: b.slug,
       };
     });
   }, [blogsListing]);
 
-  // Animate tab transitions: underline under text only (centered in each 1/3)
-  useEffect(() => {
-    if (containerWidth <= 0) return;
-
-    const paddingHorizontal = 20;
-    const contentWidth = containerWidth - paddingHorizontal * 2;
-    const third = contentWidth / 3;
-    const isLatest = selectedTab === "Latest";
-    const isTags = selectedTab === "Tags";
-    const isBlogs = selectedTab === "Blogs";
-
-    const textWidth = isLatest
-      ? latestTextWidth
-      : isTags
-        ? tagsTextWidth
-        : blogsTextWidth;
-    if (textWidth <= 0) return;
-
-    // Center underline under the text (account for tabContent paddingHorizontal: 20)
-    const targetX = isLatest
-      ? paddingHorizontal + (third - latestTextWidth) / 2
-      : isTags
-        ? paddingHorizontal + third + (third - tagsTextWidth) / 2
-        : paddingHorizontal + 2 * third + (third - blogsTextWidth) / 2;
-    const targetWidth = textWidth;
-
-    if (!isUnderlineInitialized.current) {
-      underlinePosition.setValue(targetX);
-      underlineWidth.setValue(targetWidth);
-      isUnderlineInitialized.current = true;
-    }
-
-    Animated.parallel([
-      // Animate underline position with spring effect
-      Animated.spring(underlinePosition, {
-        toValue: targetX,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: false, // We need to animate layout properties
-      }),
-      // Animate underline width
-      Animated.spring(underlineWidth, {
-        toValue: targetWidth,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: false,
-      }),
-      // Animate text opacity for smooth color transition
-      Animated.timing(latestOpacity, {
-        toValue: isLatest ? 1 : 0.5,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(tagsOpacity, {
-        toValue: isTags ? 1 : 0.5,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(blogsOpacity, {
-        toValue: isBlogs ? 1 : 0.5,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [
-    selectedTab,
-    containerWidth,
-    latestTextWidth,
-    tagsTextWidth,
-    blogsTextWidth,
-    underlinePosition,
-    underlineWidth,
-    latestOpacity,
-    tagsOpacity,
-    blogsOpacity,
-  ]);
-
   const handleBlogPress = useCallback(
     (item: any) => {
       const blogId = item?.id;
       const slug = item?.slug;
+      if (!blogId || !slug) return;
 
-      if (!blogId || !slug) {
-        console.warn("[SearchTab] Missing required blogId or slug:", {
-          blogId,
-          slug,
-        });
-        return;
-      }
-
-      // Get the first categoryId from the blog's categories array
       const categoryId =
         Array.isArray(item?.categories) && item.categories.length > 0
           ? item.categories[0]
           : undefined;
+      if (!categoryId) return;
 
-      if (!categoryId) {
-        console.warn("[SearchTab] Missing categoryId for blog:", {
-          blogId,
-          slug,
-        });
-        return;
-      }
-
-      // Navigate to blog detail with required format: /blogs/{blogId}/{categoryId}/{slug}
       router.push(buildRoute.blogDetail(blogId, categoryId, slug) as any);
     },
     [router],
@@ -259,24 +127,18 @@ export default function SearchTab() {
 
   const handleToggleWishlist = useCallback(
     (blogId: number) => {
-      // Check if user is authenticated before allowing save
       if (!isAuthenticated) {
         router.replace(AppRoutes.AUTH_SIGN_IN);
         return;
       }
 
-      // Check if blog is currently in wishlist to determine action
       const isCurrentlyInWishlist = blogsWishlist.includes(blogId);
-
-      // Toggle local wishlist state immediately for better UX
       toggleWishlistInStore(blogId);
 
-      // Call API to toggle wishlist
       toggleBlogWishlist(
         { id: blogId },
         {
-          onSuccess: (data) => {
-            // Show success toast based on action
+          onSuccess: () => {
             if (isCurrentlyInWishlist) {
               toast.success("Removed from saved articles", "Removed");
             } else {
@@ -284,13 +146,7 @@ export default function SearchTab() {
             }
           },
           onError: (error: any) => {
-            console.error(
-              "[SearchTab] ❌ Failed to toggle blog wishlist:",
-              error,
-            );
-            // Revert local state on error
             toggleWishlistInStore(blogId);
-            // Show error toast
             const errorMessage =
               error?.response?.data?.message ||
               error?.message ||
@@ -358,138 +214,51 @@ export default function SearchTab() {
     [handleBlogPress, handleToggleWishlist, blogsWishlist, wishlistLoading],
   );
 
-  // Determine which data to display based on selected tab
-  const displayData = useMemo(() => {
-    // All tabs (Latest, Tags, Blogs) display blogs when there's data
-    if (
-      selectedTab === "Tags" ||
-      selectedTab === "Latest" ||
-      selectedTab === "Blogs"
-    ) {
-      return transformedBlogs;
-    }
-    return [];
-  }, [selectedTab, transformedBlogs]);
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
-      <View style={styles.searchBar}>
-        <View style={styles.searchInput}>
-          <Ionicons
-            name="search"
-            size={18}
-            color="#666"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            placeholder="Search nutrition articles, recipes"
-            placeholderTextColor="#666"
-            value={tabsAction}
-            onChangeText={setTabsAction}
-            style={styles.inputExpanded}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
+      <View style={styles.heroCard}>
+        <View style={styles.heroTopRow}>
+          <View style={styles.heroTextBlock}>
+            <View style={styles.heroTitleRow}>
+              <Text style={styles.heroTitle}>Food Data Central</Text>
+              <Text style={styles.heroUrl}>www.enutrition.me</Text>
+            </View>
+            <Text style={styles.heroSubtitle}>
+              Your comprehensive information source of food nutrition and
+              phytonutrition
+            </Text>
+          </View>
+          <View style={styles.heroLogoWrap}>
+            <Image
+              source={require("@/src/assets/logo-mark.png")}
+              style={styles.heroLogo}
+              resizeMode="contain"
+              accessibilityLabel="Energy Healing logo"
+            />
+          </View>
+        </View>
+
+        <View style={styles.searchBar}>
+          <View style={styles.searchIconButton}>
+            <Ionicons name="search" size={22} color="#FFFFFF" />
+          </View>
+          <View style={styles.searchInputArea}>
+            <TextInput
+              placeholder="Search Your Food"
+              placeholderTextColor="#333333"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={styles.inputExpanded}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              accessibilityLabel="Search your food"
+            />
+          </View>
         </View>
       </View>
-      {/* tabs: full width, equal space */}
-      <View style={styles.tabContainer}>
-        <View
-          style={styles.tabContent}
-          onLayout={(event) =>
-            setContainerWidth(event.nativeEvent.layout.width)
-          }
-        >
-          <Pressable
-            style={styles.tabButton}
-            onPress={() => setSelectedTab("Latest")}
-          >
-            <View
-              onLayout={(e) => setLatestTextWidth(e.nativeEvent.layout.width)}
-              style={styles.tabLabelWrap}
-            >
-              <Animated.Text
-                style={[
-                  styles.tabText,
-                  {
-                    color: latestOpacity.interpolate({
-                      inputRange: [0, 0.5, 1],
-                      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
-                      extrapolate: "clamp",
-                    }),
-                  },
-                  selectedTab === "Latest" && { fontWeight: "500" },
-                ]}
-              >
-                Latest
-              </Animated.Text>
-            </View>
-          </Pressable>
 
-          <Pressable
-            style={styles.tabButton}
-            onPress={() => setSelectedTab("Tags")}
-          >
-            <View
-              onLayout={(e) => setTagsTextWidth(e.nativeEvent.layout.width)}
-              style={styles.tabLabelWrap}
-            >
-              <Animated.Text
-                style={[
-                  styles.tabText,
-                  {
-                    color: tagsOpacity.interpolate({
-                      inputRange: [0, 0.5, 1],
-                      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
-                      extrapolate: "clamp",
-                    }),
-                  },
-                  selectedTab === "Tags" && { fontWeight: "500" },
-                ]}
-              >
-                Tags
-              </Animated.Text>
-            </View>
-          </Pressable>
-
-          <Pressable
-            style={styles.tabButton}
-            onPress={() => setSelectedTab("Blogs")}
-          >
-            <View
-              onLayout={(e) => setBlogsTextWidth(e.nativeEvent.layout.width)}
-              style={styles.tabLabelWrap}
-            >
-              <Animated.Text
-                style={[
-                  styles.tabText,
-                  {
-                    color: blogsOpacity.interpolate({
-                      inputRange: [0, 0.5, 1],
-                      outputRange: ["#8e8e8e", "#8e8e8e", "#1A8917"],
-                      extrapolate: "clamp",
-                    }),
-                  },
-                  selectedTab === "Blogs" && { fontWeight: "500" },
-                ]}
-              >
-                Blogs
-              </Animated.Text>
-            </View>
-          </Pressable>
-
-          {/* Animated Underline */}
-          <Animated.View
-            style={[
-              styles.tabUnderline,
-              {
-                left: underlinePosition,
-                width: underlineWidth,
-              },
-            ]}
-          />
-        </View>
-      </View>
-      {tabsAction.trim() === "" ? (
+      {searchQuery.trim() === "" ? (
         <View style={styles.emptyContainer}>
           <Image
             source={require("@/src/assets/images/partial-react-logo.jpg")}
@@ -497,107 +266,121 @@ export default function SearchTab() {
             resizeMode="contain"
           />
         </View>
+      ) : isLoading && shouldFetchBlogs ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>Loading blogs...</Text>
+        </View>
       ) : (
-        <>
-          {isLoading && shouldFetchBlogs ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>Loading blogs...</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={displayData}
-              keyExtractor={(item: any) => String(item.id ?? item.name)}
-              contentContainerStyle={styles.listContent}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
-              ListEmptyComponent={
-                shouldFetchBlogs && displayData.length === 0 ? (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyTitle}>No blogs found</Text>
-                  </View>
-                ) : null
-              }
-              renderItem={({ item }) => {
-                return renderBlogItem({ item });
-              }}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
-        </>
+        <FlatList
+          data={transformedBlogs}
+          keyExtractor={(item: any) => String(item.id ?? item.name)}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ListEmptyComponent={
+            shouldFetchBlogs ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyTitle}>No blogs found</Text>
+              </View>
+            ) : null
+          }
+          renderItem={renderBlogItem}
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  searchBar: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  input: {
-    ...TypographyStyles.body,
-    backgroundColor: "#f2f2f2",
-    paddingVertical: 12,
-    fontSize: 15,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-  },
-  searchInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
+  heroCard: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 18,
+    backgroundColor: "#000000",
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#e6e6e6",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 30,
+    borderColor: "rgba(255,255,255,0.35)",
   },
-  searchIcon: { marginRight: 10, fontSize: 18 },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 18,
+  },
+  heroTextBlock: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  heroTitleRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    marginBottom: 8,
+    gap: 8,
+  },
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+  },
+  heroUrl: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#E5D964",
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "400",
+    color: "#FFFFFF",
+  },
+  heroLogoWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroLogo: {
+    width: 52,
+    height: 52,
+    marginTop: -6,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    height: 48,
+    borderRadius: 999,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+  },
+  searchIconButton: {
+    width: 58,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#C6E84C",
+  },
+  searchInputArea: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    backgroundColor: "#FFFFFF",
+  },
   inputExpanded: {
     ...TypographyStyles.bodySans,
     flex: 1,
-    paddingVertical: 6,
+    paddingVertical: 0,
     paddingHorizontal: 0,
     backgroundColor: "transparent",
-    fontSize: 15,
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#1F1F1F",
   },
-
-  tabContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-    backgroundColor: "#fff",
-    width: "100%",
-  },
-  tabContent: {
-    ...TypographyStyles.body,
-    flexDirection: "row",
-    position: "relative",
-    paddingHorizontal: 20,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 0,
-    position: "relative",
-  },
-  tabLabelWrap: {
-    alignSelf: "center",
-  },
-  tabText: {
-    ...TypographyStyles.body,
-    fontSize: 14,
-    fontWeight: "400",
-    color: "#8e8e8e",
-    lineHeight: 20,
-  },
-  tabTextActive: { color: "#1A8917", fontWeight: "500" },
-  tabUnderline: {
-    position: "absolute",
-    bottom: -1,
-    left: 0,
-    width: 80,
-    height: 2,
-    backgroundColor: "#1A8917",
-  },
-
   emptyContainer: {
     flex: 1,
     alignItems: "center",
@@ -606,26 +389,6 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { ...TypographyStyles.h4, color: "#111", marginBottom: 20 },
   emptyImage: { width: 220, height: 180, opacity: 0.95 },
-
-  tagCardGrid: {
-    flex: 1,
-    marginHorizontal: 6,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#f0f0f0",
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tagTextGrid: {
-    ...TypographyStyles.bodySmallSans,
-    color: "#111",
-    textAlign: "center",
-  },
-
-  // Blog card styles (matching main blogs page)
   listContent: {
     paddingBottom: 20,
   },
@@ -652,7 +415,7 @@ const styles = StyleSheet.create({
   blogTitle: {
     ...TypographyStyles.body,
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: "800",
     color: "#000",
     lineHeight: 24,
     marginBottom: 8,
